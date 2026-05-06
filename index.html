@@ -1,0 +1,3176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AITIP · 20-Day POC · Sprint Index</title>
+<style>
+/* ================================================================
+   AITIP · AI Toxicity Intelligence Platform · 20-Day POC
+   Sprint Control Index · Day 1 = Thu 07 May 2026 → Day 20 = Wed 03 Jun 2026
+   Self-contained styles. No external CSS. No external fonts.
+   ================================================================ */
+
+:root {
+  /* paper / surface */
+  --paper:        #f6f1e6;          /* aged lab notebook */
+  --paper-deep:   #ece4d0;
+  --card:         #fffdf5;          /* card surface */
+  --rule:         #d6cdb6;          /* hairline */
+  --rule-soft:    #e3dcc6;
+
+  /* ink */
+  --ink:          #0a1f2c;          /* near-black navy */
+  --ink-2:        #2a3845;
+  --ink-3:        #4a5663;
+  --muted:        #6b7785;
+  --muted-2:      #8a93a0;
+
+  /* primary palette */
+  --navy:         #0b2540;
+  --navy-deep:    #061626;
+  --teal:         #0e6b6b;          /* lab stain */
+  --teal-soft:    #6fb8a8;
+  --amber:        #b87333;          /* flask copper */
+  --amber-soft:   #e9c98b;
+  --gold:         #c79338;
+  --crimson:      #a8322d;          /* hazard */
+  --crimson-soft: #e8a4a0;
+  --moss:         #4a6b3a;
+  --plum:         #6b3a52;
+
+  /* status */
+  --ok:           #1b7f3a;
+  --ok-soft:      #c9e4d2;
+  --warn:         #b45309;
+  --warn-soft:    #f0d8a8;
+  --info:         #1f5d8c;
+  --info-soft:    #c8dcec;
+
+  /* engineer tracks */
+  --t-sarthak:    #0b3d91;          /* AI/ML lead */
+  --t-harshit:    #1f77b4;          /* Backend / MLOps */
+  --t-jitendra:   #1b7f3a;          /* Infra / DevOps */
+
+  /* phase colors */
+  --p-foundation: #0e6b6b;
+  --p-deep:       #6b3a52;
+  --p-rag:        #b87333;
+  --p-integ:      #1f5d8c;
+  --p-polish:     #4a6b3a;
+
+  /* shadows */
+  --shadow-1: 0 1px 0 rgba(11,37,64,.04), 0 1px 2px rgba(11,37,64,.06);
+  --shadow-2: 0 2px 4px rgba(11,37,64,.06), 0 8px 24px rgba(11,37,64,.08);
+  --shadow-3: 0 8px 16px rgba(11,37,64,.08), 0 24px 48px rgba(11,37,64,.10);
+  --shadow-inset: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -1px 0 rgba(11,37,64,.04);
+
+  /* radii */
+  --r-s:  3px;
+  --r:    6px;
+  --r-l:  10px;
+
+  /* typography stacks (system-only, no external loads) */
+  --serif:  Georgia, 'Iowan Old Style', 'Apple Garamond', Cambria, 'Times New Roman', serif;
+  --sans:   -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono:   'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* layout */
+  --maxw:   1180px;
+}
+
+/* ================================================================
+   RESET
+   ================================================================ */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.62;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* hex molecular lattice — extremely subtle */
+  background-image:
+    radial-gradient(circle at 18% 8%, rgba(184,115,51,0.04) 0%, transparent 45%),
+    radial-gradient(circle at 82% 92%, rgba(14,107,107,0.04) 0%, transparent 50%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='64' viewBox='0 0 56 64'><g fill='none' stroke='%230b2540' stroke-opacity='0.05' stroke-width='1'><polygon points='28,2 54,16 54,46 28,60 2,46 2,16'/></g></svg>");
+  background-attachment: fixed;
+  background-size: auto, auto, 56px 64px;
+}
+
+a { color: var(--navy); text-decoration: underline; text-decoration-color: var(--amber-soft); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--amber); color: var(--amber); }
+
+h1, h2, h3, h4, h5, h6 { font-family: var(--serif); font-weight: 700; color: var(--navy-deep); margin: 0 0 0.5em; line-height: 1.18; letter-spacing: -0.005em; }
+h1 { font-size: clamp(2.0rem, 4.2vw, 3.2rem); font-weight: 800; letter-spacing: -0.015em; }
+h2 { font-size: clamp(1.4rem, 2.4vw, 1.85rem); }
+h3 { font-size: 1.18rem; }
+h4 { font-size: 1.0rem; }
+
+p { margin: 0 0 0.85em; }
+strong { color: var(--navy-deep); font-weight: 600; }
+em { font-style: italic; color: var(--ink-2); }
+small { font-size: 0.86em; color: var(--muted); }
+
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+code { background: rgba(11,37,64,0.06); padding: 0.06em 0.32em; border-radius: var(--r-s); color: var(--ink); }
+
+ul, ol { margin: 0 0 0.85em; padding-left: 1.4em; }
+li { margin-bottom: 0.3em; }
+
+::selection { background: var(--amber-soft); color: var(--navy-deep); }
+
+/* ================================================================
+   LAYOUT SHELL
+   ================================================================ */
+.shell { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
+
+.section { padding: 56px 0; border-top: 1px solid var(--rule-soft); }
+.section:first-of-type { border-top: none; }
+.section.tight { padding: 36px 0; }
+.section.deep { background: var(--paper-deep); }
+.section.dark { background: var(--navy-deep); color: var(--paper); }
+.section.dark h1, .section.dark h2, .section.dark h3 { color: var(--paper); }
+.section.dark a { color: var(--amber-soft); }
+.section.dark p, .section.dark li { color: rgba(246,241,230,0.86); }
+
+/* ================================================================
+   TOP BAR
+   ================================================================ */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(246,241,230,0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--rule);
+}
+.topbar-inner {
+  max-width: var(--maxw); margin: 0 auto;
+  padding: 12px 28px;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  flex-wrap: wrap;
+}
+.brand {
+  display: flex; align-items: center; gap: 12px;
+  font-family: var(--serif); font-weight: 700;
+  color: var(--navy-deep); text-decoration: none;
+  font-size: 1.04rem;
+}
+.brand:hover { color: var(--amber); }
+.brand-mark {
+  width: 34px; height: 34px; flex-shrink: 0;
+  display: grid; place-items: center;
+}
+.brand small {
+  display: block;
+  font-family: var(--mono);
+  font-weight: 400;
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 1px;
+}
+.topnav { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.topnav a {
+  text-decoration: none;
+  color: var(--ink-2);
+  font-size: 0.84rem; font-weight: 500;
+  padding: 6px 12px; border-radius: var(--r-s);
+}
+.topnav a:hover { background: var(--paper-deep); color: var(--navy); }
+.topnav .pill {
+  font-family: var(--mono);
+  font-size: 0.7rem; letter-spacing: 0.06em;
+  background: var(--navy-deep); color: var(--paper);
+  padding: 6px 10px; border-radius: var(--r-s);
+  text-transform: uppercase;
+  margin-left: 6px;
+}
+
+/* ================================================================
+   HERO
+   ================================================================ */
+.hero {
+  position: relative;
+  padding: 80px 0 56px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--rule);
+}
+.hero::before {
+  /* atomic orbital decoration */
+  content: ""; position: absolute;
+  right: -100px; top: 30px; width: 420px; height: 420px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%23b87333' stroke-width='1.1' stroke-opacity='0.32'><circle cx='100' cy='100' r='42'/><circle cx='100' cy='100' r='66'/><circle cx='100' cy='100' r='88'/><ellipse cx='100' cy='100' rx='88' ry='28' transform='rotate(30 100 100)'/><ellipse cx='100' cy='100' rx='88' ry='28' transform='rotate(-30 100 100)'/><ellipse cx='100' cy='100' rx='88' ry='28' transform='rotate(90 100 100)'/></g><circle cx='100' cy='12' r='3.2' fill='%23b87333'/><circle cx='188' cy='100' r='3.2' fill='%230e6b6b'/><circle cx='100' cy='188' r='3.2' fill='%23b87333'/><circle cx='12' cy='100' r='3.2' fill='%230e6b6b'/><circle cx='100' cy='100' r='4.5' fill='%230b2540'/></svg>");
+  background-size: contain; background-repeat: no-repeat;
+  opacity: 0.65;
+  pointer-events: none;
+  animation: orbital-spin 90s linear infinite;
+}
+@keyframes orbital-spin { to { transform: rotate(360deg); } }
+
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-family: var(--mono);
+  font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--teal); font-weight: 600;
+  padding: 5px 11px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--card);
+  margin-bottom: 22px;
+}
+.eyebrow::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 0 3px rgba(184,115,51,0.18);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(184,115,51,0.18); }
+  50%      { box-shadow: 0 0 0 6px rgba(184,115,51,0.04); }
+}
+
+.hero h1 { max-width: 17ch; }
+.hero h1 em {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--amber);
+}
+.hero-sub {
+  max-width: 60ch;
+  font-size: 1.08rem;
+  color: var(--ink-2);
+  margin-top: 6px;
+  line-height: 1.6;
+}
+
+/* hero meta — 4 cells, monospace, lab-instrument feel */
+.hero-meta {
+  margin-top: 36px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  overflow: hidden;
+  max-width: 940px;
+  box-shadow: var(--shadow-1);
+}
+.hero-meta > div {
+  background: var(--card);
+  padding: 16px 18px;
+}
+.hero-meta dt {
+  font-family: var(--mono);
+  font-size: 0.66rem; letter-spacing: 0.11em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 6px;
+}
+.hero-meta dd {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.32rem;
+  font-weight: 700;
+  color: var(--navy-deep);
+  line-height: 1.1;
+}
+.hero-meta dd small {
+  display: block;
+  font-family: var(--sans); font-weight: 400;
+  font-size: 0.74rem; color: var(--muted);
+  margin-top: 4px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+@media (max-width: 760px) {
+  .hero-meta { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ================================================================
+   SECTION HEADERS  (§01, §02 etc)
+   ================================================================ */
+.section-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 24px; margin-bottom: 28px;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 14px;
+  flex-wrap: wrap;
+}
+.section-tag {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 4px;
+}
+.section-head h2 { margin: 0; }
+.section-head .sub {
+  color: var(--muted);
+  max-width: 50ch;
+  font-size: 0.96rem;
+  margin: 0;
+}
+
+/* ================================================================
+   PROSE BLOCK  (the body text under §-headings)
+   ================================================================ */
+.prose { max-width: 70ch; }
+.prose p { font-size: 0.98rem; color: var(--ink-2); }
+.prose p strong { color: var(--navy-deep); }
+.prose blockquote {
+  margin: 1em 0;
+  padding: 4px 0 4px 16px;
+  border-left: 3px solid var(--amber);
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.05rem;
+  color: var(--ink-2);
+  max-width: 65ch;
+}
+
+/* ================================================================
+   CAPABILITY LATTICE  — 7 hex-cards in a flowing grid
+   ================================================================ */
+.cap-lattice {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+}
+.cap {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 22px 22px 18px;
+  box-shadow: var(--shadow-1);
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+  overflow: hidden;
+}
+.cap:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+  border-color: var(--amber-soft);
+}
+.cap::before {
+  /* hex watermark in corner */
+  content: ""; position: absolute; top: -16px; right: -14px;
+  width: 92px; height: 92px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,4 90,26 90,74 50,96 10,74 10,26' fill='none' stroke='%23b87333' stroke-width='1.3' opacity='0.18'/><polygon points='50,22 75,36 75,64 50,78 25,64 25,36' fill='none' stroke='%23b87333' stroke-width='1.0' opacity='0.14'/></svg>");
+  background-size: contain; background-repeat: no-repeat;
+  pointer-events: none;
+}
+.cap .cap-id {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: var(--amber);
+  margin-bottom: 4px;
+  position: relative; z-index: 1;
+}
+.cap h3 {
+  font-size: 1.06rem;
+  margin: 0 0 8px;
+  position: relative; z-index: 1;
+  max-width: 22ch;
+}
+.cap-body {
+  font-size: 0.92rem;
+  color: var(--ink-2);
+  margin-bottom: 14px;
+  position: relative; z-index: 1;
+}
+.cap-meta {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  border-top: 1px dashed var(--rule);
+  padding-top: 10px;
+  margin-top: 8px;
+}
+.cap-day-link {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  background: var(--paper-deep);
+  color: var(--navy);
+  border: 1px solid transparent;
+  border-radius: var(--r-s);
+  text-decoration: none;
+  letter-spacing: 0.03em;
+  transition: border-color .15s ease, background .15s ease;
+}
+.cap-day-link:hover {
+  background: var(--card);
+  border-color: var(--amber);
+  color: var(--amber);
+  text-decoration: none;
+}
+
+/* ================================================================
+   TEAM CARDS
+   ================================================================ */
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px;
+  margin-top: 8px;
+}
+.member {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 24px 22px 20px;
+  box-shadow: var(--shadow-1);
+  border-top: 4px solid var(--track, var(--navy));
+}
+.member-head {
+  display: flex; align-items: flex-start; gap: 14px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed var(--rule);
+}
+.member-avatar {
+  flex-shrink: 0;
+  width: 50px; height: 50px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--track, var(--navy));
+  color: white;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.08rem;
+  letter-spacing: -0.01em;
+}
+.member-name {
+  font-family: var(--serif);
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.15;
+}
+.member-role {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--track, var(--navy));
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 3px;
+  font-weight: 600;
+}
+.member-tag {
+  color: var(--muted);
+  font-size: 0.86rem;
+  margin-top: 6px;
+}
+.member-section {
+  margin-top: 14px;
+}
+.member-section:first-of-type { margin-top: 0; }
+.member-section h4 {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+.member-section ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+.member-section ul li { margin-bottom: 4px; }
+
+/* ================================================================
+   FOOTER
+   ================================================================ */
+.footer {
+  background: var(--navy-deep);
+  color: rgba(246,241,230,0.72);
+  font-size: 0.86rem;
+  padding: 44px 0 32px;
+  margin-top: 80px;
+}
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 40px;
+}
+@media (max-width: 720px) { .footer-grid { grid-template-columns: 1fr; gap: 28px; } }
+.footer h4 {
+  color: var(--amber-soft);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+}
+.footer p { color: rgba(246,241,230,0.78); margin-bottom: 8px; line-height: 1.55; }
+.footer a { color: var(--amber-soft); text-decoration-color: rgba(184,115,51,0.4); }
+.footer a:hover { color: white; }
+.footer-meta {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(246,241,230,0.1);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: rgba(246,241,230,0.5);
+  letter-spacing: 0.04em;
+}
+
+/* ================================================================
+   UTILITIES
+   ================================================================ */
+.divider {
+  height: 1px;
+  background: var(--rule);
+  margin: 36px 0;
+  position: relative;
+}
+.divider::after {
+  content: "⬡  ⬡  ⬡";
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--paper);
+  padding: 0 14px;
+  font-size: 0.72rem;
+  color: var(--amber);
+  letter-spacing: 0.32em;
+}
+.divider.on-deep::after { background: var(--paper-deep); }
+
+.kbd {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  padding: 2px 6px;
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  border-bottom-width: 2px;
+  border-radius: var(--r-s);
+  color: var(--ink);
+}
+
+/* visually-hidden but screen-reader-accessible */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+</style>
+</head>
+<body>
+
+<!-- ================================================================
+     TOP BAR
+     ================================================================ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">
+        <svg viewBox="0 0 60 60" width="34" height="34" xmlns="http://www.w3.org/2000/svg" fill="none" aria-hidden="true">
+          <polygon points="30,4 52,17 52,43 30,56 8,43 8,17" stroke="#0b2540" stroke-width="2"/>
+          <circle cx="30" cy="22" r="3.2" fill="#b87333"/>
+          <circle cx="20" cy="34" r="3.2" fill="#0e6b6b"/>
+          <circle cx="40" cy="34" r="3.2" fill="#0e6b6b"/>
+          <circle cx="30" cy="44" r="3.2" fill="#b87333"/>
+          <line x1="30" y1="22" x2="20" y2="34" stroke="#0b2540" stroke-width="1.4"/>
+          <line x1="30" y1="22" x2="40" y2="34" stroke="#0b2540" stroke-width="1.4"/>
+          <line x1="20" y1="34" x2="30" y2="44" stroke="#0b2540" stroke-width="1.4"/>
+          <line x1="40" y1="34" x2="30" y2="44" stroke="#0b2540" stroke-width="1.4"/>
+        </svg>
+      </span>
+      <span>
+        AITIP · Sprint Index
+        <small>20-day production poc · v1.0</small>
+      </span>
+    </a>
+    <nav class="topnav" aria-label="primary">
+      <a href="#capabilities">Capabilities</a>
+      <a href="#team">Team</a>
+      <a href="#hardware">Hardware</a>
+      <a href="#stack">Stack</a>
+      <a href="#datasets">Datasets</a>
+      <a href="#timeline">Timeline</a>
+      <a href="#governance">Governance</a>
+      <span class="pill">Day 1 · 07 May 2026</span>
+    </nav>
+  </div>
+</header>
+
+<!-- ================================================================
+     HERO
+     ================================================================ -->
+<section class="hero">
+  <div class="shell">
+    <div class="eyebrow">Production-grade POC · v1.0 · Internal sprint control</div>
+    <h1>An on-prem <em>toxicity intelligence</em> platform &mdash; built in twenty working days.</h1>
+    <p class="hero-sub">
+      Three engineers. One 72-core, 1&nbsp;TB-RAM, 10&nbsp;TB-SSD host. Twenty working days from <strong>Thursday 07 May 2026</strong> through <strong>Wednesday 03 June 2026</strong>. The system predicts molecular toxicity across multiple endpoints, retrieves and summarizes biomedical literature with full citation grounding, finds similar compounds at sub-50ms latency over a million-vector index, orchestrates the whole workflow behind a typed REST contract, and lands a polished web dashboard non-engineers can drive themselves &mdash; all locally deployable, GPU-ready, enterprise-architected, with zero cloud dependency for the prediction path.
+    </p>
+
+    <dl class="hero-meta">
+      <div>
+        <dt>Duration</dt>
+        <dd>20 days<small>Thu 07 May → Wed 03 Jun 2026</small></dd>
+      </div>
+      <div>
+        <dt>Hardware</dt>
+        <dd>72 cores<small>1 TB RAM · 10 TB SSD · 8 VMs</small></dd>
+      </div>
+      <div>
+        <dt>Capabilities</dt>
+        <dd>7 ship<small>Predict · search · summarize · analyze</small></dd>
+      </div>
+      <div>
+        <dt>Team</dt>
+        <dd>3 engineers<small>AI · Backend · Infrastructure</small></dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+<!-- ================================================================
+     §00 · POC FRAMING (the why)
+     ================================================================ -->
+<section class="section">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 00 · framing</div>
+        <h2>What we are building, and why now</h2>
+      </div>
+      <p class="sub">A short, honest brief before the day-by-day plan. Read this once; the rest of the index assumes it.</p>
+    </div>
+
+    <div class="prose">
+      <p>
+        The pharmaceutical industry loses roughly thirty percent of its drug-development pipeline to toxicity that surfaces only after years of investment. ToxCast and Tox21 have made the underlying assay data public; ChemBERTa, MolFormer, and graph neural networks have made predictive modeling state-of-the-art; and on-prem LLMs have, in the last eighteen months, become genuinely usable on commodity CPU hardware. The platform we are building stitches those three trends into a single tool a medicinal chemist or a regulatory toxicologist can actually drive.
+      </p>
+      <p>
+        This is not a demo and it is not a research notebook. By Day 20 the system runs as a set of containerized services on a single host, serves typed REST endpoints behind authentication, persists every prediction with full audit metadata, and renders a working web dashboard backed by the same APIs an external integrator would consume. The architecture is deliberately partitioned so that adding a GPU node and migrating the language-model service is a one-day operation, not a rebuild.
+      </p>
+      <blockquote>
+        We are shipping the same system, on the same host, that V1 will scale &mdash; not a throwaway proof we will throw away.
+      </blockquote>
+      <p>
+        Three things keep this scope honest in twenty days. <strong>One:</strong> we lean on open public datasets (Tox21, ToxCast, ClinTox, SIDER, hERG/ChEMBL, DILIrank) rather than scraping or licensing private corpora. <strong>Two:</strong> we use frozen pre-trained encoders (ChemBERTa-2, MolFormer-XL, PubMedBERT) for similarity and retrieval rather than training from scratch &mdash; we fine-tune only the classification heads. <strong>Three:</strong> the local LLM (Llama-3.1-8B-Instruct, 4-bit quantized via vLLM) is configured to refuse answers without retrieved citations, which removes an entire category of demo-day risk.
+      </p>
+      <p>
+        The deliverable on Day 20 is a forty-five-minute live demonstration that exercises every one of the seven capabilities end-to-end on real, named compounds (Doxorubicin, Aspirin, Thalidomide, Cisplatin) and returns calibrated, cited, explainable answers in under fifteen seconds per molecule. The handover is the running stack plus operator runbooks, model cards, audit log exports, and a roadmap to V1 (GPU, generative design, multi-tenant SaaS, regulatory-pack export).
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     §01 · CAPABILITIES — seven cards, mapped to days
+     ================================================================ -->
+<section class="section deep" id="capabilities">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 01 · capabilities</div>
+        <h2>Seven capabilities, one platform</h2>
+      </div>
+      <p class="sub">Each capability is delivered, tested, and demoed by Day 20. Every card is hyperlinked to the days that build it &mdash; click any day-tag to jump straight into that day's plan.</p>
+    </div>
+
+    <div class="cap-lattice">
+
+      <article class="cap">
+        <div class="cap-id">CAP-01 · prediction</div>
+        <h3>Molecular Toxicity Prediction</h3>
+        <p class="cap-body">
+          Multi-endpoint classifiers covering Tox21 (12 NR + SR endpoints), hERG (cardiotoxicity), DILIrank (hepatotoxicity), and ClinTox (clinical failure). Three model families per endpoint &mdash; XGBoost on Morgan fingerprints, a graph-attention network on molecular graphs, and a fine-tuned ChemBERTa-2 head &mdash; with calibrated probabilities, scaffold-holdout evaluation, and Bayesian uncertainty via MC-dropout. Single-molecule inference target: under 250&nbsp;ms on CPU; under 25&nbsp;ms on the future GPU node.
+        </p>
+        <div class="cap-meta">
+          <a class="cap-day-link" href="day04.html">Day 04</a>
+          <a class="cap-day-link" href="day05.html">Day 05</a>
+          <a class="cap-day-link" href="day06.html">Day 06</a>
+          <a class="cap-day-link" href="day11.html">Day 11</a>
+          <a class="cap-day-link" href="day17.html">Day 17</a>
+        </div>
+      </article>
+
+      <article class="cap">
+        <div class="cap-id">CAP-02 · retrieval</div>
+        <h3>Biomedical Literature Retrieval</h3>
+        <p class="cap-body">
+          Hybrid search over a curated 100,000-abstract toxicology slice of PubMed, ingested via NCBI E-utilities and filtered by MeSH terms (Toxicity, DILI, hERG, Cardiotoxicity, Genotoxicity, Nephrotoxicity, Neurotoxicity). Vector search uses PubMedBERT embeddings persisted in ChromaDB; lexical search uses BM25 over the raw abstract text; results are merged with reciprocal-rank fusion. Target MRR@10 on a 50-query gold set: at least 0.55. Search latency target: p95 under 300&nbsp;ms.
+        </p>
+        <div class="cap-meta">
+          <a class="cap-day-link" href="day08.html">Day 08</a>
+          <a class="cap-day-link" href="day11.html">Day 11</a>
+        </div>
+      </article>
+
+      <article class="cap">
+        <div class="cap-id">CAP-03 · summarization</div>
+        <h3>Scientific Evidence Summarization</h3>
+        <p class="cap-body">
+          On-premise Llama-3.1-8B-Instruct (4-bit AWQ, served via vLLM with an OpenAI-compatible HTTP shim) wrapped in a strict citation-grounded prompt template. The model is configured to refuse any answer it cannot back with retrieved PubMed evidence; every claim in its response carries an inline <code>[PMID:xxxxxxx]</code> tag that resolves to a real abstract in our index. Hallucination target: under 5% on a hand-rated 30-prompt evaluation set. End-to-end latency target: under 8&nbsp;s on CPU for a six-document RAG answer.
+        </p>
+        <div class="cap-meta">
+          <a class="cap-day-link" href="day09.html">Day 09</a>
+          <a class="cap-day-link" href="day11.html">Day 11</a>
+          <a class="cap-day-link" href="day17.html">Day 17</a>
+        </div>
+      </article>
+
+      <article class="cap">
+        <div class="cap-id">CAP-04 · similarity</div>
+        <h3>Molecular Similarity Search</h3>
+        <p class="cap-body">
+          MolFormer-XL embeddings (768-dim, mean-pooled last hidden state, PCA-reduced to 128 dims preserving ≥&nbsp;95% variance) indexed in HNSWlib over a one-million-compound subset of PubChem. Returns top-K nearest neighbors with both cosine similarity (semantic) and Tanimoto similarity (structural) so users can see why the system thinks two molecules are alike. Target: recall@10 of at least 0.98 against brute-force ground truth, p95 latency under 50&nbsp;ms.
+        </p>
+        <div class="cap-meta">
+          <a class="cap-day-link" href="day07.html">Day 07</a>
+          <a class="cap-day-link" href="day11.html">Day 11</a>
+        </div>
+      </article>
+
+      <article class="cap">
+        <div class="cap-id">CAP-05 · orchestration</div>
+        <h3>AI-Assisted Molecule Analysis</h3>
+        <p class="cap-body">
+          A single <code>POST&nbsp;/analyze</code> endpoint that fans out to predict, similarity, and literature-search services in parallel; reranks the literature hits with a cross-encoder; assembles a cited, structured report; persists every result to Postgres + MinIO with a sha256 hash of the canonical SMILES; and returns either a synchronous JSON document (single molecule) or a Celery job-id for batches over fifty. Target: single-molecule analyze p95 under 12&nbsp;s end-to-end.
+        </p>
+        <div class="cap-meta">
+          <a class="cap-day-link" href="day11.html">Day 11</a>
+          <a class="cap-day-link" href="day14.html">Day 14</a>
+          <a class="cap-day-link" href="day17.html">Day 17</a>
+        </div>
+      </article>
+
+      <article class="cap">
+        <div class="cap-id">CAP-06 · interface</div>
+        <h3>REST APIs</h3>
+        <p class="cap-body">
+          FastAPI service tier with OpenAPI 3.1 spec frozen at v0.5 on Day 10. OAuth2 password flow with rotating RS256 JWTs; per-route RBAC across viewer, analyst, and admin roles; rate limiting at the Traefik edge; full request/response logging into the audit table. A typed Python SDK and a TypeScript SDK are auto-generated from the OpenAPI spec via openapi-generator and shipped alongside the platform.
+        </p>
+        <div class="cap-meta">
+          <a class="cap-day-link" href="day03.html">Day 03</a>
+          <a class="cap-day-link" href="day10.html">Day 10</a>
+          <a class="cap-day-link" href="day15.html">Day 15</a>
+        </div>
+      </article>
+
+      <article class="cap">
+        <div class="cap-id">CAP-07 · dashboard</div>
+        <h3>Web Dashboard</h3>
+        <p class="cap-body">
+          A Streamlit MVP lands on Day 12 to give non-engineering stakeholders something tangible by mid-POC; the production React + Tailwind + TanStack-Query frontend lands on Day 18 with feature parity plus polish (per-atom attention overlays on rendered molecules, calibrated risk verdicts, batch-job ETA streaming, exportable PDF reports). The two coexist for six days (12&nbsp;→&nbsp;18) so we never demo against an unfinished UI.
+        </p>
+        <div class="cap-meta">
+          <a class="cap-day-link" href="day12.html">Day 12</a>
+          <a class="cap-day-link" href="day13.html">Day 13</a>
+          <a class="cap-day-link" href="day18.html">Day 18</a>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     §02 · TEAM (start) — three engineers, three lanes
+     ================================================================ -->
+<section class="section" id="team">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 02 · team</div>
+        <h2>Three engineers, three lanes</h2>
+      </div>
+      <p class="sub">Work is assigned to strengths from prior projects, internships, and published research &mdash; not by guesswork. The lanes are intentionally non-overlapping so the critical path has a single owner at every point.</p>
+    </div>
+
+    <div class="prose" style="margin-bottom: 28px;">
+      <p>
+        <strong>Sarthak</strong> owns the science: dataset curation, descriptor and fingerprint engineering, classical baselines, deep models (GAT and ChemBERTa), molecular embeddings, similarity search, calibration, explainability, and model evaluation. His prior work &mdash; the 92% AUC drug-induced cardiotoxicity classifier (under submission), the 94.1% accuracy groundnut disease CNN presented at ICAIM 2025, the patent-filed SIH 2024 blockchain cheque deposit work &mdash; tells us he ships, publishes, and ships again. He is the technical conscience of the model layer; if a number looks too good, he is the one who refuses to believe it before scaffold-holdout proves it.
+      </p>
+      <p>
+        <strong>Harshit</strong> owns the services and the data flow: FastAPI gateway, Celery worker pool, ETL pipelines, Bio_ClinicalBERT-derived NLP utilities, the PubMed-RAG layer, the Streamlit MVP and the React production frontend. His Zivoke Tech Labs internship (July&nbsp;2025–Jan&nbsp;2026) shipped an AI agent for U.S. Healthcare Revenue Cycle Management automation in production using the exact stack we need here &mdash; Bio_ClinicalBERT, PyTorch, Flask/FastAPI, Docker, Pandas. The Smart Inventory forecasting work at Hostbook (Dec&nbsp;2024–Jan&nbsp;2025) shipped time-series models with a Streamlit dashboard. He has run this play before; we are running it again, larger.
+      </p>
+      <p>
+        <strong>Jitendra</strong> owns the iron and everything that touches it: hypervisor configuration on the 72-core host, VM provisioning, internal networking, Docker registry, secrets management, reverse proxy with TLS, observability stack (Prometheus + Grafana + Loki + Alertmanager), backup-and-restore drills, GPU-readiness preparation, and on Day 15 the security baseline. His role exists precisely because the modeling team and the services team should never have to think about whether a VM has enough memory or whether the bridge network is up &mdash; that is a separate discipline and we treat it as one.
+      </p>
+    </div>
+
+    <div class="team-grid">
+
+      <article class="member" style="--track: var(--t-sarthak);">
+        <div class="member-head">
+          <div class="member-avatar">SC</div>
+          <div>
+            <div class="member-name">Sarthak Chauhan</div>
+            <div class="member-role">AI / ML Lead · Toxicity Models</div>
+            <div class="member-tag">Deep learning, computer vision, molecular ML</div>
+          </div>
+        </div>
+
+        <div class="member-section">
+          <h4>Track record (relevant)</h4>
+          <ul>
+            <li>Drug-Induced Cardiotoxicity Classification &mdash; 92% AUC (under submission, 2026). The exact problem class we are scaling.</li>
+            <li>Groundnut Disease Detection &mdash; 94.1% accuracy CNN. Presented at ICAIM 2025. Demonstrates pipeline discipline (preprocessing → augmentation → publication).</li>
+            <li>Blockchain Cheque Deposit System &mdash; SIH 2024 national-finalist (Top 25). Patent filed as first author.</li>
+            <li>Stack: Python, PyTorch, TensorFlow, scikit-learn, RDKit, OpenCV, NLTK. CGPA 9.56, BCA-AI&amp;ML, Sharda University.</li>
+          </ul>
+        </div>
+
+        <div class="member-section">
+          <h4>Owns in this POC</h4>
+          <ul>
+            <li>Dataset curation (Tox21, ToxCast, ClinTox, SIDER, hERG, DILIrank) &mdash; canonicalization, salt stripping, scaffold splits.</li>
+            <li>Feature engineering &mdash; Morgan fingerprints, RDKit descriptors, MolFormer / ChemBERTa embeddings.</li>
+            <li>Classical baselines (XGBoost, RandomForest) and deep models (GAT, ChemBERTa-2 fine-tunes).</li>
+            <li>Molecular similarity index (HNSWlib over PubChem subset).</li>
+            <li>Calibration, MC-dropout uncertainty, SHAP / integrated-gradients explainability, structural-alert checking.</li>
+            <li>Model cards, OECD QSAR-principle documentation.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="member" style="--track: var(--t-harshit);">
+        <div class="member-head">
+          <div class="member-avatar">HP</div>
+          <div>
+            <div class="member-name">Harshit Prajapati</div>
+            <div class="member-role">Backend &amp; MLOps Engineer</div>
+            <div class="member-tag">FastAPI, Bio_ClinicalBERT, Docker, ML pipelines</div>
+          </div>
+        </div>
+
+        <div class="member-section">
+          <h4>Track record (relevant)</h4>
+          <ul>
+            <li>Zivoke Tech Labs (Jul 2025–Jan 2026) &mdash; AI agent for U.S. Healthcare Revenue Cycle Management. Shipped production with Bio_ClinicalBERT, PyTorch, Flask, Docker.</li>
+            <li>Hostbook (Dec 2024–Jan 2025) &mdash; Smart Inventory AI Demand Forecasting. ARIMA/Prophet time-series + Streamlit dashboard + PostgreSQL.</li>
+            <li>Plant Disease Detection (IoT + ML, Aug 2023–Jan 2024) &mdash; TensorFlow classifier integrated with Arduino sensors.</li>
+            <li>Stack: Python, Java, MySQL/PostgreSQL, Flask/FastAPI, Docker, HuggingFace Transformers, Streamlit, REST APIs.</li>
+          </ul>
+        </div>
+
+        <div class="member-section">
+          <h4>Owns in this POC</h4>
+          <ul>
+            <li>FastAPI service tier &mdash; OpenAPI v0.5 contract, Pydantic v2 schemas, RBAC, rate limiting, audit logging.</li>
+            <li>Celery worker pool &mdash; ETL, batch scoring (10K compounds in &lt; 6 min), async job orchestration.</li>
+            <li>PubMed ingestion + chunking + ChromaDB indexing + hybrid (BM25 + vector) retrieval.</li>
+            <li>Local LLM RAG chain (vLLM + Llama-3.1) with strict citation grounding and streaming responses.</li>
+            <li>Streamlit MVP (Day 12) and React production frontend (Days 13, 18) with auto-generated typed SDK.</li>
+            <li>Postgres / MinIO / Redis schema design, Alembic migrations, MLflow tracking server.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="member" style="--track: var(--t-jitendra);">
+        <div class="member-head">
+          <div class="member-avatar">JM</div>
+          <div>
+            <div class="member-name">Jitendra Maurya</div>
+            <div class="member-role">Infrastructure &amp; DevOps</div>
+            <div class="member-tag">VM provisioning, networking, observability</div>
+          </div>
+        </div>
+
+        <div class="member-section">
+          <h4>Track record (relevant)</h4>
+          <ul>
+            <li>Linux server administration and virtualization &mdash; KVM/libvirt, Proxmox, ZFS/LVM thin-provisioning.</li>
+            <li>Container orchestration &mdash; Docker, docker-compose, registry management, multi-stage build optimization.</li>
+            <li>Network and edge &mdash; nftables, Traefik, internal DNS, TLS termination, reverse-proxy patterns.</li>
+            <li>Observability &mdash; Prometheus, Grafana, Loki, Alertmanager, OpenTelemetry collectors.</li>
+            <li>CI/CD and supply chain &mdash; GitHub Actions, pre-commit, Trivy image scanning, secrets via Vault.</li>
+          </ul>
+        </div>
+
+        <div class="member-section">
+          <h4>Owns in this POC</h4>
+          <ul>
+            <li>Hypervisor on the 72-core host &mdash; KVM/libvirt golden image, ZFS thin-pool on the 10&nbsp;TB SSD.</li>
+            <li>VM commissioning &mdash; 8 VMs totalling 72 vCPU, 1018&nbsp;GB RAM, 9.0&nbsp;TB disk allocated, with a 220&nbsp;GB / 4.2&nbsp;TB reserve for the future GPU node.</li>
+            <li>Internal bridge network <code>br-poc0</code> on 10.20.0.0/24, dnsmasq for <code>vm-*.poc.local</code> resolution, nftables default-deny.</li>
+            <li>Docker stack per VM, Traefik edge with TLS, secrets via Vault (with sops-encrypted YAML fallback).</li>
+            <li>Prometheus + Grafana + Loki + Alertmanager on <code>vm-observability</code>; node-exporters on every VM.</li>
+            <li>Backup discipline &mdash; pgBackRest WAL + nightly dumps, ChromaDB nightly snapshots, MinIO bucket replication, daily restore drill.</li>
+            <li>GPU-readiness runbook (NVIDIA driver + container-toolkit + vLLM CUDA pin) for the V1 hand-off.</li>
+          </ul>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     PART 2 — additional CSS for §03 §04 §05 §06
+     ================================================================ -->
+<style>
+/* ================================================================
+   LAB TABLE — used by hardware partition, stack, datasets, VM plan
+   ================================================================ */
+.lab-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  overflow: hidden;
+  font-size: 0.9rem;
+  box-shadow: var(--shadow-1);
+}
+.lab-table thead {
+  background: var(--navy-deep);
+  color: var(--paper);
+}
+.lab-table thead th {
+  padding: 11px 14px;
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--navy-deep);
+}
+.lab-table tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: top;
+  color: var(--ink-2);
+}
+.lab-table tbody tr:last-child td { border-bottom: none; }
+.lab-table tbody tr:nth-child(even) { background: var(--paper); }
+.lab-table tbody tr:hover { background: rgba(233, 201, 139, 0.18); }
+
+.lab-table td.code,
+.lab-table td.num,
+.lab-table th.num {
+  font-family: var(--mono);
+  font-size: 0.86rem;
+}
+.lab-table td.num,
+.lab-table th.num { text-align: right; }
+.lab-table td.code { color: var(--navy); font-weight: 500; }
+
+.lab-table tbody tr.total td {
+  background: var(--paper-deep);
+  font-weight: 700;
+  color: var(--navy-deep);
+  border-top: 2px solid var(--navy-deep);
+}
+.lab-table tbody tr.reserve td {
+  background: rgba(184, 115, 51, 0.06);
+  font-style: italic;
+  color: var(--ink-3);
+}
+
+.lab-table caption {
+  caption-side: bottom;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-align: left;
+  padding: 10px 0 0;
+  letter-spacing: 0.04em;
+}
+
+/* small-screen rescue for tables */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 0 16px;
+}
+
+/* ================================================================
+   ARCHITECTURE DIAGRAM — minimal SVG-style block diagram
+   ================================================================ */
+.arch-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 14px;
+  margin: 24px 0 8px;
+}
+.arch-tier {
+  grid-column: span 12;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--tier-color, var(--navy));
+  border-radius: var(--r);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-1);
+}
+.arch-tier-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 16px; margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.arch-tier-title {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.04rem;
+  color: var(--navy-deep);
+}
+.arch-tier-tag {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tier-color, var(--navy));
+}
+.arch-tier-body {
+  font-size: 0.92rem;
+  color: var(--ink-2);
+  line-height: 1.55;
+}
+.arch-flow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--rule);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink);
+}
+.arch-flow .node {
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  padding: 4px 10px;
+  border-radius: var(--r-s);
+  white-space: nowrap;
+}
+.arch-flow .arrow {
+  color: var(--amber);
+  font-weight: 700;
+}
+
+/* ================================================================
+   STACK GRID — 2-col layer / components
+   ================================================================ */
+.stack-grid {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  overflow: hidden;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-1);
+}
+@media (max-width: 720px) { .stack-grid { grid-template-columns: 1fr; } }
+.stack-grid > * {
+  background: var(--card);
+  padding: 14px 18px;
+  font-size: 0.92rem;
+}
+.stack-grid > .layer {
+  background: var(--paper-deep);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--navy-deep);
+  display: flex; align-items: center;
+}
+.stack-grid > .layer .layer-num {
+  display: inline-block;
+  font-size: 0.7rem;
+  color: var(--amber);
+  margin-right: 10px;
+}
+.stack-grid > .components {
+  color: var(--ink-2);
+  font-family: var(--sans);
+}
+.stack-grid > .components code { background: rgba(11,37,64,0.05); }
+
+/* ================================================================
+   DATASET CARDS — alternative to lab-table when rich detail needed
+   ================================================================ */
+.dataset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.dataset {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--teal);
+  border-radius: var(--r);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-1);
+}
+.dataset .ds-name {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.06rem;
+  color: var(--navy-deep);
+  margin-bottom: 4px;
+}
+.dataset .ds-scale {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--amber);
+  margin-bottom: 8px;
+}
+.dataset .ds-use {
+  font-size: 0.9rem;
+  color: var(--ink-2);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+.dataset .ds-meta {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+  padding-top: 8px;
+  border-top: 1px dashed var(--rule);
+}
+
+/* ================================================================
+   TIMELINE — week stripes containing day cards
+   ================================================================ */
+.weeks {
+  display: flex; flex-direction: column;
+  gap: 36px;
+  margin-top: 8px;
+}
+.week {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 28px;
+  align-items: start;
+}
+@media (max-width: 820px) { .week { grid-template-columns: 1fr; } }
+
+.week-side {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--week-color, var(--amber));
+  border-radius: var(--r);
+  padding: 16px 18px;
+  position: sticky;
+  top: 86px;
+  box-shadow: var(--shadow-1);
+}
+@media (max-width: 820px) { .week-side { position: static; } }
+
+.week-side .week-num {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--week-color, var(--amber));
+  font-weight: 600;
+}
+.week-side .week-title {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--navy-deep);
+  margin: 4px 0 10px;
+  line-height: 1.2;
+}
+.week-side .week-dates {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-2);
+  padding: 8px 0;
+  border-top: 1px dashed var(--rule);
+  border-bottom: 1px dashed var(--rule);
+  margin-bottom: 10px;
+}
+.week-side .week-blurb {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.week-days {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.day-card {
+  position: relative;
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 16px 18px 14px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--shadow-1);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  overflow: hidden;
+}
+.day-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+  border-color: var(--amber);
+  text-decoration: none;
+}
+.day-card::before {
+  /* corner hex watermark */
+  content: ""; position: absolute;
+  top: -10px; right: -10px;
+  width: 56px; height: 56px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,4 90,26 90,74 50,96 10,74 10,26' fill='%23ece4d0' stroke='%23d6cdb6' stroke-width='1'/></svg>");
+  background-size: contain; background-repeat: no-repeat;
+  opacity: 0.7;
+  pointer-events: none;
+}
+.day-card .day-id {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--amber);
+  font-weight: 600;
+  position: relative; z-index: 1;
+}
+.day-card .day-id .phase {
+  color: var(--muted);
+  margin-left: 4px;
+  font-weight: 500;
+}
+.day-card .day-title {
+  font-family: var(--serif);
+  font-size: 1.0rem;
+  font-weight: 700;
+  color: var(--navy-deep);
+  margin: 6px 0 6px;
+  line-height: 1.22;
+  position: relative; z-index: 1;
+}
+.day-card .day-date {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+  position: relative; z-index: 1;
+}
+.day-card .day-owners {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--rule);
+  position: relative; z-index: 1;
+}
+.day-card .owner-chip {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  padding: 2px 6px;
+  background: var(--paper-deep);
+  border: 1px solid transparent;
+  border-radius: var(--r-s);
+  color: var(--ink-2);
+  letter-spacing: 0.02em;
+}
+.day-card .owner-chip.s { color: var(--t-sarthak); border-color: rgba(11,61,145,0.2); }
+.day-card .owner-chip.h { color: var(--t-harshit); border-color: rgba(31,119,180,0.2); }
+.day-card .owner-chip.j { color: var(--t-jitendra); border-color: rgba(27,127,58,0.2); }
+
+/* ================================================================
+   ANCHOR LIST (used on hardware tier / governance later)
+   ================================================================ */
+.anchor-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+}
+.anchor-list li {
+  position: relative;
+  padding: 8px 0 8px 28px;
+  border-bottom: 1px dashed var(--rule);
+  font-size: 0.92rem;
+  color: var(--ink-2);
+}
+.anchor-list li:last-child { border-bottom: none; }
+.anchor-list li::before {
+  content: "⬡";
+  position: absolute;
+  left: 4px; top: 8px;
+  color: var(--amber);
+  font-size: 0.85rem;
+}
+.anchor-list li strong { color: var(--navy-deep); }
+
+</style>
+
+
+<!-- ================================================================
+     §03 · HARDWARE PARTITIONING
+     ================================================================ -->
+<section class="section deep" id="hardware">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 03 · hardware partitioning</div>
+        <h2>How the 72-core host is carved up</h2>
+      </div>
+      <p class="sub">One purpose-built VM per concern, all on a private bridge, all snapshot-able. The reserve row leaves room for a future GPU node, scale-out, and snapshots without rebuilding.</p>
+    </div>
+
+    <div class="prose" style="margin-bottom: 22px;">
+      <p>
+        The host is a single physical machine: 72 CPU cores (assume two NUMA nodes of 36 cores each, hyperthreading on, so 144 logical CPUs &mdash; we allocate by physical cores and pin); 1&nbsp;TB of RAM; 10&nbsp;TB of NVMe SSD. Day 1 confirms the actual NUMA layout with <code>numactl --hardware</code>, the disk topology with <code>lsblk</code>, and the firmware-level virtualization extensions (VT-x or AMD-V, IOMMU on for future GPU passthrough). Day 2 carves it. After Day 2 we never touch the host's core configuration again &mdash; everything else lives inside a VM with a documented resource cap.
+      </p>
+      <p>
+        We use KVM with libvirt (Proxmox VE is acceptable as an alternative if Jitendra prefers its console). VM disks live on a ZFS thin-pool so snapshots are nearly free, point-in-time, and roll back in seconds. The internal bridge <code>br-poc0</code> on 10.20.0.0/24 carries inter-VM traffic; only the reverse-proxy VM exposes ports to the host network. nftables on every VM defaults to deny-inbound, with explicit allows for the ports a VM's role actually requires.
+      </p>
+      <p>
+        The eight-VM partition below totals exactly 72 vCPU, leaves about 4&nbsp;GB of RAM for the hypervisor itself, and consumes 9&nbsp;TB of the 10&nbsp;TB SSD with the remaining 1&nbsp;TB held in the ZFS pool's free margin so snapshots do not fail under load. A reserve allocation (<code>(reserve)</code>) holds 220&nbsp;GB of RAM and 4.2&nbsp;TB of disk &mdash; this is intentional headroom for adding the GPU passthrough VM in V1, for a second worker pool if batch demand spikes during the demo, and for the snapshot-and-rollback discipline during model training and dataset ingestion.
+      </p>
+    </div>
+
+    <div class="table-wrap">
+      <table class="lab-table">
+        <thead>
+          <tr>
+            <th>VM hostname</th>
+            <th class="num">vCPU</th>
+            <th class="num">RAM (GB)</th>
+            <th class="num">Disk (GB)</th>
+            <th>Role / processes</th>
+            <th>Provisioned</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="code">vm-bastion</td>
+            <td class="num">2</td>
+            <td class="num">4</td>
+            <td class="num">50</td>
+            <td>SSH jump host, Ansible runner, Flower (Celery) admin UI, Vault dev server, gitleaks runner</td>
+            <td class="code">Day 01</td>
+          </tr>
+          <tr>
+            <td class="code">vm-core-api</td>
+            <td class="num">8</td>
+            <td class="num">32</td>
+            <td class="num">200</td>
+            <td>FastAPI gateway, Pydantic validation, JWT auth, RBAC middleware, OpenAPI server, Traefik edge upstream</td>
+            <td class="code">Day 02</td>
+          </tr>
+          <tr>
+            <td class="code">vm-tox-inference</td>
+            <td class="num">16</td>
+            <td class="num">128</td>
+            <td class="num">400</td>
+            <td>PyTorch CPU inference (GAT, ChemBERTa-2 INT8), XGBoost / RandomForest baseline serving, MLflow client. NUMA-pinned to node 0. GPU-passthrough target in V1.</td>
+            <td class="code">Day 02</td>
+          </tr>
+          <tr>
+            <td class="code">vm-embed-search</td>
+            <td class="num">12</td>
+            <td class="num">96</td>
+            <td class="num">500</td>
+            <td>MolFormer-XL embedding service (frozen), HNSWlib molecular index (1M vectors @ 128-dim PCA), ChromaDB literature index server, similarity microservice</td>
+            <td class="code">Day 02</td>
+          </tr>
+          <tr>
+            <td class="code">vm-rag-llm</td>
+            <td class="num">12</td>
+            <td class="num">256</td>
+            <td class="num">800</td>
+            <td>vLLM serving Llama-3.1-8B-Instruct AWQ (4-bit), bge-reranker, RAG orchestrator, sentence-transformers for query expansion. NUMA-pinned to node 1. Highest RAM footprint by design.</td>
+            <td class="code">Day 02</td>
+          </tr>
+          <tr>
+            <td class="code">vm-data-store</td>
+            <td class="num">8</td>
+            <td class="num">128</td>
+            <td class="num">3,000</td>
+            <td>Postgres 16 (with pg_partman, pg_stat_statements), MinIO (3 buckets initially: raw-datasets, processed, models &mdash; 5 by Day 5), Redis 7 with AOF every-second, MLflow tracking backend, ChromaDB persistent volume</td>
+            <td class="code">Day 03</td>
+          </tr>
+          <tr>
+            <td class="code">vm-worker-pool</td>
+            <td class="num">12</td>
+            <td class="num">128</td>
+            <td class="num">400</td>
+            <td>Celery workers (8 workers × 2 GB initial, scaling to 12 under batch load) for ETL, batch scoring, PubMed ingestion, embedding compute, PDF report rendering (WeasyPrint)</td>
+            <td class="code">Day 04</td>
+          </tr>
+          <tr>
+            <td class="code">vm-observability</td>
+            <td class="num">2</td>
+            <td class="num">26</td>
+            <td class="num">450</td>
+            <td>Prometheus (15s scrape, 30d retention), Grafana, Loki, Alertmanager, OpenTelemetry collector, Vault (POC mode)</td>
+            <td class="code">Day 05</td>
+          </tr>
+          <tr class="reserve">
+            <td class="code">(reserve)</td>
+            <td class="num">0</td>
+            <td class="num">220</td>
+            <td class="num">4,200</td>
+            <td>Headroom for V1 GPU node (NVIDIA A100/H100 passthrough), snapshot-and-rollback margin, batch-scale-out, hypervisor overhead</td>
+            <td class="code">held</td>
+          </tr>
+          <tr class="total">
+            <td class="code">TOTAL</td>
+            <td class="num">72</td>
+            <td class="num">1,018</td>
+            <td class="num">10,000</td>
+            <td>72 cores · 1 TB RAM · 10 TB SSD envelope</td>
+            <td class="code">complete</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="prose" style="margin-top: 24px;">
+      <p>
+        <strong>NUMA pinning.</strong> The two heaviest VMs &mdash; <code>vm-tox-inference</code> (16 vCPU) and <code>vm-rag-llm</code> (12 vCPU) &mdash; are pinned to opposite NUMA nodes via <code>cpuset</code> and <code>numatune</code> in their libvirt domain XML. This prevents cross-socket memory traffic during the heaviest single-process workloads (PyTorch tensor operations on the inference VM, vLLM kv-cache reads on the LLM VM). The remaining VMs are scheduled normally; the kernel's NUMA balancing handles them.
+      </p>
+      <p>
+        <strong>Snapshot discipline.</strong> Every VM is snapshotted with the suffix <code>-base</code> immediately after Jitendra's golden-image bootstrap completes. Before any irreversible operation &mdash; a kernel update, a Postgres schema migration, an experimental model training run that uses a new RDKit version &mdash; the affected VM's owner takes a fresh snapshot first. The ZFS pool is sized so all 8 VMs can each hold three full snapshots without exhausting free space. Rollback is a one-line operation tested on Day 3.
+      </p>
+      <p>
+        <strong>Network plan.</strong> All 8 VMs sit on <code>br-poc0</code> with statically allocated IPs in 10.20.0.0/24 (recorded in dnsmasq host entries so <code>vm-data-store.poc.local</code> resolves correctly from any other VM). Only <code>vm-bastion</code> exposes port 22 to the host network for SSH. Only <code>vm-core-api</code> via Traefik exposes 80/443 on the host network. Every other VM is reachable only from inside the bridge. Worker VM egress (NCBI E-utilities, HuggingFace model downloads) is allowed via a NAT rule on the host but logged.
+      </p>
+    </div>
+
+    <div class="arch-grid" style="margin-top: 32px;">
+      <div class="arch-tier" style="--tier-color: var(--teal);">
+        <div class="arch-tier-head">
+          <div class="arch-tier-title">Edge tier — host-exposed</div>
+          <div class="arch-tier-tag">tier 1</div>
+        </div>
+        <div class="arch-tier-body">
+          Traefik 3.0 on <code>vm-core-api</code> terminates TLS (self-signed for POC, ACME-ready), serves <code>app.poc.local</code> (React UI), <code>api.poc.local</code> (FastAPI), <code>dashboard.poc.local</code> (Streamlit during weeks 2–3), and <code>llm.poc.local</code> (vLLM OpenAI-compat shim, internal-only). HSTS, secure cookies, rate limits per route, gzip + brotli.
+        </div>
+        <div class="arch-flow">
+          <span class="node">browser</span><span class="arrow">→</span>
+          <span class="node">host:443</span><span class="arrow">→</span>
+          <span class="node">traefik</span><span class="arrow">→</span>
+          <span class="node">vm-core-api:8000</span>
+        </div>
+      </div>
+      <div class="arch-tier" style="--tier-color: var(--navy);">
+        <div class="arch-tier-head">
+          <div class="arch-tier-title">Service tier — orchestration &amp; APIs</div>
+          <div class="arch-tier-tag">tier 2</div>
+        </div>
+        <div class="arch-tier-body">
+          FastAPI gateway on <code>vm-core-api</code> performs auth, routing, request validation, and orchestrates downstream calls. Heavy work is dispatched to Celery on <code>vm-worker-pool</code> (Redis broker on <code>vm-data-store</code>). LLM and embedding services are invoked over the bridge with httpx + tenacity (3-retry exponential backoff, circuit-breaker after 5 consecutive failures).
+        </div>
+        <div class="arch-flow">
+          <span class="node">core-api</span><span class="arrow">→</span>
+          <span class="node">tox-inference</span><span class="arrow">·</span>
+          <span class="node">embed-search</span><span class="arrow">·</span>
+          <span class="node">rag-llm</span><span class="arrow">→</span>
+          <span class="node">worker-pool (async)</span>
+        </div>
+      </div>
+      <div class="arch-tier" style="--tier-color: var(--amber);">
+        <div class="arch-tier-head">
+          <div class="arch-tier-title">Persistence tier — state &amp; artifacts</div>
+          <div class="arch-tier-tag">tier 3</div>
+        </div>
+        <div class="arch-tier-body">
+          Postgres 16 holds compounds, predictions, jobs, users, audit_log, model_registry. MinIO holds raw datasets, processed Parquet features, model artifacts (.pkl / .pt / safetensors), batch result files, PDF reports, MLflow artifact store, and pgBackRest backup archives. Redis caches hot SMILES predictions (TTL 24h) and brokers Celery. ChromaDB persists the literature vector index. All on <code>vm-data-store</code> with snapshot + WAL discipline.
+        </div>
+        <div class="arch-flow">
+          <span class="node">postgres:5432</span><span class="arrow">·</span>
+          <span class="node">minio:9000</span><span class="arrow">·</span>
+          <span class="node">redis:6379</span><span class="arrow">·</span>
+          <span class="node">chromadb:8001</span>
+        </div>
+      </div>
+      <div class="arch-tier" style="--tier-color: var(--moss);">
+        <div class="arch-tier-head">
+          <div class="arch-tier-title">Observability tier — see everything</div>
+          <div class="arch-tier-tag">tier 4</div>
+        </div>
+        <div class="arch-tier-body">
+          Prometheus scrapes node-exporter on every VM (CPU, memory, disk, network) plus app-level <code>/metrics</code> endpoints (FastAPI request rate / latency / error rate, Celery queue depth, vLLM tokens-per-second, Postgres connection pool, MinIO object count). Grafana dashboards land on Day 10. Loki ingests structured JSON logs from every container. Alertmanager fires to email and Slack on p95 &gt; 2&nbsp;s, error rate &gt; 1%, disk &gt; 80%, OOM events, backup failures.
+        </div>
+        <div class="arch-flow">
+          <span class="node">node-exporter × 8</span><span class="arrow">→</span>
+          <span class="node">prometheus</span><span class="arrow">→</span>
+          <span class="node">grafana</span><span class="arrow">·</span>
+          <span class="node">alertmanager</span>
+        </div>
+      </div>
+    </div>
+
+    <ul class="anchor-list">
+      <li><strong>Hypervisor headroom:</strong> 4 GB RAM and 6 vCPU equivalents stay unallocated to the hypervisor itself. Do not trim this; KVM steals from the parent kernel under load and we have seen production systems thrash at 100% allocation.</li>
+      <li><strong>Disk I/O isolation:</strong> <code>vm-data-store</code> gets a dedicated ZFS dataset with <code>recordsize=16K</code> (Postgres-friendly); <code>vm-rag-llm</code> gets <code>recordsize=128K</code> (better for sequential model-weight reads); the rest get the pool default.</li>
+      <li><strong>Backup target:</strong> pgBackRest writes WAL + nightly full dumps to MinIO bucket <code>pg-backups</code> on the same host but on a different ZFS dataset. Off-host backup is a V1 task.</li>
+      <li><strong>GPU upgrade path:</strong> When the GPU node lands, we IOMMU-passthrough it into a new VM <code>vm-gpu-llm</code> using 8 vCPU + 64 GB from the reserve, migrate the vLLM and ChemBERTa workloads off <code>vm-rag-llm</code> and <code>vm-tox-inference</code> respectively, and reclaim CPU on those two VMs for higher concurrency. Total downtime budget: 2 hours.</li>
+    </ul>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §04 · STACK — what we are running
+     ================================================================ -->
+<section class="section" id="stack">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 04 · stack</div>
+        <h2>What we are running, layer by layer</h2>
+      </div>
+      <p class="sub">Open-source by default. Battle-tested, on-prem-friendly, GPU-ready. Every choice has a reason &mdash; the rationale paragraph below the table records why we picked the named tool over its closest alternative.</p>
+    </div>
+
+    <div class="stack-grid">
+
+      <div class="layer"><span class="layer-num">L01</span>Modeling</div>
+      <div class="components">
+        <strong>PyTorch 2.4</strong> (primary) · TensorFlow 2.17 (legacy interop only) · scikit-learn 1.5 · XGBoost 2.1 · DeepChem 2.8 · PyTorch Geometric 2.5 (GAT, GCN) · Optuna (HPO) · MC-dropout via custom training loop.
+      </div>
+
+      <div class="layer"><span class="layer-num">L02</span>Cheminformatics</div>
+      <div class="components">
+        <strong>RDKit 2024.03.5</strong> (canonicalization, Morgan FP, 208 descriptors, Bemis–Murcko scaffolds, structural-alert SMARTS for PAINS / Brenk / NIH MLSMR) · OpenBabel 3.1 (format conversion only) · <code>seyonec/ChemBERTa-zinc-base-v1</code> (HuggingFace, 77M molecules pretrained) · <code>ibm/MoLFormer-XL-both-10pct</code> (frozen encoder for similarity) · Mol2Vec (baseline embedding for ablation).
+      </div>
+
+      <div class="layer"><span class="layer-num">L03</span>NLP / RAG</div>
+      <div class="components">
+        <strong>PubMedBERT</strong> (<code>microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext</code>) for literature embeddings · <code>BAAI/bge-reranker-base</code> for cross-encoder reranking · sentence-transformers 3.0 · LangChain 0.3 (orchestration only, not retrieval) · rank_bm25 1.0 for the lexical channel.
+      </div>
+
+      <div class="layer"><span class="layer-num">L04</span>Local LLM</div>
+      <div class="components">
+        <strong>vLLM 0.6.2</strong> serving <code>meta-llama/Llama-3.1-8B-Instruct</code> in 4-bit AWQ quantization. OpenAI-compatible HTTP shim on <code>vm-rag-llm:8001</code>. Token streaming, prompt-cache enabled. CPU-only mode via OMP threads pinned to NUMA node 1; GPU-ready by config flag.
+      </div>
+
+      <div class="layer"><span class="layer-num">L05</span>Vector / search</div>
+      <div class="components">
+        <strong>ChromaDB 0.5.x</strong> server-mode for the literature index (~100K abstract chunks at 768-dim) · <strong>HNSWlib 0.8</strong> for the molecular index (1M vectors at 128-dim PCA, M=32 efC=200) · FAISS-CPU as a fallback / brute-force comparator only.
+      </div>
+
+      <div class="layer"><span class="layer-num">L06</span>API service</div>
+      <div class="components">
+        <strong>FastAPI 0.115</strong> · Pydantic v2 (typed request/response, automatic OpenAPI 3.1) · Uvicorn workers managed by Gunicorn (4 workers per VM, increase under load) · <code>fastapi-users</code> for OAuth2 + JWT · slowapi for rate limiting · httpx + tenacity for downstream calls · structlog for JSON logging.
+      </div>
+
+      <div class="layer"><span class="layer-num">L07</span>Async / batch</div>
+      <div class="components">
+        <strong>Celery 5.4</strong> with Redis broker · Flower for admin UI (bastion-only) · WeasyPrint 62 for PDF report rendering · pandas 2.2 + pyarrow for batch result Parquet · resumable chunked upload to MinIO via boto3 multipart.
+      </div>
+
+      <div class="layer"><span class="layer-num">L08</span>Datastores</div>
+      <div class="components">
+        <strong>PostgreSQL 16</strong> (with pg_partman for audit_log monthly partitions, pg_stat_statements, pgcrypto for hashing) · <strong>MinIO RELEASE.2024-09</strong> (S3-compatible, ILM rules) · <strong>Redis 7.4</strong> (AOF every-second persistence, used as broker + cache) · SQLAlchemy 2.0 with Alembic migrations.
+      </div>
+
+      <div class="layer"><span class="layer-num">L09</span>Frontend</div>
+      <div class="components">
+        Days 12–17: <strong>Streamlit 1.38</strong> MVP (cached via <code>st.cache_data</code>, RDKit Draw for 2D structures, Recharts via st-recharts, JWT login). Days 13–18 in parallel, ship Day 18: <strong>React 18 + Vite 5 + TypeScript + Tailwind 3.4 + shadcn/ui + TanStack Query 5</strong>. SmilesDrawer for molecule rendering. Auto-generated typed API client from OpenAPI 3.1.
+      </div>
+
+      <div class="layer"><span class="layer-num">L10</span>Infrastructure</div>
+      <div class="components">
+        <strong>Ubuntu 22.04 LTS</strong> on host and all VMs (cloud-init for golden image) · <strong>KVM + libvirt</strong> hypervisor (Proxmox VE acceptable alternative) · <strong>ZFS</strong> on the SSD for snapshot-able VM disks · <strong>Docker 27 + docker-compose v2</strong> · <strong>Traefik 3.0</strong> reverse proxy · NVIDIA Container Toolkit (installed but inactive, GPU-ready).
+      </div>
+
+      <div class="layer"><span class="layer-num">L11</span>Observability</div>
+      <div class="components">
+        <strong>Prometheus 2.55</strong> · <strong>Grafana 11</strong> (5 dashboards by Day 10) · <strong>Loki 3.2</strong> for logs · <strong>Alertmanager 0.27</strong> · OpenTelemetry collector (OTLP → Prometheus + Loki) · <code>node_exporter</code>, <code>postgres_exporter</code>, <code>redis_exporter</code> on respective VMs.
+      </div>
+
+      <div class="layer"><span class="layer-num">L12</span>CI/CD &amp; supply chain</div>
+      <div class="components">
+        <strong>GitHub Actions</strong> (test → build → push to internal Docker registry on bastion → ansible-deploy) · pre-commit (black, ruff, isort, mypy --strict on services/, eslint+prettier on frontend) · <strong>Trivy</strong> image scanning (HIGH+ CVE blocks merge) · <strong>gitleaks</strong> in pre-push hook · <strong>HashiCorp Vault</strong> (POC mode, sops-encrypted YAML as fallback). Conventional commits enforced on main.
+      </div>
+    </div>
+
+    <div class="prose" style="margin-top: 16px;">
+      <p>
+        <strong>Why FastAPI over Flask or Django REST.</strong> FastAPI is async-first (free with our Python 3.12 baseline), generates OpenAPI 3.1 with no extra effort, and Pydantic v2 catches schema bugs at request time rather than at integration time. Harshit shipped this exact framework at Zivoke.
+      </p>
+      <p>
+        <strong>Why ChromaDB over Qdrant or Weaviate or pgvector.</strong> The corpus is 100K chunks &mdash; well within ChromaDB's sweet spot &mdash; and ChromaDB has no operational footprint to speak of. Qdrant wins at million-chunk scale with complex filtering, but we are not there. pgvector would have been fine but adds load to the same Postgres instance that holds our transactional state, which we do not want to mix. Weaviate is overbuilt for our needs.
+      </p>
+      <p>
+        <strong>Why HNSWlib over FAISS for molecular similarity.</strong> HNSWlib has lower RAM overhead at our index size (1M × 128-dim ≈ 0.5&nbsp;GB), simpler persistence to disk, and reliable recall@10 ≥ 0.98 with the M=32, efC=200 configuration we have validated in prior work. FAISS is faster on GPU but we do not have a GPU yet; on CPU at our scale, HNSWlib wins on simplicity-to-recall ratio.
+      </p>
+      <p>
+        <strong>Why Llama-3.1-8B-Instruct over a hosted model.</strong> Customer-data privacy is a hard constraint: pharmaceutical chemistry is patent-sensitive, and we cannot route SMILES strings through a third-party API. The 4-bit AWQ quantization fits in 6&nbsp;GB of RAM and runs on CPU at acceptable latency for the demo. When the GPU node lands in V1, the same model weights move &mdash; no swap, no re-evaluation.
+      </p>
+      <p>
+        <strong>Why Streamlit before React.</strong> A working Streamlit dashboard on Day 12 is worth two weeks of "almost-finished" React. We get stakeholder feedback five days earlier, and the React build (Days 13–18) ports proven flows rather than chasing a moving design. Streamlit is archived on Day 18.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §05 · DATASETS
+     ================================================================ -->
+<section class="section deep" id="datasets">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 05 · datasets</div>
+        <h2>Where the signal comes from</h2>
+      </div>
+      <p class="sub">Public, well-curated, regulator-friendly datasets. Every record is canonicalized, scaffold-split, and versioned in MinIO. No private licenses, no scraped data, no pay-walled corpora &mdash; the whole pipeline is reproducible by anyone with our codebase and an internet connection.</p>
+    </div>
+
+    <div class="prose" style="margin-bottom: 22px;">
+      <p>
+        Toxicity ML lives or dies by data discipline. The same compound appears in five public datasets under three SMILES tautomers and two assay protocols; if we naively union them, the model memorizes the duplicate and reports an inflated AUROC that collapses on the next batch. Day 4 is dedicated entirely to curation: SMILES canonicalization (RDKit <code>MolToSmiles</code> with <code>canonical=True</code>, salt stripped via <code>SaltRemover</code>, charge-neutralized via <code>Uncharger</code>), duplicate merge with a documented conflict-resolution rule (when labels disagree, drop the compound and log the rejection), and Bemis–Murcko scaffold splits for the 70/15/15 train/val/test partition.
+      </p>
+      <p>
+        We use scaffold splits, not random splits, because pharmaceutical reality is that the next compound a chemist asks us about will not look like anything in our training set. A random 70/15/15 split inflates AUROC by 5–10 points compared to scaffold-holdout on the same data; scaffold-holdout is what regulators and serious medicinal chemists trust. Our published metrics will all be scaffold-holdout, with random-split numbers reported separately for benchmarking against the public literature.
+      </p>
+    </div>
+
+    <div class="dataset-grid">
+      <article class="dataset">
+        <div class="ds-name">Tox21</div>
+        <div class="ds-scale">~ 8,000 compounds · 12 endpoints (NR + SR)</div>
+        <p class="ds-use">Multi-task in vitro toxicity classification. Seven nuclear-receptor (androgen, estrogen, glucocorticoid, aromatase, AR-LBD, ER-LBD, AhR) and five stress-response (ARE, ATAD5, HSE, MMP, p53) endpoints. The benchmark every toxicity ML paper compares against; our floor is mean AUROC ≥ 0.78 to match published RF/XGBoost baselines, ceiling ≥ 0.82 to beat them with deep models.</p>
+        <div class="ds-meta">source: NIH NCATS via DeepChem · MoleculeNet</div>
+      </article>
+
+      <article class="dataset">
+        <div class="ds-name">ToxCast</div>
+        <div class="ds-scale">~ 9,000 compounds · 600+ assays</div>
+        <p class="ds-use">Broader in vitro panel from EPA's high-throughput toxicology program. We use the curated subset that overlaps with Tox21 (~3,500 compounds across 50 high-quality assays) for multi-task transfer learning &mdash; pre-train on ToxCast assay panel, fine-tune on Tox21 for the demo endpoints. Scaffold-holdout enforced.</p>
+        <div class="ds-meta">source: EPA ToxCast / CompTox Dashboard</div>
+      </article>
+
+      <article class="dataset">
+        <div class="ds-name">ClinTox</div>
+        <div class="ds-scale">1,478 compounds · 2 endpoints</div>
+        <p class="ds-use">FDA-approved drugs vs. clinical-trial failures (CT_TOX) and clinical-toxicity events (FDA_APPROVED). Small but high-signal for "did this molecule survive humans" &mdash; a genuinely different question from the in-vitro endpoints in Tox21. Imbalanced (~6% positives); we use focal loss and report AUPRC alongside AUROC.</p>
+        <div class="ds-meta">source: MoleculeNet · originally Gayvert et al. 2016</div>
+      </article>
+
+      <article class="dataset">
+        <div class="ds-name">SIDER</div>
+        <div class="ds-scale">1,427 marketed drugs · 27 system-organ classes</div>
+        <p class="ds-use">Adverse drug reaction labels mapped to MedDRA system-organ classes (cardiac, hepatobiliary, renal, etc.). Used as a multi-task auxiliary signal during deep-model training &mdash; the GAT and ChemBERTa heads predict SIDER classes alongside Tox21, which improves the rare-endpoint Tox21 numbers by 1–2 AUROC points in our prior work.</p>
+        <div class="ds-meta">source: SIDER 4.1 · Kuhn et al.</div>
+      </article>
+
+      <article class="dataset">
+        <div class="ds-name">hERG (ChEMBL-derived)</div>
+        <div class="ds-scale">~ 13,000 compounds</div>
+        <p class="ds-use">Cardiotoxicity via the hERG potassium channel &mdash; the single most important off-target in drug discovery and the cause of the FDA's CIPA initiative. Binary label: blocker (IC50 ≤ 10 μM) vs non-blocker. Sarthak's prior cardiotoxicity work hits 92% AUC on a related dataset; our target on this curated set is AUROC ≥ 0.88 on scaffold-holdout.</p>
+        <div class="ds-meta">source: ChEMBL 34 · curated via Karim et al. protocol</div>
+      </article>
+
+      <article class="dataset">
+        <div class="ds-name">DILIrank</div>
+        <div class="ds-scale">~ 1,000 compounds · 4 severity classes</div>
+        <p class="ds-use">FDA's drug-induced liver injury classification: most-DILI-concern, less-DILI-concern, no-DILI-concern, ambiguous. We collapse to binary (most/less vs no) for the headline endpoint and keep the four-class version for the model card. Small dataset, so we use it strictly as test-set / external validation, never as primary training data.</p>
+        <div class="ds-meta">source: FDA DILIrank · Chen et al. 2016</div>
+      </article>
+
+      <article class="dataset">
+        <div class="ds-name">PubChem (subset)</div>
+        <div class="ds-scale">1,000,000 compounds · embedding only</div>
+        <p class="ds-use">Backbone of the molecular similarity index (CAP-04). We sample 1M compounds from PubChem Compound Database (filtered to drug-like by Lipinski Ro5 + MW between 100–800 Da + non-toxic metals excluded), embed with frozen MolFormer-XL, PCA-reduce to 128 dims, index in HNSWlib. No labels needed; this is a pure neighborhood store.</p>
+        <div class="ds-meta">source: PubChem · NCBI · drug-like subset</div>
+      </article>
+
+      <article class="dataset">
+        <div class="ds-name">PubMed (toxicology slice)</div>
+        <div class="ds-scale">100,000 abstracts</div>
+        <p class="ds-use">Backbone of the biomedical RAG (CAP-02, CAP-03). Pulled via NCBI E-utilities filtered by the seven MeSH terms (Toxicity, DILI, hERG, Cardiotoxicity, Genotoxicity, Nephrotoxicity, Neurotoxicity). Chunked to 256-token windows with 32-token overlap, embedded with PubMedBERT, indexed in ChromaDB. Abstracts only; we never store full text (license discipline) but link out to DOI for full reads.</p>
+        <div class="ds-meta">source: NCBI PubMed via E-utilities · MeSH-filtered</div>
+      </article>
+    </div>
+
+    <ul class="anchor-list" style="margin-top: 28px;">
+      <li><strong>Provenance discipline:</strong> Each Parquet file under <code>processed/features/v0/</code> in MinIO carries a sidecar <code>.meta.json</code> recording the source dataset version, the curation script git-hash, the SMILES count before and after each filter step, and the timestamp. This is what regulators ask for.</li>
+      <li><strong>Conflict resolution:</strong> When the same canonical SMILES appears with disagreeing labels across datasets, we drop the compound entirely and log the rejection to <code>audit_log</code> with reason code <code>conflict_drop</code>. We never silently pick one label.</li>
+      <li><strong>Scaffold overlap target:</strong> Tanimoto similarity between train and test scaffold sets must stay below 0.4 mean &mdash; verified on Day 4 as a precondition for any model training. If overlap exceeds 0.4 we re-split with a stricter scaffold algorithm.</li>
+      <li><strong>External validation set:</strong> A 200-compound held-out set assembled from recent (post-2023) publications is reserved on Day 4 and never touched until Day 19. Final demo metrics include this external set, not just internal scaffold-holdout.</li>
+    </ul>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §06 · TIMELINE — opening (week-1 and week-2 strips)
+     Continued in part 3
+     ================================================================ -->
+<section class="section" id="timeline">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 06 · timeline</div>
+        <h2>Twenty working days, week by week</h2>
+      </div>
+      <p class="sub">Click any day card for the detailed objectives, per-engineer task list, KPIs, risks, and end-of-day exit criteria. The timeline is organized into four phases: Foundation (Days 1–5), Deep Models &amp; RAG (Days 6–10), Integration (Days 11–15), Polish &amp; Demo (Days 16–20).</p>
+    </div>
+
+    <div class="prose" style="margin-bottom: 32px;">
+      <p>
+        Each week ends on a deliverable that is independently demoable. Week 1 ends with classical baselines beating published RF/XGBoost numbers on Tox21 and hERG &mdash; a result we could ship on its own if the rest of the POC fell apart. Week 2 ends with a working RAG plus deep-model improvements, demonstrated as a mid-POC checkpoint to stakeholders on Day 10. Week 3 ends with a security-hardened, batch-capable, dashboard-fronted system. Week 4 ends with the live demo on Day 20.
+      </p>
+      <p>
+        We schedule deliberately: Mondays and Tuesdays are heads-down build days, Wednesdays carry mid-week reviews, Thursdays carry integration testing, Fridays carry retros and snapshot discipline. The 09:30 standup is fifteen minutes flat with three questions each (yesterday, today, blockers). The 18:00 EOD checkpoint is a written status update in the shared <code>#poc-war-room</code> channel; if the EOD criterion for the day is not met, the next day's plan opens with a recovery slot before the new objectives.
+      </p>
+    </div>
+
+    <div class="weeks">
+
+      <!-- =====================================================
+           WEEK 01 — Foundation
+           ===================================================== -->
+      <div class="week">
+        <aside class="week-side" style="--week-color: var(--p-foundation);">
+          <div class="week-num">Week 01 · Foundation</div>
+          <div class="week-title">Hardware, data, baselines</div>
+          <div class="week-dates">07 May → 13 May 2026<br>Thu · Fri · Mon · Tue · Wed</div>
+          <p class="week-blurb">Lay the slab. By Friday EOD the host is partitioned, the datastores hold curated data, and the classical baselines have hit publishable AUROC numbers on Tox21 and hERG. If the POC stops here, we still have something to show.</p>
+        </aside>
+        <div class="week-days">
+          <a class="day-card" href="day01.html">
+            <div class="day-id">Day 01 <span class="phase">· foundation</span></div>
+            <div class="day-title">Mobilization &amp; Hardware Bring-up</div>
+            <div class="day-date">Thu · 07 May 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip j">Jitendra · lead</span>
+              <span class="owner-chip h">Harshit</span>
+              <span class="owner-chip s">Sarthak</span>
+            </div>
+          </a>
+          <a class="day-card" href="day02.html">
+            <div class="day-id">Day 02 <span class="phase">· foundation</span></div>
+            <div class="day-title">VM Provisioning &amp; Network Topology</div>
+            <div class="day-date">Fri · 08 May 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip j">Jitendra · lead</span>
+              <span class="owner-chip h">Harshit</span>
+            </div>
+          </a>
+          <a class="day-card" href="day03.html">
+            <div class="day-id">Day 03 <span class="phase">· foundation</span></div>
+            <div class="day-title">Data Stores: Postgres, MinIO, Redis, ChromaDB</div>
+            <div class="day-date">Mon · 11 May 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip j">Jitendra · lead</span>
+              <span class="owner-chip h">Harshit</span>
+            </div>
+          </a>
+          <a class="day-card" href="day04.html">
+            <div class="day-id">Day 04 <span class="phase">· foundation</span></div>
+            <div class="day-title">Toxicity Dataset Curation &amp; Feature Engineering</div>
+            <div class="day-date">Tue · 12 May 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip s">Sarthak · lead</span>
+              <span class="owner-chip h">Harshit</span>
+              <span class="owner-chip j">Jitendra</span>
+            </div>
+          </a>
+          <a class="day-card" href="day05.html">
+            <div class="day-id">Day 05 <span class="phase">· foundation</span></div>
+            <div class="day-title">Baseline Toxicity Models &mdash; RF &amp; XGBoost</div>
+            <div class="day-date">Wed · 13 May 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip s">Sarthak · lead</span>
+              <span class="owner-chip h">Harshit</span>
+              <span class="owner-chip j">Jitendra</span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <!-- =====================================================
+           WEEK 02 — Deep Models · RAG
+           ===================================================== -->
+      <div class="week">
+        <aside class="week-side" style="--week-color: var(--p-deep);">
+          <div class="week-num">Week 02 · Deep Models &amp; RAG</div>
+          <div class="week-title">GNN, embeddings, biomedical retrieval, on-prem LLM</div>
+          <div class="week-dates">14 May → 20 May 2026<br>Thu · Fri · Mon · Tue · Wed</div>
+          <p class="week-blurb">Move from fingerprints to learned representations. Stand up the literature RAG. Bring an open LLM on-prem. Day 10 is a mid-POC checkpoint: every capability has a working slice; we lock the OpenAPI v0.5 contract and freeze schemas.</p>
+        </aside>
+        <div class="week-days">
+          <a class="day-card" href="day06.html">
+            <div class="day-id">Day 06 <span class="phase">· deep models</span></div>
+            <div class="day-title">GNN &amp; ChemBERTa Toxicity Models</div>
+            <div class="day-date">Thu · 14 May 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip s">Sarthak · lead</span>
+              <span class="owner-chip h">Harshit</span>
+            </div>
+          </a>
+          <a class="day-card" href="day07.html">
+            <div class="day-id">Day 07 <span class="phase">· deep models</span></div>
+            <div class="day-title">Molecular Embedding &amp; Similarity Search</div>
+            <div class="day-date">Fri · 15 May 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip s">Sarthak · lead</span>
+              <span class="owner-chip h">Harshit</span>
+              <span class="owner-chip j">Jitendra</span>
+            </div>
+          </a>
+          <a class="day-card" href="day08.html">
+            <div class="day-id">Day 08 <span class="phase">· rag</span></div>
+            <div class="day-title">PubMed Ingestion &amp; Biomedical RAG Index</div>
+            <div class="day-date">Mon · 18 May 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip h">Harshit · lead</span>
+              <span class="owner-chip s">Sarthak</span>
+              <span class="owner-chip j">Jitendra</span>
+            </div>
+          </a>
+          <a class="day-card" href="day09.html">
+            <div class="day-id">Day 09 <span class="phase">· rag</span></div>
+            <div class="day-title">Local LLM Deployment &amp; Evidence Summarization</div>
+            <div class="day-date">Tue · 19 May 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip h">Harshit · lead</span>
+              <span class="owner-chip j">Jitendra</span>
+              <span class="owner-chip s">Sarthak</span>
+            </div>
+          </a>
+          <a class="day-card" href="day10.html">
+            <div class="day-id">Day 10 <span class="phase">· checkpoint</span></div>
+            <div class="day-title">Mid-POC Review &amp; Hardening</div>
+            <div class="day-date">Wed · 20 May 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip s">Sarthak</span>
+              <span class="owner-chip h">Harshit</span>
+              <span class="owner-chip j">Jitendra</span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <!-- =====================================================
+           WEEK 03 — Integration
+           ===================================================== -->
+      <div class="week">
+        <aside class="week-side" style="--week-color: var(--p-integ);">
+          <div class="week-num">Week 03 · Integration</div>
+          <div class="week-title">Orchestration, dashboard, batch, security</div>
+          <div class="week-dates">21 May → 27 May 2026<br>Thu · Fri · Mon · Tue · Wed</div>
+          <p class="week-blurb">Stitch the pieces. Day 11 lands the orchestrated <code>/analyze</code> endpoint that exercises every downstream service in one call. Day 12 ships a Streamlit MVP for stakeholder feedback. Day 13 begins the React production frontend. Day 14 lands batch scoring at 10K-compound scale. Day 15 hardens authentication, RBAC, audit, and secrets management.</p>
+        </aside>
+        <div class="week-days">
+          <a class="day-card" href="day11.html">
+            <div class="day-id">Day 11 <span class="phase">· integration</span></div>
+            <div class="day-title">AI-Assisted Molecule Analysis Engine</div>
+            <div class="day-date">Thu · 21 May 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip h">Harshit · lead</span>
+              <span class="owner-chip s">Sarthak</span>
+              <span class="owner-chip j">Jitendra</span>
+            </div>
+          </a>
+          <a class="day-card" href="day12.html">
+            <div class="day-id">Day 12 <span class="phase">· integration</span></div>
+            <div class="day-title">Web Dashboard &mdash; Streamlit MVP</div>
+            <div class="day-date">Fri · 22 May 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip h">Harshit · lead</span>
+              <span class="owner-chip s">Sarthak</span>
+              <span class="owner-chip j">Jitendra</span>
+            </div>
+          </a>
+          <a class="day-card" href="day13.html">
+            <div class="day-id">Day 13 <span class="phase">· integration</span></div>
+            <div class="day-title">Production Frontend Skeleton &mdash; React + Tailwind</div>
+            <div class="day-date">Mon · 25 May 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip h">Harshit · lead</span>
+              <span class="owner-chip s">Sarthak</span>
+              <span class="owner-chip j">Jitendra</span>
+            </div>
+          </a>
+          <a class="day-card" href="day14.html">
+            <div class="day-id">Day 14 <span class="phase">· integration</span></div>
+            <div class="day-title">Batch Scoring &amp; Export Pipelines</div>
+            <div class="day-date">Tue · 26 May 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip h">Harshit · lead</span>
+              <span class="owner-chip s">Sarthak</span>
+              <span class="owner-chip j">Jitendra</span>
+            </div>
+          </a>
+          <a class="day-card" href="day15.html">
+            <div class="day-id">Day 15 <span class="phase">· integration</span></div>
+            <div class="day-title">Security, Authentication &amp; Audit</div>
+            <div class="day-date">Wed · 27 May 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip j">Jitendra · lead</span>
+              <span class="owner-chip h">Harshit</span>
+              <span class="owner-chip s">Sarthak</span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <!-- =====================================================
+           WEEK 04 — Polish & Demo
+           ===================================================== -->
+      <div class="week">
+        <aside class="week-side" style="--week-color: var(--p-polish);">
+          <div class="week-num">Week 04 · Polish &amp; Demo</div>
+          <div class="week-title">Performance, explainability, final UI, demo</div>
+          <div class="week-dates">28 May → 03 Jun 2026<br>Thu · Fri · Mon · Tue · Wed</div>
+          <p class="week-blurb">Final week. Day 16 load-tests every endpoint and tunes the bottlenecks. Day 17 lands explainability and the OECD-aligned model cards. Day 18 retires Streamlit and ships the production React frontend. Day 19 freezes documentation and rehearses the demo twice. Day 20 is the live demo and handover.</p>
+        </aside>
+        <div class="week-days">
+          <a class="day-card" href="day16.html">
+            <div class="day-id">Day 16 <span class="phase">· polish</span></div>
+            <div class="day-title">Performance &amp; Load Testing</div>
+            <div class="day-date">Thu · 28 May 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip j">Jitendra · lead</span>
+              <span class="owner-chip h">Harshit</span>
+              <span class="owner-chip s">Sarthak</span>
+            </div>
+          </a>
+          <a class="day-card" href="day17.html">
+            <div class="day-id">Day 17 <span class="phase">· polish</span></div>
+            <div class="day-title">Explainability, Trust &amp; Compliance Layer</div>
+            <div class="day-date">Fri · 29 May 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip s">Sarthak · lead</span>
+              <span class="owner-chip h">Harshit</span>
+            </div>
+          </a>
+          <a class="day-card" href="day18.html">
+            <div class="day-id">Day 18 <span class="phase">· polish</span></div>
+            <div class="day-title">React Frontend Completion &amp; Visual Polish</div>
+            <div class="day-date">Mon · 01 Jun 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip h">Harshit · lead</span>
+              <span class="owner-chip s">Sarthak</span>
+              <span class="owner-chip j">Jitendra</span>
+            </div>
+          </a>
+          <a class="day-card" href="day19.html">
+            <div class="day-id">Day 19 <span class="phase">· polish</span></div>
+            <div class="day-title">Documentation, Runbooks &amp; Demo Rehearsal</div>
+            <div class="day-date">Tue · 02 Jun 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip s">Sarthak</span>
+              <span class="owner-chip h">Harshit</span>
+              <span class="owner-chip j">Jitendra</span>
+            </div>
+          </a>
+          <a class="day-card" href="day20.html">
+            <div class="day-id">Day 20 <span class="phase">· demo</span></div>
+            <div class="day-title">Final Demo &amp; POC Handover</div>
+            <div class="day-date">Wed · 03 Jun 2026</div>
+            <div class="day-owners">
+              <span class="owner-chip s">Sarthak · lead</span>
+              <span class="owner-chip h">Harshit</span>
+              <span class="owner-chip j">Jitendra</span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+    </div><!-- /.weeks -->
+
+    <div class="divider"></div>
+
+    <div class="prose">
+      <p>
+        <strong>Reading the timeline.</strong> Each day card carries a phase tag (foundation / deep&nbsp;models / rag / integration / checkpoint / polish / demo), a date, and the lead engineer plus supporting engineers for that day. Click any card to open the day's full plan: objectives, per-engineer task breakdown to a 30-minute resolution, deliverables, KPIs with measurable thresholds, identified risks with mitigations, and the EOD exit-criterion check.
+      </p>
+      <p>
+        <strong>The two checkpoints.</strong> Day 10 (mid-POC review) is the formal stakeholder checkpoint &mdash; we demo the working slice end-to-end, lock the OpenAPI v0.5 contract, freeze the Postgres schema, and decide go/no-go on the Week 3 plan. Day 19 is the demo rehearsal &mdash; full dry-run of the Day 20 demo script, twice, with one of the engineers playing the customer asking questions. If Day 19 rehearsals do not meet the timing target (12 minutes happy-path, 18 minutes with Q&amp;A), Day 20 morning is reserved for a third rehearsal before the customer arrives.
+      </p>
+      <p>
+        <strong>Slip discipline.</strong> If a day's EOD criterion is not met, the next day opens with a recovery slot before the new objectives. Slips are logged in <code>docs/slip-register.md</code> with cause and recovery, and reviewed at the Wednesday mid-week sync. Two slips in a single week trigger a scope-cut conversation with stakeholders &mdash; we cut from the bottom of the polish list (e.g., a third explanation modality, a fourth load-test scenario), never from the core capabilities.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §07 · GOVERNANCE & RITUALS
+     ================================================================ -->
+<section class="section deep" id="governance">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 07 · governance &amp; rituals</div>
+        <h2>How we run the twenty days</h2>
+      </div>
+      <p class="sub">Three engineers can communicate informally most of the time, but POCs go off the rails when nobody writes anything down. Below is the minimum ceremony we keep &mdash; nothing optional, nothing more.</p>
+    </div>
+
+    <div class="prose" style="margin-bottom: 22px;">
+      <p>
+        We run a single Slack-style channel <code>#poc-war-room</code> for everything synchronous: standups, blockers, EOD checkpoints, ad-hoc help requests. A second channel <code>#poc-stakeholders</code> is broadcast-only &mdash; the team posts a Friday-EOD weekly summary and milestone announcements; stakeholders read but do not interrupt. All technical decisions of any consequence are written into <code>docs/decisions/</code> as numbered ADRs (Architecture Decision Records, MADR template) so the next team can see why a choice was made, not just what it was.
+      </p>
+      <p>
+        The work week is Monday through Friday. Saturdays and Sundays are weekends and the schedule explicitly accounts for that &mdash; Day 1 is Thursday 7 May, Day 5 is Wednesday 13 May (skipping the 9–10 May weekend), and so on through Day 20 on Wednesday 3 June. Nothing reasonable should require weekend work; if something does, the standup the following Monday opens with why and what we change so it does not recur.
+      </p>
+    </div>
+
+    <div class="arch-grid">
+
+      <div class="arch-tier" style="--tier-color: var(--teal);">
+        <div class="arch-tier-head">
+          <div class="arch-tier-title">09:30 IST · Daily standup &mdash; 15 minutes flat</div>
+          <div class="arch-tier-tag">ritual 01</div>
+        </div>
+        <div class="arch-tier-body">
+          Each engineer answers three questions in two minutes: <em>what closed yesterday, what opens today, what is blocked.</em> No solutioning during standup &mdash; if a discussion exceeds 60 seconds it spawns a follow-up huddle after standup with only the affected engineers. The standup ends with a one-line "today's risk" call from each engineer &mdash; the single thing most likely to derail the day's EOD criterion.
+        </div>
+        <div class="arch-flow">
+          <span class="node">sarthak (2 min)</span><span class="arrow">·</span>
+          <span class="node">harshit (2 min)</span><span class="arrow">·</span>
+          <span class="node">jitendra (2 min)</span><span class="arrow">·</span>
+          <span class="node">risks (3 min)</span><span class="arrow">·</span>
+          <span class="node">break (15:00 elapsed)</span>
+        </div>
+      </div>
+
+      <div class="arch-tier" style="--tier-color: var(--navy);">
+        <div class="arch-tier-head">
+          <div class="arch-tier-title">18:00 IST · EOD checkpoint &mdash; written</div>
+          <div class="arch-tier-tag">ritual 02</div>
+        </div>
+        <div class="arch-tier-body">
+          A written status post in <code>#poc-war-room</code>, one message per engineer, three lines maximum: <strong>did:</strong> what shipped today; <strong>state:</strong> green / amber / red on the day's EOD criterion; <strong>next:</strong> what tomorrow's first hour looks like. The lead for the day appends a fourth line: the day's EOD criterion as <em>met / not met</em>, with a one-sentence justification. If <em>not met</em>, the next day's plan opens with a recovery slot before its own objectives.
+        </div>
+        <div class="arch-flow">
+          <span class="node">3 status posts</span><span class="arrow">→</span>
+          <span class="node">lead verdict</span><span class="arrow">→</span>
+          <span class="node">recovery decision</span><span class="arrow">→</span>
+          <span class="node">tomorrow's day-card prepped</span>
+        </div>
+      </div>
+
+      <div class="arch-tier" style="--tier-color: var(--amber);">
+        <div class="arch-tier-head">
+          <div class="arch-tier-title">Wednesday 14:00 · Mid-week sync &mdash; 30 minutes</div>
+          <div class="arch-tier-tag">ritual 03</div>
+        </div>
+        <div class="arch-tier-body">
+          A working-week health-check halfway through the week. Walk the slip register. Walk the risk register. Decide whether any P2 risk needs to be escalated to P1. Decide whether the current week is on track for its Friday-EOD deliverable; if not, decide what to cut from the bottom. Held on Wednesdays because that gives us Thursday and Friday to act on the decisions.
+        </div>
+        <div class="arch-flow">
+          <span class="node">slip register</span><span class="arrow">→</span>
+          <span class="node">risk register</span><span class="arrow">→</span>
+          <span class="node">cut decisions</span><span class="arrow">→</span>
+          <span class="node">friday-EOD plan</span>
+        </div>
+      </div>
+
+      <div class="arch-tier" style="--tier-color: var(--p-polish);">
+        <div class="arch-tier-head">
+          <div class="arch-tier-title">Friday 17:00 · Weekly retro + stakeholder note &mdash; 45 min</div>
+          <div class="arch-tier-tag">ritual 04</div>
+        </div>
+        <div class="arch-tier-body">
+          Closed-door retro for the three engineers (15 min): what worked, what did not, one thing to change next week. Then 15 minutes to draft the broadcast note for <code>#poc-stakeholders</code> &mdash; what shipped this week, what blockers were resolved, what is on deck for next week, any decisions stakeholders need to weigh in on. 15 minutes for snapshot discipline (Jitendra: snapshot every VM with the suffix <code>-week-N-close</code>) and Git tagging (Harshit: tag main with <code>weekN-close-vN.M.P</code>).
+        </div>
+        <div class="arch-flow">
+          <span class="node">retro (15 min)</span><span class="arrow">→</span>
+          <span class="node">stakeholder note (15 min)</span><span class="arrow">→</span>
+          <span class="node">snapshots + tags (15 min)</span><span class="arrow">→</span>
+          <span class="node">weekend</span>
+        </div>
+      </div>
+
+      <div class="arch-tier" style="--tier-color: var(--crimson);">
+        <div class="arch-tier-head">
+          <div class="arch-tier-title">Day 10 · Mid-POC checkpoint &mdash; 90 minutes with stakeholders</div>
+          <div class="arch-tier-tag">ritual 05 · once</div>
+        </div>
+        <div class="arch-tier-body">
+          The formal mid-POC review. Sarthak walks the model performance dashboard and the dataset curation report. Harshit walks the working <code>/analyze</code> demo on three named compounds (Doxorubicin known-toxic, Aspirin known-safe, Thalidomide known-historical-tragedy) and walks the OpenAPI v0.5 contract. Jitendra walks the Grafana dashboards and the backup-restore drill log. Stakeholders ask questions. Outcome: a written go/no-go on the Week 3 plan, the OpenAPI contract frozen at v0.5, and any scope adjustments captured as ADRs.
+        </div>
+        <div class="arch-flow">
+          <span class="node">model walk (20 min)</span><span class="arrow">→</span>
+          <span class="node">demo (20 min)</span><span class="arrow">→</span>
+          <span class="node">infra walk (10 min)</span><span class="arrow">→</span>
+          <span class="node">Q&amp;A (30 min)</span><span class="arrow">→</span>
+          <span class="node">decisions (10 min)</span>
+        </div>
+      </div>
+
+      <div class="arch-tier" style="--tier-color: var(--moss);">
+        <div class="arch-tier-head">
+          <div class="arch-tier-title">Day 19 · Demo rehearsal &mdash; twice, end-to-end</div>
+          <div class="arch-tier-tag">ritual 06 · once</div>
+        </div>
+        <div class="arch-tier-body">
+          Full dry-run of the Day 20 demo script. The team rotates: round 1 has Sarthak driving the demo and Harshit playing the customer (asking pointed questions about model limitations, edge cases, why we picked Llama not GPT, how the system handles novel scaffolds); round 2 has Harshit driving and Jitendra playing the customer (asking pointed questions about availability, observability, security, how a regulator would audit this). Timing target: 12 minutes happy path, 18 minutes with Q&amp;A. If either round overshoots, a third rehearsal is scheduled for Day 20 morning before the customer arrives.
+        </div>
+        <div class="arch-flow">
+          <span class="node">round 1 (30 min)</span><span class="arrow">→</span>
+          <span class="node">retro (15 min)</span><span class="arrow">→</span>
+          <span class="node">round 2 (30 min)</span><span class="arrow">→</span>
+          <span class="node">final fixes (60 min)</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="divider on-deep"></div>
+
+    <div class="prose">
+      <p>
+        <strong>Decision discipline.</strong> Anything with cross-engineer impact or any architecture-level choice gets an ADR in <code>docs/decisions/NNNN-title.md</code>. The format is the MADR template: context, options considered, decision, consequences. We keep them short &mdash; one page or less &mdash; but we do keep them. By Day 20 we expect 12&ndash;18 ADRs; a handover team picking up the platform should be able to read the ADRs in an hour and understand the architecture as a chain of explicit choices, not as found code.
+      </p>
+      <p>
+        <strong>Slip register.</strong> The file <code>docs/slip-register.md</code> is a chronological log of every EOD criterion that was missed, the cause, the recovery, and the impact on subsequent days. We expect 2&ndash;4 slips across the POC &mdash; that is normal &mdash; and the value of recording them is to spot patterns (always Wednesdays? always Sarthak's lane? always model training?) before they become structural problems.
+      </p>
+      <p>
+        <strong>The "no surprises" rule.</strong> If something is going to slip a day or more, the lead for that day raises it in <code>#poc-war-room</code> at least 24 hours before the EOD it threatens, with a proposed recovery and a request for help if needed. Stakeholders do not learn about slips on the demo day. Stakeholders do not even learn about slips in the Friday note &mdash; they learn at the next mid-week sync, with a plan attached. This is the single most important social rule of the POC.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §08 · RISK REGISTER
+     ================================================================ -->
+<section class="section" id="risks">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 08 · risk register</div>
+        <h2>Top risks &mdash; named, owned, mitigated</h2>
+      </div>
+      <p class="sub">Twelve risks identified up front. Each has a probability (P) and impact (I) score on a 1&ndash;5 scale; severity = P × I. Each has a single owner and a documented mitigation. The register is reviewed at every Wednesday mid-week sync; new risks join, mitigated risks retire.</p>
+    </div>
+
+    <div class="prose" style="margin-bottom: 22px;">
+      <p>
+        We score impact in days-of-slip-equivalent: I=1 means &lt; half a day, I=3 means a full day to two days, I=5 means a week or terminal-to-the-POC. We score probability against the twenty-day window, not against industry baselines. Severity ≥ 12 is a P1 risk and earns a daily check-in line in standup; severity 6&ndash;11 is P2 (Wednesday review only); below 6 is acknowledged-and-monitored.
+      </p>
+      <p>
+        Risks are <em>specific</em>. "Models might underperform" is not a risk; it is hand-waving. "GAT scaffold-holdout AUROC on Tox21 lands below 0.78, the published RF baseline" is a risk &mdash; we know what it means, who owns it, and what to do about it.
+      </p>
+    </div>
+
+    <div class="table-wrap">
+      <table class="lab-table">
+        <thead>
+          <tr>
+            <th style="width:40px;">#</th>
+            <th>Risk</th>
+            <th style="width:80px;">Owner</th>
+            <th class="num" style="width:50px;">P</th>
+            <th class="num" style="width:50px;">I</th>
+            <th class="num" style="width:60px;">Sev</th>
+            <th>Mitigation</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <tr>
+            <td class="code">R-01</td>
+            <td><strong>GAT or ChemBERTa fine-tunes underperform RF/XGBoost baseline on scaffold-holdout</strong> &mdash; a classic deep-learning trap when training data is small or when classical features are already strong.</td>
+            <td class="code">Sarthak</td>
+            <td class="num">3</td>
+            <td class="num">4</td>
+            <td class="num"><strong>12</strong></td>
+            <td>Day 5 baselines are a hard gate &mdash; we do not move to Day 6 deep models if XGBoost is below published numbers. Day 6 deep training uses early-stopping on val AUPRC and ships only the best-of-three across baseline / GAT / ChemBERTa per endpoint. If the deep model loses by &gt; 1 AUROC point, we ship the baseline and document the negative result.</td>
+          </tr>
+
+          <tr>
+            <td class="code">R-02</td>
+            <td><strong>vLLM CPU-only throughput on <code>vm-rag-llm</code> is too slow for live demo</strong> &mdash; Llama-3.1-8B at 4-bit AWQ on 12 vCPU may produce only 6&ndash;12 tokens/sec, making a typical 400-token RAG answer take 30&ndash;60 seconds.</td>
+            <td class="code">Harshit</td>
+            <td class="num">4</td>
+            <td class="num">3</td>
+            <td class="num"><strong>12</strong></td>
+            <td>Day 9 measures actual tokens/sec on representative prompts. If &lt; 15 tok/s, three mitigations stack: (a) pre-cache the Day 20 demo answers in Redis with 24h TTL; (b) reduce the LLM context window to top-4 retrieved docs instead of top-6; (c) prepare a recorded demo video as a fallback. The GPU upgrade path is documented in the Day 9 runbook and presented openly during the demo as the path to V1 latency.</td>
+          </tr>
+
+          <tr>
+            <td class="code">R-03</td>
+            <td><strong>NCBI E-utilities rate-limits or temporarily blocks our IP</strong> during PubMed ingestion (Day 8) &mdash; without an API key, the limit is 3 req/s, and 100K abstracts at 3 req/s is ~9 hours.</td>
+            <td class="code">Harshit</td>
+            <td class="num">3</td>
+            <td class="num">3</td>
+            <td class="num"><strong>9</strong></td>
+            <td>Register an NCBI API key on Day 1 (raises limit to 10 req/s, ~3 hours). Implement exponential-backoff retry with jitter. Cache every successful response to disk so re-ingestion does not re-query. Maintain a stable HTTP <code>User-Agent</code> identifying our team contact email per NCBI policy. If still blocked, fall back to PubMed Baseline FTP download (full corpus, larger but offline).</td>
+          </tr>
+
+          <tr>
+            <td class="code">R-04</td>
+            <td><strong>Postgres schema churn breaks downstream services</strong> &mdash; the Day 3 schema is v0; every endpoint built on Day 5+ assumes its shape. An unannounced ALTER on Day 12 breaks every Celery worker.</td>
+            <td class="code">Harshit</td>
+            <td class="num">3</td>
+            <td class="num">3</td>
+            <td class="num"><strong>9</strong></td>
+            <td>Day 5 freezes the v0 schema and every subsequent change must go through an Alembic migration with a written ADR. Migrations are reviewed in pull-request before merge. The CI pipeline runs all migrations against a fresh Postgres on every PR and fails the build on any migration error or post-migration test regression.</td>
+          </tr>
+
+          <tr>
+            <td class="code">R-05</td>
+            <td><strong>NUMA mis-pinning kills throughput silently</strong> &mdash; a misconfigured libvirt domain XML lets the kernel schedule a vLLM thread on the opposite socket, halving effective throughput while CPU still reads as "well-utilized" in Grafana.</td>
+            <td class="code">Jitendra</td>
+            <td class="num">3</td>
+            <td class="num">3</td>
+            <td class="num"><strong>9</strong></td>
+            <td>Day 2 verifies pinning with <code>numactl --hardware</code> on host and <code>numactl --show</code> from inside each VM. The Day 5 Prometheus dashboard includes per-VM cross-NUMA memory access counters; an alert fires if cross-NUMA traffic exceeds 10% of total. Pinning is re-verified after every libvirt config change.</td>
+          </tr>
+
+          <tr>
+            <td class="code">R-06</td>
+            <td><strong>Streamlit-to-React frontend handover slips past Day 18</strong> &mdash; UI work has historically been the most over-optimistic estimate on every project, and the temptation to keep polishing eats integration testing time.</td>
+            <td class="code">Harshit</td>
+            <td class="num">3</td>
+            <td class="num">3</td>
+            <td class="num"><strong>9</strong></td>
+            <td>Streamlit is kept fully functional through Day 18 as the safety net. The React frontend has an explicit "good enough to ship" definition (login, analyze, batch, similarity, literature, history, compliance pages all working with at-least-Streamlit-parity, Lighthouse perf ≥ 90, zero console errors). If on Day 18 morning the React UI is not at parity, we demo Day 20 with Streamlit and ship React in a follow-up week. This is communicated to stakeholders if it happens, not silently swapped.</td>
+          </tr>
+
+          <tr>
+            <td class="code">R-07</td>
+            <td><strong>Local LLM hallucinates citations</strong> &mdash; the model fabricates a PMID that does not exist in our index, or attaches a real PMID to a claim that PMID does not actually support. Either is a credibility-killing demo failure.</td>
+            <td class="code">Harshit</td>
+            <td class="num">3</td>
+            <td class="num">4</td>
+            <td class="num"><strong>12</strong></td>
+            <td>The RAG prompt includes an explicit instruction: "every claim must end with [PMID:X]; if no source supports a claim, do not make the claim". After generation, a post-processor validates every cited PMID against the ChromaDB index and rejects answers with unknown PMIDs (re-runs once, then returns an "insufficient evidence" message). Day 9 evaluation includes a 30-prompt manual hallucination audit by Sarthak; the target is &lt; 5% hallucinated citations.</td>
+          </tr>
+
+          <tr>
+            <td class="code">R-08</td>
+            <td><strong>Backup/restore drill on Day 3 has not been re-run by demo day</strong> &mdash; a regulator-grade audit assumes backups actually restore, but POC teams rarely re-test after the first green run.</td>
+            <td class="code">Jitendra</td>
+            <td class="num">3</td>
+            <td class="num">3</td>
+            <td class="num"><strong>9</strong></td>
+            <td>Friday weekly retro includes a backup-restore drill on a clone of <code>vm-data-store</code>. Four drills total (week-1 Friday through week-4 Friday). Drills test: pgBackRest WAL replay, MinIO bucket-level restore, ChromaDB volume snapshot rollback, full VM restore from <code>-week-N-close</code> snapshot. Drill log committed to <code>docs/backup-drills.md</code> with timestamps and durations.</td>
+          </tr>
+
+          <tr>
+            <td class="code">R-09</td>
+            <td><strong>SMILES canonicalization differs subtly between training-time RDKit and inference-time RDKit</strong> &mdash; if the inference-time canonicalization produces a slightly different string (different RDKit version, different aromaticity model), the model receives unfamiliar input and accuracy collapses.</td>
+            <td class="code">Sarthak</td>
+            <td class="num">2</td>
+            <td class="num">4</td>
+            <td class="num"><strong>8</strong></td>
+            <td>RDKit version pinned exactly (<code>2024.03.5</code>) in <code>pyproject.toml</code>; CI fails on any deviation. The canonicalization function is shared code (<code>aitip_chem.canonicalize</code>) imported by both training and inference paths. A unit test covers 200 representative SMILES with known canonical forms; runs in CI on every PR. Audit log records the canonicalized form as a hash so production drift is detectable.</td>
+          </tr>
+
+          <tr>
+            <td class="code">R-10</td>
+            <td><strong>HuggingFace model downloads fail or are throttled mid-POC</strong> &mdash; ChemBERTa, MolFormer-XL, PubMedBERT, BGE-reranker, and Llama-3.1 are large; a network blip during a fresh VM provision can break Day 6, 7, 8, or 9.</td>
+            <td class="code">Jitendra</td>
+            <td class="num">3</td>
+            <td class="num">2</td>
+            <td class="num"><strong>6</strong></td>
+            <td>All five model checkpoints are mirrored to MinIO bucket <code>models/external/v0/</code> on Day 5 from a single successful download. Service Dockerfiles point at the MinIO mirror, not at HuggingFace, with a fallback to HuggingFace only if MinIO is unreachable. A daily mirror-integrity check verifies SHA256 of every checkpoint.</td>
+          </tr>
+
+          <tr>
+            <td class="code">R-11</td>
+            <td><strong>Demo-day live failure on a stage with stakeholders watching</strong> &mdash; a service crashes, a network blip drops a request, the LLM produces something nonsensical, or one engineer's laptop dies while presenting.</td>
+            <td class="code">All three</td>
+            <td class="num">2</td>
+            <td class="num">5</td>
+            <td class="num"><strong>10</strong></td>
+            <td>Demo on the team's pre-warmed bastion VM with all services warmed at T&minus;30 min (Jitendra checks every Grafana panel green). A second engineer mirrors the same flow on a backup VM in another browser tab; if primary stalls, the presenter switches with no apology. A pre-recorded screen capture of the full happy-path runs on a separate machine as a final fallback. The demo script avoids any "live" element that would require a fresh model inference under 5 seconds.</td>
+          </tr>
+
+          <tr>
+            <td class="code">R-12</td>
+            <td><strong>One engineer is sick or unreachable for &gt; 1 day</strong> &mdash; with a three-person team and lanes deliberately non-overlapping, any single absence is a real risk.</td>
+            <td class="code">All three</td>
+            <td class="num">2</td>
+            <td class="num">3</td>
+            <td class="num"><strong>6</strong></td>
+            <td>Critical knowledge is written down at the time of decision, not at the end &mdash; the docs/ folder is updated every Friday as part of the retro ritual. Each engineer has a documented "second" who can read their work and at least keep services running: Sarthak↔Harshit on the model layer, Harshit↔Jitendra on the service layer, Jitendra↔Harshit on infra. If absence exceeds 2 days, scope is cut from the bottom of the polish list, never from core capabilities.</td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+    <ul class="anchor-list" style="margin-top: 28px;">
+      <li><strong>P1 risks (severity ≥ 12):</strong> R-01 (deep models underperform), R-02 (LLM CPU throughput), R-07 (LLM hallucinated citations). These earn a daily standup line until they retire or fire.</li>
+      <li><strong>Risks that retire by Day 5:</strong> R-04 once the v0 schema is frozen and Alembic discipline is established; R-05 once NUMA pinning is verified and the Prometheus alert is in place.</li>
+      <li><strong>Risks that escalate past Day 10 if not addressed:</strong> R-01 if Day 5 baselines are below published numbers; R-07 if the Day 9 hallucination audit shows &gt; 10%.</li>
+      <li><strong>The risk we are <em>not</em> trying to mitigate:</strong> "demo-day audience asks a question the system cannot answer". That is acceptable &mdash; we are not building omniscient AI. The mitigation for that is the team's honest answer in the rehearsals: "we do not have evidence on that compound in our index; here is the model's uncalibrated guess and here is its confidence interval".</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================
+     PART 4 — additional CSS for §09 §10 §11, footer
+     ================================================================ -->
+<style>
+
+/* ================================================================
+   ROADMAP CARDS — V1 horizon
+   ================================================================ */
+.roadmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+.roadmap-card {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 22px 22px 18px;
+  box-shadow: var(--shadow-1);
+  border-top: 4px solid var(--horizon, var(--amber));
+  overflow: hidden;
+}
+.roadmap-card::before {
+  content: "";
+  position: absolute;
+  top: -30px; right: -30px;
+  width: 120px; height: 120px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><g fill='none' stroke='%230b2540' stroke-opacity='0.07' stroke-width='1.2'><polygon points='50,4 90,26 90,74 50,96 10,74 10,26'/><polygon points='50,22 75,36 75,64 50,78 25,64 25,36'/><polygon points='50,40 60,46 60,54 50,60 40,54 40,46'/></g></svg>");
+  background-size: contain;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+.roadmap-card .horizon-tag {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: var(--horizon, var(--amber));
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  position: relative; z-index: 1;
+}
+.roadmap-card h3 {
+  font-size: 1.08rem;
+  margin: 0 0 10px;
+  position: relative; z-index: 1;
+}
+.roadmap-card .horizon-body {
+  font-size: 0.92rem;
+  color: var(--ink-2);
+  line-height: 1.55;
+  margin-bottom: 12px;
+  position: relative; z-index: 1;
+}
+.roadmap-card .horizon-detail {
+  font-size: 0.86rem;
+  color: var(--ink-3);
+  border-top: 1px dashed var(--rule);
+  padding-top: 10px;
+  margin-top: 8px;
+  line-height: 1.5;
+  position: relative; z-index: 1;
+}
+.roadmap-card .horizon-detail strong {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--navy-deep);
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* ================================================================
+   DEFINITION OF DONE — checklist
+   ================================================================ */
+.dod-section {
+  margin-bottom: 28px;
+}
+.dod-section h3 {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule);
+}
+.dod-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.dod-item {
+  display: grid;
+  grid-template-columns: 24px 60px 1fr;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--rule);
+  align-items: start;
+}
+.dod-item:last-child { border-bottom: none; }
+.dod-item .check {
+  width: 18px; height: 18px;
+  border: 1.5px solid var(--navy);
+  border-radius: 3px;
+  margin-top: 2px;
+  background: var(--card);
+  position: relative;
+}
+.dod-item .id {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--amber);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding-top: 2px;
+}
+.dod-item .desc {
+  font-size: 0.92rem;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+.dod-item .desc strong { color: var(--navy-deep); }
+.dod-item .desc small {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+}
+
+/* ================================================================
+   COMMS GRID — channels and escalation
+   ================================================================ */
+.comms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+.channel-card {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--ch-color, var(--navy));
+  border-radius: var(--r);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-1);
+}
+.channel-card .ch-name {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ch-color, var(--navy));
+  letter-spacing: 0.04em;
+}
+.channel-card .ch-purpose {
+  font-family: var(--serif);
+  font-weight: 700;
+  color: var(--navy-deep);
+  margin-top: 4px;
+  font-size: 1.0rem;
+}
+.channel-card .ch-body {
+  font-size: 0.88rem;
+  color: var(--ink-2);
+  margin-top: 8px;
+  line-height: 1.55;
+}
+.channel-card .ch-meta {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--rule);
+  letter-spacing: 0.03em;
+}
+
+/* escalation ladder */
+.escalation {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-1);
+  margin: 18px 0;
+}
+.escalation-step {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px dashed var(--rule);
+  align-items: start;
+}
+.escalation-step:last-child { border-bottom: none; }
+.escalation-step .step-tier {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--amber);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.escalation-step .step-tier small {
+  display: block;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  margin-top: 2px;
+}
+.escalation-step .step-detail {
+  font-size: 0.92rem;
+  color: var(--ink-2);
+  line-height: 1.55;
+}
+.escalation-step .step-detail strong { color: var(--navy-deep); }
+
+/* docs folder layout */
+.tree {
+  font-family: var(--mono);
+  font-size: 0.84rem;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 16px 20px;
+  color: var(--ink-2);
+  line-height: 1.7;
+  white-space: pre;
+  overflow-x: auto;
+  box-shadow: var(--shadow-1);
+}
+.tree .dir { color: var(--navy); font-weight: 600; }
+.tree .file { color: var(--ink-2); }
+.tree .ext { color: var(--amber); }
+.tree .note { color: var(--muted); font-style: italic; }
+
+/* closer */
+.poc-affirmation {
+  text-align: center;
+  padding: 70px 20px;
+  background: var(--paper-deep);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  position: relative;
+  overflow: hidden;
+}
+.poc-affirmation::before {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px; height: 600px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%23b87333' stroke-width='1' stroke-opacity='0.18'><polygon points='100,20 160,55 160,125 100,160 40,125 40,55'/><polygon points='100,40 145,65 145,115 100,140 55,115 55,65'/><polygon points='100,60 130,77 130,113 100,130 70,113 70,77'/></g></svg>");
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: 0.6;
+  pointer-events: none;
+}
+.poc-affirmation .lab-tag {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 14px;
+  position: relative; z-index: 1;
+}
+.poc-affirmation h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  max-width: 28ch;
+  margin: 0 auto 16px;
+  position: relative; z-index: 1;
+  color: var(--navy-deep);
+}
+.poc-affirmation h2 em {
+  font-style: italic;
+  color: var(--amber);
+}
+.poc-affirmation p {
+  max-width: 60ch;
+  margin: 0 auto;
+  color: var(--ink-2);
+  font-size: 1.02rem;
+  position: relative; z-index: 1;
+}
+
+</style>
+
+
+<!-- ================================================================
+     §09 · V1 ROADMAP
+     ================================================================ -->
+<section class="section deep" id="roadmap">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 09 · v1 roadmap</div>
+        <h2>What we build after Day 20</h2>
+      </div>
+      <p class="sub">The POC ends on Day 20 with a working, demo-able platform. V1 is the next horizon &mdash; six work-streams that take the architecture from "running on one host" to "a product a pharmaceutical company would buy and a regulator would audit." Each card below is sized in approximate engineer-weeks; the totals are deliberate &mdash; this is a quarter of work, not a sprint.</p>
+    </div>
+
+    <div class="prose" style="margin-bottom: 22px;">
+      <p>
+        The POC architecture is intentionally V1-shaped. Every service is already containerized; the GPU node slots in via IOMMU passthrough on Day 21 morning; the OpenAPI contract is already typed and versioned; the audit log already records every prediction with a hashed input. Nothing in V1 requires us to throw away POC code &mdash; it is all addition, hardening, and scale.
+      </p>
+      <p>
+        The six horizons below are the real conversation we want to have on Day 20 with stakeholders, after the demo. We do not propose all six in the same breath; we propose the first two (GPU + generative design) as the obvious next quarter, the next two (multi-tenant + regulatory pack) as the quarter after that, and the final two (continuous learning + advanced explainability) as scope to negotiate based on customer pull.
+      </p>
+    </div>
+
+    <div class="roadmap-grid">
+
+      <article class="roadmap-card" style="--horizon: var(--amber);">
+        <div class="horizon-tag">Horizon 01 · 4&ndash;5 engineer-weeks</div>
+        <h3>GPU acceleration &amp; production model serving</h3>
+        <p class="horizon-body">
+          Add an NVIDIA A100 (80&nbsp;GB) or H100 node to the host (or replace the host with a GPU-equipped server). IOMMU-passthrough into a new <code>vm-gpu-llm</code> VM. Migrate vLLM (Llama-3.1-8B) and ChemBERTa fine-tunes onto it. Reclaim CPU on <code>vm-rag-llm</code> and <code>vm-tox-inference</code> for higher concurrency. Replace ad-hoc model loading with NVIDIA Triton Inference Server for batched requests, dynamic batching, and per-model auto-scaling.
+        </p>
+        <div class="horizon-detail">
+          <strong>Targets</strong>
+          LLM throughput uplift 8&ndash;12&times; (from ~12 tok/s CPU to 120&ndash;150 tok/s GPU). ChemBERTa single-molecule inference from 250&nbsp;ms to under 25&nbsp;ms. Single-molecule end-to-end <code>/analyze</code> p95 latency from 12&nbsp;s to under 3&nbsp;s. Total downtime budget for the migration: 2 hours, executed at a stakeholder-agreed window.
+        </div>
+      </article>
+
+      <article class="roadmap-card" style="--horizon: var(--teal);">
+        <div class="horizon-tag">Horizon 02 · 6&ndash;8 engineer-weeks</div>
+        <h3>Generative design with toxicity-aware constraints</h3>
+        <p class="horizon-body">
+          Add a generative front-end &mdash; <strong>REINVENT 4</strong> (RNN-based reinforcement learning) and <strong>MolGPT</strong> (transformer language model on SELFIES) &mdash; that proposes new molecular candidates inside a chemical-space neighborhood the user specifies. The toxicity scorer from CAP-01 becomes the constraint: candidates with predicted hERG &gt; 0.5 or DILI &gt; 0.5 are pruned at sample time, not at filter time. Output is ranked by a multi-objective score (target activity + toxicity + synthesizability via SAScore).
+        </p>
+        <div class="horizon-detail">
+          <strong>Targets</strong>
+          1,000&ndash;5,000 valid candidates per design run, of which ≥ 60% pass toxicity gates and ≥ 40% are synthetically accessible (SAScore &lt; 4). User flow: input target SMILES + objective (e.g., "improve hERG profile while keeping core pharmacophore"); output a ranked SDF with predicted properties and similarity to seed. Wires into the existing <code>/analyze</code> pipeline so every generated candidate gets a full toxicity report on the same UI.
+        </div>
+      </article>
+
+      <article class="roadmap-card" style="--horizon: var(--navy);">
+        <div class="horizon-tag">Horizon 03 · 5&ndash;7 engineer-weeks</div>
+        <h3>Multi-tenant SaaS with strict isolation</h3>
+        <p class="horizon-body">
+          Convert the single-tenant POC into a multi-tenant deployment where each pharmaceutical customer gets its own logical workspace. Per-tenant Postgres schemas (one schema per tenant on a shared database, row-level security as a defense-in-depth layer); per-tenant MinIO bucket prefixes; per-tenant API keys with scoped JWT issuers; metering on every API call for billing. Tenant-isolated audit log so customer A never sees customer B's prediction history even by hash.
+        </p>
+        <div class="horizon-detail">
+          <strong>Targets</strong>
+          Onboard a new tenant in under 15 minutes via a Terraform module. Per-tenant rate limits (100 req/min default, configurable per contract). Compliance attestations: SOC&nbsp;2 Type 1 within 6 months, ISO&nbsp;27001 within 12. Tenant deletion runs end-to-end in under 24 hours and produces a written attestation document for the departing customer.
+        </div>
+      </article>
+
+      <article class="roadmap-card" style="--horizon: var(--gold);">
+        <div class="horizon-tag">Horizon 04 · 4&ndash;6 engineer-weeks</div>
+        <h3>Regulatory pack &mdash; OECD QSAR · ICH M7 · REACH</h3>
+        <p class="horizon-body">
+          Auto-generate the documentation a pharmaceutical regulatory submission actually requires. <strong>OECD QSAR Toolbox-aligned model documentation</strong> covering the five OECD principles: defined endpoint, unambiguous algorithm, defined applicability domain, statistics, mechanistic interpretation. Export to <strong>ICH M7</strong> format for genotoxic-impurity assessments. Export to <strong>REACH</strong> dossier format for chemical-substance registrations. Every export includes the model card, the training data provenance, the calibration curves, and the per-prediction confidence intervals.
+        </p>
+        <div class="horizon-detail">
+          <strong>Targets</strong>
+          Single-button export from the dashboard's compliance page. PDF + machine-readable XML side by side. Reviewed by an external regulatory consultant (named in V1 plan) before first customer use. Coverage of the top 12 toxicity endpoints regulators care about for small-molecule drug submissions.
+        </div>
+      </article>
+
+      <article class="roadmap-card" style="--horizon: var(--moss);">
+        <div class="horizon-tag">Horizon 05 · 6&ndash;9 engineer-weeks</div>
+        <h3>Continuous learning &amp; data-feedback loop</h3>
+        <p class="horizon-body">
+          Customers who use the platform produce signal: which predictions they agreed with, which they overrode, which compounds they synthesized and tested in the wet lab. We capture that signal (with consent) and use it to retrain the models on a quarterly cadence. Strict separation between training data and customer data: a customer can opt out of training contribution per workspace; even when contributing, the training pipeline never sees raw SMILES &mdash; it sees fingerprints + labels.
+        </p>
+        <div class="horizon-detail">
+          <strong>Targets</strong>
+          Quarterly model refresh with a published changelog. Hold-out validation against a frozen reference set so customers can verify a refresh did not regress on their use case. Active-learning loop: low-confidence predictions get queued for human-in-the-loop review and become priority training examples. Drift monitoring on production embeddings to detect when the chemical space has shifted enough to require off-cycle retraining.
+        </div>
+      </article>
+
+      <article class="roadmap-card" style="--horizon: var(--plum);">
+        <div class="horizon-tag">Horizon 06 · 5&ndash;7 engineer-weeks</div>
+        <h3>Mechanistic explainability &amp; AOP integration</h3>
+        <p class="horizon-body">
+          Move beyond "this atom mattered" to "this molecule probably triggers <em>this molecular initiating event</em>, which propagates to <em>this organ-level adverse outcome</em>." Integrate the OECD <strong>Adverse Outcome Pathway</strong> framework: link every toxicity prediction to the most-probable AOP from the AOP-Wiki knowledge base. Wire in the <strong>ComptoxAI</strong> heterogeneous knowledge graph (compounds &harr; genes &harr; pathways &harr; assays) so the explanation panel can show "this compound is predicted toxic because it resembles known AhR agonists, which trigger CYP1A1 induction, which links to the hepatotoxicity AOP".
+        </p>
+        <div class="horizon-detail">
+          <strong>Targets</strong>
+          Every prediction carries a top-3 AOP hypothesis with confidence scores and source citations. The dashboard's Explain page renders the AOP chain as a sankey diagram. Mechanistic explanations are validated against a 50-compound expert-curated benchmark set with target precision ≥ 75% (a known AOP appears in the top-3 for 75% of cases).
+        </div>
+      </article>
+
+    </div>
+
+    <div class="prose" style="margin-top: 28px;">
+      <p>
+        <strong>The roadmap conversation we are <em>not</em> having.</strong> We deliberately do not propose a clinical-trial-data integration, a wet-lab automation tie-in, or an FDA submission-as-a-service platform in V1. Those are V2+ scope and require regulatory partnerships and customer-funded development before we touch them. The POC and V1 are both squarely in the "in silico discovery and triage" lane &mdash; that is the lane where AI is currently delivering value, and the lane where we have evidence we can ship.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §10 · DEFINITION OF DONE
+     ================================================================ -->
+<section class="section" id="dod">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 10 · definition of done</div>
+        <h2>The thirty-item checklist that gates Day 20 sign-off</h2>
+      </div>
+      <p class="sub">A POC is done when these thirty items are checkable. Not before. Day 19 morning, the team walks this list together; whatever is not green is what Day 19 polishes. Day 20 morning the list is walked again with stakeholders observing; the green count <em>is</em> the deliverable measure.</p>
+    </div>
+
+    <div class="prose" style="margin-bottom: 22px;">
+      <p>
+        Each item is binary &mdash; it is checkable or it is not. Aspirational language ("system is fast", "code is clean") is banned from this list; every item names a measurable outcome, an artifact in the repository or in MinIO, or a passing test. The list is written so that an outside auditor with read access to the repo and the running stack can verify every item without asking us a single clarifying question.
+      </p>
+    </div>
+
+    <div class="dod-section">
+      <h3>A · Capabilities (all seven shipped)</h3>
+      <ul class="dod-list">
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-A1</span>
+          <span class="desc"><strong>CAP-01 Toxicity prediction</strong> &mdash; <code>POST /predict</code> returns calibrated probabilities + confidence interval + applicability-domain flag for Tox21 (12 endpoints), hERG, DILI, ClinTox on any valid SMILES. Single-molecule p95 latency &lt; 250&nbsp;ms (CPU). <small>verified by tests/integration/test_predict.py · MLflow run-ids in docs/models.md</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-A2</span>
+          <span class="desc"><strong>CAP-02 Literature retrieval</strong> &mdash; <code>POST /search/literature</code> returns hybrid-ranked PubMed abstracts with MeSH-term filters. MRR@10 ≥ 0.55 on the 50-query gold set. p95 latency &lt; 300&nbsp;ms. <small>verified by reports/retrieval-v0.md and tests/integration/test_search.py</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-A3</span>
+          <span class="desc"><strong>CAP-03 Evidence summarization</strong> &mdash; <code>POST /summarize/evidence</code> streams a citation-grounded answer where every claim carries a <code>[PMID:xxx]</code> tag that resolves in our index. Hallucination rate &lt; 5% on the 30-prompt audit set. <small>verified by reports/llm-audit-v0.md</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-A4</span>
+          <span class="desc"><strong>CAP-04 Similarity search</strong> &mdash; <code>POST /similarity</code> returns top-K neighbors with cosine + Tanimoto over the 1M-vector PubChem index. Recall@10 ≥ 0.98 vs brute-force. p95 latency &lt; 50&nbsp;ms. <small>verified by reports/similarity-v0.md</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-A5</span>
+          <span class="desc"><strong>CAP-05 Orchestrated analysis</strong> &mdash; <code>POST /analyze</code> returns a structured report (predictions, neighbors, evidence, summary, attributions, alerts) for a single SMILES in &lt; 12&nbsp;s p95. Async batch path returns a job-id and processes 10K compounds in &lt; 6 min. <small>verified by tests/integration/test_analyze.py</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-A6</span>
+          <span class="desc"><strong>CAP-06 REST API</strong> &mdash; OpenAPI 3.1 spec frozen at v0.5 since Day 10, served at <code>/openapi.json</code>. Typed Python and TypeScript SDKs auto-generated and committed under <code>sdk/</code>. RBAC enforced (viewer / analyst / admin). Per-IP rate limiting at the edge. <small>verified by sdk/python/tests and sdk/typescript/tests</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-A7</span>
+          <span class="desc"><strong>CAP-07 Web dashboard</strong> &mdash; React frontend reachable at <code>app.poc.local</code> with all seven pages working (Home, Analyze, Batch, Similarity, Literature, History, Compliance). Lighthouse perf ≥ 90, a11y ≥ 95, zero console errors on any page. <small>verified by frontend/lighthouse-report.html</small></span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="dod-section">
+      <h3>B · Model quality (numbers we promised, on holdouts we did not touch)</h3>
+      <ul class="dod-list">
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-B1</span>
+          <span class="desc"><strong>Tox21 mean AUROC ≥ 0.82</strong> on scaffold-holdout, best-of-three across baseline / GAT / ChemBERTa per endpoint, with bootstrap 95% confidence intervals reported. <small>artifact: reports/model-final-v1.html</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-B2</span>
+          <span class="desc"><strong>hERG AUROC ≥ 0.88</strong> on scaffold-holdout. <strong>DILI AUROC ≥ 0.78</strong>. <strong>ClinTox MCC ≥ 0.40</strong>. All three on the held-out external validation set (post-2023 publications, never seen during training). <small>artifact: reports/external-validation-v1.html</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-B3</span>
+          <span class="desc"><strong>Calibration</strong> &mdash; expected calibration error (ECE) &lt; 0.05 on every shipped endpoint. Reliability diagrams committed for every model. Isotonic or Platt scaling applied where raw outputs were uncalibrated. <small>artifact: reports/calibration/</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-B4</span>
+          <span class="desc"><strong>Applicability domain</strong> &mdash; every prediction returns an in-domain / out-of-domain flag based on kNN distance to training compounds. Out-of-domain compounds have predictions but are visually flagged in the dashboard with a "low-confidence" badge. <small>artifact: services/tox/applicability_domain.py + tests</small></span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="dod-section">
+      <h3>C · Non-functional (the platform is actually production-grade)</h3>
+      <ul class="dod-list">
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-C1</span>
+          <span class="desc"><strong>Authentication and RBAC</strong> &mdash; OAuth2 password flow with rotating RS256 JWTs. Three roles enforced on every endpoint. Password policy enforced (12+ chars, no top-1000 leaked passwords via zxcvbn). Sessions invalidate on role change. <small>verified by tests/security/test_authz.py</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-C2</span>
+          <span class="desc"><strong>Audit log</strong> &mdash; every prediction, every LLM call, every login, every role change writes to <code>audit_log</code> with actor, action, target hash, timestamp. Audit log is append-only at the database level (REVOKE UPDATE/DELETE for app role). Exportable as CSV from the Compliance page. <small>verified by tests/security/test_audit.py</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-C3</span>
+          <span class="desc"><strong>Secrets discipline</strong> &mdash; zero secrets in the repository (gitleaks runs in pre-push hook and CI). All runtime secrets in Vault (POC mode) or sops-encrypted YAML. JWT signing keys rotate on a 90-day schedule with documented rotation procedure. <small>verified by .github/workflows/security.yml</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-C4</span>
+          <span class="desc"><strong>Container security</strong> &mdash; Trivy scan in CI fails the build on HIGH+ CVEs. Multi-stage Dockerfiles produce final images &lt; 1.5&nbsp;GB each. All containers run as non-root with explicit user IDs. <small>verified by .github/workflows/build.yml</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-C5</span>
+          <span class="desc"><strong>Observability</strong> &mdash; Grafana dashboards live at <code>grafana.poc.local</code> covering API latency, model throughput, RAG token rate, VM resource usage, error rates, queue depth. Alertmanager rules fire to email on p95 &gt; 2&nbsp;s, error rate &gt; 1%, disk &gt; 80%, OOM. <small>verified by infra/grafana/dashboards/</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-C6</span>
+          <span class="desc"><strong>Backup &amp; restore</strong> &mdash; pgBackRest WAL + nightly dumps to MinIO, ChromaDB nightly snapshots, MinIO bucket replication. Four full restore drills logged in <code>docs/backup-drills.md</code> (one per Friday retro). RTO target: 30 minutes for full datastore restore. <small>verified by docs/backup-drills.md</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-C7</span>
+          <span class="desc"><strong>Performance baseline</strong> &mdash; load test report with capacity statement (e.g., "sustains 12 analyze/sec at p95 &lt; 10&nbsp;s on this hardware"). 30-minute soak at sustainable concurrency passes with zero memory creep and zero error rate. <small>artifact: reports/perf-final-v1.md</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-C8</span>
+          <span class="desc"><strong>Test coverage</strong> &mdash; ≥ 70% line coverage on service code (services/), ≥ 60% on the orchestrator. Integration tests cover every documented API endpoint. Frontend has Playwright smoke tests for every page. CI green on main. <small>verified by .github/workflows/test.yml + coverage badge</small></span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="dod-section">
+      <h3>D · Documentation &amp; handover (the next team can pick this up)</h3>
+      <ul class="dod-list">
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-D1</span>
+          <span class="desc"><strong>Architecture documentation</strong> &mdash; C4-model levels 1, 2, 3 diagrams (system context, container, component) committed as Mermaid sources + PNG renders. Walkthrough video recorded by Jitendra (under 15 minutes). <small>artifact: docs/architecture/</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-D2</span>
+          <span class="desc"><strong>API reference</strong> &mdash; auto-generated from OpenAPI v0.5 + integration guide for external consumers + curl examples for every endpoint + SDK quickstart for Python and TypeScript. Hosted at <code>docs.poc.local</code> via MkDocs. <small>artifact: docs/api/</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-D3</span>
+          <span class="desc"><strong>Model cards</strong> &mdash; one per shipped model (≥ 4 cards) per OECD QSAR principles: training data provenance, hyperparameters, scaffold-holdout metrics, calibration plot, applicability domain, mechanistic interpretation, known limitations. <small>artifact: docs/model-cards/</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-D4</span>
+          <span class="desc"><strong>Operator runbooks</strong> &mdash; step-by-step procedures for: VM bring-up, full data restore, certificate rotation, JWT key rotation, GPU upgrade, scale-up of worker pool, rollback after a bad deploy. Each runbook tested at least once during the POC. <small>artifact: docs/runbooks/</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-D5</span>
+          <span class="desc"><strong>Decision log</strong> &mdash; 12+ ADRs in <code>docs/decisions/</code> documenting every cross-engineer architectural choice with context, options considered, decision, consequences. <small>artifact: docs/decisions/</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-D6</span>
+          <span class="desc"><strong>Slip and risk registers</strong> &mdash; <code>docs/slip-register.md</code> chronologically lists every missed EOD with cause and recovery. <code>docs/risk-register.md</code> closed out with final disposition (retired / mitigated / fired) for each risk in §08. <small>artifact: docs/slip-register.md + docs/risk-register.md</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-D7</span>
+          <span class="desc"><strong>Demo recording</strong> &mdash; Day 20 live demo recorded end-to-end (with audio) and archived to MinIO bucket <code>demos/</code>. Demo script committed as <code>docs/demo-day.md</code>. <small>artifact: MinIO demos/poc-final-v1.mp4</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-D8</span>
+          <span class="desc"><strong>Handover package</strong> &mdash; a single zipped archive containing: source tarball at git tag <code>v1.0-poc</code>, all model artifacts, all dataset artifacts, exported audit log, exported MLflow runs, all docs/ as static HTML, credentials handover document (sealed). Stored in MinIO with 1-year retention. <small>artifact: MinIO handover/poc-v1.0-handover.zip</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-D9</span>
+          <span class="desc"><strong>V1 roadmap deck</strong> &mdash; 10-slide presentation derived from §09 of this index, presented to stakeholders on Day 20 immediately after the demo. Stored as PDF + source. <small>artifact: docs/v1-roadmap.pdf</small></span>
+        </li>
+        <li class="dod-item">
+          <span class="check"></span>
+          <span class="id">DoD-D10</span>
+          <span class="desc"><strong>Stakeholder go/no-go</strong> &mdash; written sign-off from stakeholders at the close of Day 20 explicitly acknowledging the seven capabilities are demonstrated, the thirty DoD items are checkable, and committing (or declining) to fund V1. This is the official end of the POC. <small>artifact: docs/poc-signoff-2026-06-03.pdf</small></span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="prose" style="margin-top: 22px;">
+      <p>
+        <strong>The thirty-first item.</strong> A POC is also done when the team that built it walks away healthy &mdash; nobody burned out, every engineer left with a project they are proud of and can talk about in interviews, the stakeholders trust the team enough to fund V1 with the same people. That is not a checkbox on a list, but it is the real outcome we are accountable for. The thirty checkboxes above are how we get there without paying for it in human capital.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §11 · COMMUNICATION & ESCALATION
+     ================================================================ -->
+<section class="section deep" id="comms">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 11 · communication &amp; escalation</div>
+        <h2>Channels, paths, and what gets posted where</h2>
+      </div>
+      <p class="sub">Three engineers can mostly hear each other talk, but the POC has stakeholders, an on-call rotation, and a documentation footprint that outlives any individual conversation. Below is the channel topology, the escalation ladder, and the docs/ folder layout we keep faithfully through Day 20.</p>
+    </div>
+
+    <h3 style="margin-bottom: 8px;">Channel topology</h3>
+
+    <div class="comms-grid">
+
+      <div class="channel-card" style="--ch-color: var(--teal);">
+        <div class="ch-name">#poc-war-room</div>
+        <div class="ch-purpose">Synchronous engineering chat</div>
+        <div class="ch-body">
+          The default channel. Standups, EOD checkpoints, blockers, ad-hoc help requests, code-review pings, link sharing, screenshots of broken Grafana panels, "is X up for anyone else?" pings. Everything informal goes here. Fast, noisy, full-history searchable, ephemeral in tone.
+        </div>
+        <div class="ch-meta">members: 3 engineers · retention: full history · norms: react with ✅ when read</div>
+      </div>
+
+      <div class="channel-card" style="--ch-color: var(--navy);">
+        <div class="ch-name">#poc-stakeholders</div>
+        <div class="ch-purpose">Broadcast to the customer / sponsors</div>
+        <div class="ch-body">
+          Read-mostly for stakeholders. Friday-EOD weekly summary (3 paragraphs maximum: what shipped, what is on deck, what stakeholder input we need). Mid-POC checkpoint announcements. Demo-day announcements. Slip notifications &mdash; with a recovery plan, never with apology and silence. Stakeholders can ask in this channel; the team answers within 4 hours during work hours.
+        </div>
+        <div class="ch-meta">members: 3 engineers + 2&ndash;5 stakeholders · retention: full history · norms: weekly note Friday 17:30 IST</div>
+      </div>
+
+      <div class="channel-card" style="--ch-color: var(--amber);">
+        <div class="ch-name">#poc-alerts</div>
+        <div class="ch-purpose">Automated infrastructure alerts</div>
+        <div class="ch-body">
+          Alertmanager and CI fire here. Failed CI builds, p95 latency breach, error-rate breach, disk-fullness warnings, OOM kills, backup-drill failures, certificate-expiry warnings. Every alert is acknowledged within 15 minutes during work hours by reacting with 👀 (looking at it) or ✅ (resolved). After-hours alerts go to Jitendra's pager (PagerDuty free-tier or equivalent).
+        </div>
+        <div class="ch-meta">members: 3 engineers (notifications on) · retention: 30 days · norms: acknowledge with emoji</div>
+      </div>
+
+      <div class="channel-card" style="--ch-color: var(--moss);">
+        <div class="ch-name">#poc-decisions</div>
+        <div class="ch-purpose">ADR review and architectural debate</div>
+        <div class="ch-body">
+          When an ADR is drafted (in <code>docs/decisions/NNNN-title.md</code>), a one-paragraph summary plus a link goes here for the other two engineers to react to. ADRs need 2/3 explicit thumbs-up before merging. Cross-cutting questions ("should we add Redis to the inference VM or keep it on data-store?") start here, run for at most 24 hours, and end with an ADR.
+        </div>
+        <div class="ch-meta">members: 3 engineers · retention: full · norms: 2/3 approval to merge ADR</div>
+      </div>
+
+    </div>
+
+    <div class="divider on-deep"></div>
+
+    <h3 style="margin-bottom: 8px; margin-top: 8px;">Escalation ladder</h3>
+
+    <div class="prose" style="margin-bottom: 14px;">
+      <p>
+        Most issues never leave the engineer's desk. The ladder below describes how an issue rises if it cannot be resolved at the current rung. Time-on-rung is a soft target &mdash; the rule is "raise it before it becomes a slip", not "wait the prescribed time."
+      </p>
+    </div>
+
+    <div class="escalation">
+
+      <div class="escalation-step">
+        <div class="step-tier">Rung 0 <small>self</small></div>
+        <div class="step-detail">
+          <strong>Engineer hits a problem.</strong> Tries the obvious things, searches the ChromaDB literature index for any prior solution in the codebase, checks the relevant ADR, reads the runbook. Spends up to 60 minutes here before raising. Most problems resolve on this rung; the discipline is to recognize when 60 minutes is up and not become heroic about it.
+        </div>
+      </div>
+
+      <div class="escalation-step">
+        <div class="step-tier">Rung 1 <small>peer</small></div>
+        <div class="step-detail">
+          <strong>Engineer pings the relevant lane partner</strong> in <code>#poc-war-room</code> with "stuck on X for 60 min, here's what I tried, can you eyeball?" Sarthak↔Harshit on model layer; Harshit↔Jitendra on services / infra interface; Jitendra↔Harshit on observability / data plane. The peer responds within 30 minutes during work hours; if they are deep in something else, they say so and propose a 14:00 huddle slot.
+        </div>
+      </div>
+
+      <div class="escalation-step">
+        <div class="step-tier">Rung 2 <small>team</small></div>
+        <div class="step-detail">
+          <strong>All three engineers in a 30-minute huddle.</strong> Triggered when a peer pair cannot resolve in 60 minutes, or when the issue crosses two lanes (e.g., a model produces NaN only when called via the API, not from a notebook &mdash; that is a Sarthak + Harshit problem with infra implications). Outcome: a fix, a workaround, or an explicit "this needs to escalate to stakeholders, here is the plan."
+        </div>
+      </div>
+
+      <div class="escalation-step">
+        <div class="step-tier">Rung 3 <small>stakeholder</small></div>
+        <div class="step-detail">
+          <strong>Issue is communicated to <code>#poc-stakeholders</code>.</strong> Reserved for: scope changes, schedule slips of more than one day, requests for stakeholder input or vendor budget. The post follows the no-surprises rule &mdash; problem stated, options listed, recommendation made, asks of stakeholders explicit. Stakeholders respond within 24 hours during work hours; if longer, the team picks the recommended option and proceeds with a "we are going ahead with X unless you tell us otherwise by Y" message.
+        </div>
+      </div>
+
+      <div class="escalation-step">
+        <div class="step-tier">Rung 4 <small>terminal</small></div>
+        <div class="step-detail">
+          <strong>The POC is in genuine danger.</strong> Reserved for: a security incident, irrecoverable data loss, an engineer becoming long-term unavailable, a fundamental capability failing to materialize (e.g., the LLM cannot produce coherent answers even on GPU). A direct call (not a Slack message) is placed by the lead engineer to the lead stakeholder. The conversation is followed by a written summary in <code>#poc-stakeholders</code> within an hour. The POC may be stopped, scope-cut hard, or extended; that is the stakeholder's call.
+        </div>
+      </div>
+
+    </div>
+
+    <div class="divider on-deep"></div>
+
+    <h3 style="margin-bottom: 8px; margin-top: 8px;">The <code>docs/</code> folder &mdash; what lives where</h3>
+
+    <div class="prose" style="margin-bottom: 16px;">
+      <p>
+        Treat this folder as the persistence layer for institutional memory. Anything an outside engineer would need to pick up the platform on Day 21 lives here. The folder is committed to the Git repository, rendered to a static MkDocs site at <code>docs.poc.local</code>, and zipped into the handover package on Day 20.
+      </p>
+    </div>
+
+    <pre class="tree"><span class="dir">docs/</span>
+├── <span class="file">README.md</span>                          <span class="note"># entry point — start here, links everywhere</span>
+├── <span class="dir">architecture/</span>
+│   ├── <span class="file">c4-l1-context.mmd</span>            <span class="note"># system context</span>
+│   ├── <span class="file">c4-l2-containers.mmd</span>         <span class="note"># container diagram (8 VMs, services)</span>
+│   ├── <span class="file">c4-l3-components.mmd</span>         <span class="note"># inside vm-core-api, vm-rag-llm</span>
+│   └── <span class="file">walkthrough.mp4</span>              <span class="note"># 15-min Jitendra-narrated tour</span>
+├── <span class="dir">api/</span>
+│   ├── <span class="file">openapi.json</span>                 <span class="note"># frozen at v0.5 since Day 10</span>
+│   ├── <span class="file">integration-guide.md</span>         <span class="note"># for external consumers</span>
+│   └── <span class="dir">examples/</span>                     <span class="note"># curl + Python + TypeScript snippets</span>
+├── <span class="dir">model-cards/</span>
+│   ├── <span class="file">tox21-multitask-v1.md</span>        <span class="note"># OECD QSAR principles compliant</span>
+│   ├── <span class="file">herg-binary-v1.md</span>
+│   ├── <span class="file">dili-binary-v1.md</span>
+│   └── <span class="file">clintox-v1.md</span>
+├── <span class="dir">runbooks/</span>
+│   ├── <span class="file">vm-bringup.md</span>                <span class="note"># cold-start the entire stack</span>
+│   ├── <span class="file">data-restore.md</span>              <span class="note"># pgBackRest + MinIO + ChromaDB</span>
+│   ├── <span class="file">cert-rotation.md</span>             <span class="note"># Traefik / TLS</span>
+│   ├── <span class="file">jwt-key-rotation.md</span>          <span class="note"># 90-day cycle</span>
+│   ├── <span class="file">gpu-upgrade.md</span>               <span class="note"># V1 horizon-01 procedure</span>
+│   ├── <span class="file">worker-scale-up.md</span>           <span class="note"># Celery pool growth</span>
+│   └── <span class="file">deploy-rollback.md</span>           <span class="note"># bad-deploy recovery</span>
+├── <span class="dir">decisions/</span>                       <span class="note"># MADR-format ADRs, numbered</span>
+│   ├── <span class="file">0001-fastapi-over-flask.md</span>
+│   ├── <span class="file">0002-chromadb-over-qdrant.md</span>
+│   ├── <span class="file">0003-hnswlib-over-faiss.md</span>
+│   ├── <span class="file">0004-llama-on-prem.md</span>
+│   ├── <span class="file">0005-streamlit-then-react.md</span>
+│   ├── <span class="file">0006-zfs-on-host.md</span>
+│   └── <span class="file">...</span>                          <span class="note"># 12+ ADRs by Day 20</span>
+├── <span class="dir">reports/</span>
+│   ├── <span class="file">dataset-v0.md</span>                <span class="note"># Day 4 curation report</span>
+│   ├── <span class="file">baseline-v0.html</span>             <span class="note"># Day 5 RF/XGBoost</span>
+│   ├── <span class="file">model-final-v1.html</span>          <span class="note"># Day 17 final metrics</span>
+│   ├── <span class="file">retrieval-v0.md</span>              <span class="note"># Day 8 RAG MRR</span>
+│   ├── <span class="file">llm-audit-v0.md</span>              <span class="note"># Day 9 hallucination audit</span>
+│   ├── <span class="file">similarity-v0.md</span>             <span class="note"># Day 7 recall@10</span>
+│   ├── <span class="file">perf-final-v1.md</span>             <span class="note"># Day 16 load-test</span>
+│   └── <span class="file">external-validation-v1.html</span>  <span class="note"># Day 19 untouched-set numbers</span>
+├── <span class="file">slip-register.md</span>                 <span class="note"># every missed EOD, with recovery</span>
+├── <span class="file">risk-register.md</span>                 <span class="note"># §08 risks, closed out by Day 20</span>
+├── <span class="file">backup-drills.md</span>                 <span class="note"># 4 weekly drill records</span>
+├── <span class="file">demo-day.md</span>                      <span class="note"># Day 20 demo script</span>
+├── <span class="file">v1-roadmap.pdf</span>                   <span class="note"># §09 as deck</span>
+└── <span class="file">poc-signoff-2026-06-03.pdf</span>       <span class="note"># the official end</span></pre>
+
+    <div class="prose" style="margin-top: 18px;">
+      <p>
+        <strong>The MkDocs render.</strong> Every Friday retro, Jitendra runs <code>mkdocs build</code> and serves the static output at <code>docs.poc.local</code> through Traefik. This means stakeholders can browse documentation in a browser without a Git checkout, and the team can reference docs by URL during standup. Builds fail loudly on broken internal links &mdash; if you delete a referenced runbook, CI catches it.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §12 · CLOSER
+     ================================================================ -->
+<div class="poc-affirmation">
+  <div class="lab-tag">§ 12 · we ship on day 20</div>
+  <h2>Twenty days. Three engineers. Seven capabilities. <em>Real molecules, real evidence, real audit trail.</em></h2>
+  <p>
+    Day 1 begins Thursday 7 May 2026 at 09:30 IST with a hardware audit and a clean git commit. Day 20 ends Wednesday 3 June 2026 with a recorded demo, a signed-off DoD checklist, a handover package in MinIO, and a V1 roadmap conversation. Everything between those two points is in this index. Click into any day card to see exactly what happens that day, who owns it, and how we know it shipped.
+  </p>
+</div>
+
+
+<!-- ================================================================
+     FOOTER
+     ================================================================ -->
+<footer class="footer">
+  <div class="shell">
+    <div class="footer-grid">
+      <div>
+        <h4>AI Toxicity Intelligence Platform</h4>
+        <p>
+          A 20-day production-grade proof of concept for molecular toxicity prediction, biomedical literature retrieval, scientific evidence summarization, similarity search, and AI-assisted molecule analysis. Built on-prem, GPU-ready, enterprise-architected. Designed so V1 is addition, not rebuild.
+        </p>
+        <p style="margin-top: 14px;">
+          <strong>Document:</strong> AITIP-POC-PLAN-v1.0 &middot; sprint control index<br>
+          <strong>Hardware:</strong> 72 cores &middot; 1 TB RAM &middot; 10 TB SSD &middot; 8 VMs<br>
+          <strong>Stack:</strong> open-source by default &middot; PyTorch &middot; FastAPI &middot; vLLM
+        </p>
+      </div>
+      <div>
+        <h4>Section index</h4>
+        <p>
+          <a href="#capabilities">§ 01 capabilities</a><br>
+          <a href="#team">§ 02 team</a><br>
+          <a href="#hardware">§ 03 hardware</a><br>
+          <a href="#stack">§ 04 stack</a><br>
+          <a href="#datasets">§ 05 datasets</a><br>
+          <a href="#timeline">§ 06 timeline</a><br>
+          <a href="#governance">§ 07 governance</a><br>
+          <a href="#risks">§ 08 risks</a><br>
+          <a href="#roadmap">§ 09 v1 roadmap</a><br>
+          <a href="#dod">§ 10 definition of done</a><br>
+          <a href="#comms">§ 11 communication</a>
+        </p>
+      </div>
+      <div>
+        <h4>Team</h4>
+        <p>
+          <strong>Sarthak Chauhan</strong><br>
+          AI / ML Lead &middot; Toxicity Models<br>
+          <small>BCA-AI&amp;ML &middot; CGPA 9.56 &middot; Sharda</small>
+        </p>
+        <p style="margin-top: 10px;">
+          <strong>Harshit Prajapati</strong><br>
+          Backend &amp; MLOps Engineer<br>
+          <small>B.Tech CSE &middot; Sharda &middot; ex-Zivoke</small>
+        </p>
+        <p style="margin-top: 10px;">
+          <strong>Jitendra Maurya</strong><br>
+          Infrastructure &amp; DevOps<br>
+          <small>VM provisioning &middot; observability &middot; on-call</small>
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-meta">
+      POC start &middot; Thursday 07 May 2026 &middot; 09:30 IST &nbsp;·&nbsp;
+      POC end &middot; Wednesday 03 June 2026 &middot; 18:00 IST &nbsp;·&nbsp;
+      Working days &middot; 20 (weekends skipped) &nbsp;·&nbsp;
+      Calendar span &middot; 28 days
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

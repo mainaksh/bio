@@ -1,0 +1,3865 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 03 · Data Stores &mdash; Postgres, MinIO, Redis, ChromaDB · AITIP POC</title>
+<style>
+/* ================================================================
+   AITIP · Day 03 · Monday 11 May 2026
+   Data Stores — Postgres · MinIO · Redis · ChromaDB
+   Self-contained styles. No external CSS. No external fonts.
+   ================================================================ */
+
+:root {
+  /* paper / surface */
+  --paper:        #f6f1e6;
+  --paper-deep:   #ece4d0;
+  --card:         #fffdf5;
+  --rule:         #d6cdb6;
+  --rule-soft:    #e3dcc6;
+
+  /* ink */
+  --ink:          #0a1f2c;
+  --ink-2:        #2a3845;
+  --ink-3:        #4a5663;
+  --muted:        #6b7785;
+  --muted-2:      #8a93a0;
+
+  /* primary palette */
+  --navy:         #0b2540;
+  --navy-deep:    #061626;
+  --teal:         #0e6b6b;
+  --teal-soft:    #6fb8a8;
+  --amber:        #b87333;
+  --amber-soft:   #e9c98b;
+  --gold:         #c79338;
+  --crimson:      #a8322d;
+  --crimson-soft: #e8a4a0;
+  --moss:         #4a6b3a;
+  --plum:         #6b3a52;
+
+  /* status */
+  --ok:           #1b7f3a;
+  --ok-soft:      #c9e4d2;
+  --warn:         #b45309;
+  --warn-soft:    #f0d8a8;
+  --info:         #1f5d8c;
+  --info-soft:    #c8dcec;
+
+  /* engineer tracks */
+  --t-sarthak:    #0b3d91;
+  --t-harshit:    #1f77b4;
+  --t-jitendra:   #1b7f3a;
+
+  /* phase colors */
+  --p-foundation: #0e6b6b;
+
+  /* datastore palette — used in §02 viz */
+  --ds-postgres:  #336791;
+  --ds-minio:     #c72e29;
+  --ds-redis:     #a41e11;
+  --ds-chroma:    #7a4cb8;
+
+  /* shadows */
+  --shadow-1: 0 1px 0 rgba(11,37,64,.04), 0 1px 2px rgba(11,37,64,.06);
+  --shadow-2: 0 2px 4px rgba(11,37,64,.06), 0 8px 24px rgba(11,37,64,.08);
+  --shadow-3: 0 8px 16px rgba(11,37,64,.08), 0 24px 48px rgba(11,37,64,.10);
+
+  --r-s:  3px;
+  --r:    6px;
+  --r-l:  10px;
+
+  --serif:  Georgia, 'Iowan Old Style', 'Apple Garamond', Cambria, 'Times New Roman', serif;
+  --sans:   -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono:   'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --maxw:   1180px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.62;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-image:
+    radial-gradient(circle at 18% 8%, rgba(184,115,51,0.04) 0%, transparent 45%),
+    radial-gradient(circle at 82% 92%, rgba(14,107,107,0.04) 0%, transparent 50%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='64' viewBox='0 0 56 64'><g fill='none' stroke='%230b2540' stroke-opacity='0.05' stroke-width='1'><polygon points='28,2 54,16 54,46 28,60 2,46 2,16'/></g></svg>");
+  background-attachment: fixed;
+  background-size: auto, auto, 56px 64px;
+}
+
+a { color: var(--navy); text-decoration: underline; text-decoration-color: var(--amber-soft); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+a:hover { color: var(--amber); }
+
+h1, h2, h3, h4, h5 { font-family: var(--serif); font-weight: 700; color: var(--navy-deep); margin: 0 0 0.5em; line-height: 1.18; letter-spacing: -0.005em; }
+h1 { font-size: clamp(2.0rem, 4.2vw, 3.0rem); font-weight: 800; letter-spacing: -0.015em; }
+h2 { font-size: clamp(1.4rem, 2.4vw, 1.85rem); }
+h3 { font-size: 1.18rem; }
+h4 { font-size: 1.0rem; }
+
+p { margin: 0 0 0.85em; }
+strong { color: var(--navy-deep); font-weight: 600; }
+em { font-style: italic; color: var(--ink-2); }
+small { font-size: 0.86em; color: var(--muted); }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+code { background: rgba(11,37,64,0.06); padding: 0.06em 0.32em; border-radius: var(--r-s); color: var(--ink); }
+ul, ol { margin: 0 0 0.85em; padding-left: 1.4em; }
+li { margin-bottom: 0.3em; }
+::selection { background: var(--amber-soft); color: var(--navy-deep); }
+
+/* ================================================================
+   SHELL
+   ================================================================ */
+.shell { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
+.section { padding: 48px 0; border-top: 1px solid var(--rule-soft); }
+.section:first-of-type { border-top: none; }
+.section.deep { background: var(--paper-deep); }
+
+/* ================================================================
+   TOPBAR
+   ================================================================ */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(246,241,230,0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--rule);
+}
+.topbar-inner {
+  max-width: var(--maxw); margin: 0 auto;
+  padding: 12px 28px;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  flex-wrap: wrap;
+}
+.brand {
+  display: flex; align-items: center; gap: 12px;
+  font-family: var(--serif); font-weight: 700;
+  color: var(--navy-deep); text-decoration: none;
+  font-size: 1.0rem;
+}
+.brand:hover { color: var(--amber); text-decoration: none; }
+.brand small {
+  display: block;
+  font-family: var(--mono); font-weight: 400;
+  font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); margin-top: 1px;
+}
+.topnav { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.topnav a {
+  text-decoration: none; color: var(--ink-2);
+  font-size: 0.84rem; font-weight: 500;
+  padding: 6px 10px; border-radius: var(--r-s);
+}
+.topnav a:hover { background: var(--paper-deep); color: var(--navy); }
+.topnav .pill {
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.06em;
+  background: var(--p-foundation); color: var(--paper);
+  padding: 6px 10px; border-radius: var(--r-s);
+  text-transform: uppercase; margin-left: 6px;
+}
+
+/* ================================================================
+   DAY HERO
+   ================================================================ */
+.day-hero {
+  position: relative;
+  padding: 48px 0 36px;
+  border-bottom: 1px solid var(--rule);
+  overflow: hidden;
+}
+.day-hero::before {
+  content: ""; position: absolute;
+  right: -60px; top: 30px; width: 320px; height: 320px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%230e6b6b' stroke-width='1.2' stroke-opacity='0.28'><polygon points='100,20 160,55 160,125 100,160 40,125 40,55'/><polygon points='100,55 130,72 130,107 100,125 70,107 70,72'/><line x1='100' y1='20' x2='100' y2='55'/><line x1='160' y1='55' x2='130' y2='72'/></g></svg>");
+  background-size: contain; background-repeat: no-repeat;
+  opacity: 0.7; pointer-events: none;
+}
+.day-stamp {
+  display: flex; align-items: flex-end; gap: 18px; margin-bottom: 16px;
+}
+.day-stamp .num {
+  font-family: var(--serif);
+  font-size: 4.4rem; font-weight: 800;
+  line-height: 0.9; color: var(--amber);
+  letter-spacing: -0.03em;
+}
+.day-stamp .of {
+  font-family: var(--mono);
+  font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--muted);
+  padding-bottom: 8px;
+}
+.day-stamp .of strong {
+  color: var(--ink-2); display: block; margin-top: 2px;
+  font-family: var(--sans); font-size: 0.92rem;
+  letter-spacing: 0; text-transform: none; font-weight: 500;
+}
+.day-stamp .phase {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: white; background: var(--p-foundation);
+  padding: 5px 11px; border-radius: var(--r-s);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.day-hero h1 { max-width: 22ch; margin-bottom: 12px; }
+.day-theme {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.12rem;
+  color: var(--ink-2);
+  max-width: 65ch;
+  border-left: 3px solid var(--amber);
+  padding: 4px 0 4px 16px;
+  margin-bottom: 22px;
+}
+.hero-meta {
+  margin-top: 26px;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  overflow: hidden;
+  max-width: 940px;
+  box-shadow: var(--shadow-1);
+}
+.hero-meta > div { background: var(--card); padding: 14px 16px; }
+.hero-meta dt {
+  font-family: var(--mono);
+  font-size: 0.66rem; letter-spacing: 0.11em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 6px;
+}
+.hero-meta dd {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.18rem; font-weight: 700;
+  color: var(--navy-deep);
+  line-height: 1.1;
+}
+.hero-meta dd small {
+  display: block;
+  font-family: var(--sans); font-weight: 400;
+  font-size: 0.74rem; color: var(--muted);
+  margin-top: 4px; letter-spacing: 0; text-transform: none;
+}
+@media (max-width: 760px) { .hero-meta { grid-template-columns: repeat(2, 1fr); } }
+
+/* ================================================================
+   SECTION HEAD
+   ================================================================ */
+.section-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 24px; margin-bottom: 24px;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 12px;
+  flex-wrap: wrap;
+}
+.section-tag {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 4px;
+}
+.section-head h2 { margin: 0; }
+.section-head .sub {
+  color: var(--muted);
+  max-width: 50ch;
+  font-size: 0.94rem; margin: 0;
+}
+.prose { max-width: 70ch; }
+.prose p { font-size: 0.98rem; color: var(--ink-2); }
+
+/* ================================================================
+   STANDUP
+   ================================================================ */
+.standup-meta {
+  display: flex;
+  gap: 16px; flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-2);
+  margin: 8px 0 22px;
+  padding: 10px 14px;
+  background: var(--paper-deep);
+  border-radius: var(--r);
+  border: 1px solid var(--rule);
+}
+.standup-meta span strong { color: var(--navy-deep); margin-right: 6px; }
+.standup-meta span:not(:last-child)::after {
+  content: "·"; color: var(--amber); margin-left: 16px;
+}
+
+.report {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--track, var(--navy));
+  border-radius: var(--r);
+  padding: 18px 22px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-1);
+}
+.report-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 10px; flex-wrap: wrap; gap: 12px;
+}
+.report-name {
+  font-family: var(--serif);
+  font-weight: 700; font-size: 1.1rem;
+  color: var(--ink);
+}
+.report-role {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--track, var(--navy));
+  font-weight: 600; margin-left: 8px;
+}
+.report-window {
+  font-family: var(--mono);
+  font-size: 0.74rem; color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.report-line {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 16px;
+  padding: 6px 0;
+  border-top: 1px dashed var(--rule);
+}
+.report-line:first-of-type { border-top: none; padding-top: 2px; }
+.report-line .label {
+  font-family: var(--mono);
+  font-size: 0.74rem; color: var(--muted);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding-top: 2px;
+}
+.report-line .text {
+  font-size: 0.94rem; color: var(--ink-2);
+  line-height: 1.55;
+}
+.report-line .text strong { color: var(--navy-deep); }
+.report-line.risk .label { color: var(--crimson); }
+.report-line.risk .text strong { color: var(--crimson); }
+
+/* ================================================================
+   THEME VIZ — Day 3: layered persistence-tier diagram
+   showing the four datastores inside vm-data-store with
+   their volumes, ports, and the connections from other VMs.
+   ================================================================ */
+.persistence {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 26px 24px;
+  box-shadow: var(--shadow-1);
+  margin: 8px 0 18px;
+  overflow-x: auto;
+}
+.persistence-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+}
+.persistence-head .tag {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--amber);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.persistence-head .title {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.18rem;
+  color: var(--navy-deep);
+}
+.persistence-head .meta {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+.persistence svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Datastore quartet — four card spec breakdown below diagram */
+.ds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin-top: 22px;
+}
+.ds-card {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-top: 4px solid var(--ds-color, var(--navy));
+  border-radius: var(--r);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-1);
+}
+.ds-card .ds-name {
+  font-family: var(--serif);
+  font-weight: 800;
+  font-size: 1.18rem;
+  color: var(--ds-color, var(--navy-deep));
+  margin-bottom: 4px;
+}
+.ds-card .ds-port {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--rule);
+}
+.ds-card .ds-port code {
+  background: var(--paper-deep);
+  font-size: 0.84rem;
+  color: var(--ds-color, var(--navy));
+  padding: 1px 6px;
+}
+.ds-card .ds-purpose {
+  font-size: 0.92rem;
+  color: var(--ink-2);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.ds-card .ds-config {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-2);
+  background: var(--paper-deep);
+  padding: 8px 10px;
+  border-radius: var(--r-s);
+  border: 1px solid var(--rule);
+  line-height: 1.7;
+}
+.ds-card .ds-config strong {
+  color: var(--ds-color, var(--navy-deep));
+  font-family: var(--mono);
+}
+
+/* Volume diagram — ZFS dataset breakdown for vm-data-store's 3 TB disk */
+.volumes {
+  margin-top: 22px;
+  padding: 16px 18px;
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+}
+.volumes h4 {
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+.volume-bar {
+  display: flex;
+  width: 100%;
+  height: 32px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  margin-bottom: 10px;
+}
+.volume-seg {
+  display: grid;
+  place-items: center;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: white;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.volume-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+}
+.volume-legend .vl-row {
+  display: flex; align-items: center; gap: 8px;
+  color: var(--ink-2);
+}
+.volume-legend .vl-swatch {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  border: 1px solid rgba(11,37,64,0.2);
+  flex-shrink: 0;
+}
+.volume-legend .vl-row strong { color: var(--navy-deep); margin-right: 4px; }
+.volume-legend .vl-row .size {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+</style>
+</head>
+<body>
+
+
+<!-- ================================================================
+     TOPBAR
+     ================================================================ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html">
+      <svg viewBox="0 0 60 60" width="32" height="32" xmlns="http://www.w3.org/2000/svg" fill="none" aria-hidden="true">
+        <polygon points="30,4 52,17 52,43 30,56 8,43 8,17" stroke="#0b2540" stroke-width="2"/>
+        <circle cx="30" cy="22" r="3.2" fill="#b87333"/>
+        <circle cx="20" cy="34" r="3.2" fill="#0e6b6b"/>
+        <circle cx="40" cy="34" r="3.2" fill="#0e6b6b"/>
+        <circle cx="30" cy="44" r="3.2" fill="#b87333"/>
+        <line x1="30" y1="22" x2="20" y2="34" stroke="#0b2540" stroke-width="1.4"/>
+        <line x1="30" y1="22" x2="40" y2="34" stroke="#0b2540" stroke-width="1.4"/>
+        <line x1="20" y1="34" x2="30" y2="44" stroke="#0b2540" stroke-width="1.4"/>
+        <line x1="40" y1="34" x2="30" y2="44" stroke="#0b2540" stroke-width="1.4"/>
+      </svg>
+      <span>
+        AITIP &middot; Day 03
+        <small>Data Stores &mdash; Postgres, MinIO, Redis, ChromaDB</small>
+      </span>
+    </a>
+    <nav class="topnav">
+      <a href="index.html">Index</a>
+      <a href="day02.html">&larr; Day 02</a>
+      <a href="#standup">§01 Standup</a>
+      <a href="#theme">§02 Theme</a>
+      <a href="#tasks">§03 Tasks</a>
+      <a href="#deliverables">§04 Deliverables</a>
+      <a href="#eod">§05 EOD</a>
+      <a href="day04.html">Day 04 &rarr;</a>
+      <span class="pill">Foundation · 3 / 20</span>
+    </nav>
+  </div>
+</header>
+
+
+<!-- ================================================================
+     DAY HERO
+     ================================================================ -->
+<section class="day-hero">
+  <div class="shell">
+    <div class="day-stamp">
+      <span class="num">03</span>
+      <span class="of">
+        Day 03 of 20
+        <strong>Monday · 11 May 2026</strong>
+      </span>
+    </div>
+    <span class="phase">Foundation · Day 3 of 5</span>
+    <h1>Data Stores &mdash; Postgres, MinIO, Redis, ChromaDB</h1>
+    <p class="day-theme">
+      Stand up the persistence tier. Every other service will lean on these four pillars. By Monday 18:00 the v0 schema is applied to a real Postgres instance, MinIO holds the four raw datasets and the two curated parquets, Redis answers <code>PING</code> from the bridge, and ChromaDB has its persistent volume mounted. Plus a backup-restore drill, end-to-end, before close. After the weekend rest, the week's heaviest application-tier day.
+    </p>
+
+    <dl class="hero-meta">
+      <div>
+        <dt>09:30 IST</dt>
+        <dd>Standup<small>15 min &middot; Harshit chairs</small></dd>
+      </div>
+      <div>
+        <dt>13:00 target</dt>
+        <dd>4 stores up<small>migration applied · buckets created</small></dd>
+      </div>
+      <div>
+        <dt>16:00 target</dt>
+        <dd>Datasets in MinIO<small>4 raw + 2 curated · sha256 in DB</small></dd>
+      </div>
+      <div>
+        <dt>17:30 target</dt>
+        <dd>Restore drill<small>full recovery on clone VM</small></dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §01 · STANDUP — services-day rotation, Harshit chairs
+     ================================================================ -->
+<section class="section" id="standup">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 01 · standup</div>
+        <h2>09:30 IST &middot; daily standup &mdash; 15 minutes flat</h2>
+      </div>
+      <p class="sub">First services-day standup. Harshit chairs by lane rotation. Three engineers, two minutes each, three-minute cross-cutting block. Weekend recap brief.</p>
+    </div>
+
+    <div class="prose" style="margin-bottom: 20px;">
+      <p>
+        Two-day weekend gap since Day 02 closed at 20:15 IST Friday with all eight EOD criteria green. No work happened over the weekend &mdash; which is exactly the contract; weekends are weekends. Everyone arrives Monday morning rested, which matters because Day 3 is the longest single application-tier day of Week 1. Harshit installs four datastores on one VM in eight hours; the merge gates of two open PRs (#8 Alembic, #10 curation) lock when those services come up. If anything in this stack misbehaves, every subsequent day inherits the bug.
+      </p>
+    </div>
+
+    <div class="standup-meta">
+      <span><strong>Time:</strong>09:30&ndash;09:45 IST</span>
+      <span><strong>Format:</strong>video, cameras on</span>
+      <span><strong>Chair:</strong>Harshit (services-day rotation)</span>
+      <span><strong>Notes:</strong>Jitendra, into <code>#poc-war-room</code></span>
+    </div>
+
+
+    <!-- Harshit report -->
+    <article class="report" style="--track: var(--t-harshit);">
+      <div class="report-head">
+        <div>
+          <span class="report-name">Harshit Prajapati</span>
+          <span class="report-role">Backend &amp; MLOps &middot; lane lead today</span>
+        </div>
+        <div class="report-window">2 min &middot; 09:30&ndash;09:32</div>
+      </div>
+
+      <div class="report-line">
+        <span class="label">Friday</span>
+        <span class="text">
+          Alembic init + migration 001_init landed against Postgres-in-Docker dry-run (PR #8 deferred to today's merge gate). Ansible inventory pinging all 8 VMs. MinIO 5-bucket plan + lifecycle JSON committed. Curation protocol up.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Today</span>
+        <span class="text">
+          <strong>Five sub-rocks.</strong> (1) <code>infra/ansible/deploy-data-store.yml</code> playbook idempotent &mdash; installs Postgres-16 with extensions (pg_partman, pg_stat_statements, pgcrypto), MinIO 4-node single-host, Redis 7 with AOF, ChromaDB containerized. (2) Run migration 001 against vm-data-store; merge PR-#8 once verified. (3) Create the 5 MinIO buckets via <code>mc</code>; apply lifecycle policies; generate read-only and read-write access keys; store in Vault (POC mode for now). (4) Wire vm-core-api → vm-data-store smoke connectivity (telnet on 5432/9000/6379/8001 from core-api). (5) Help Sarthak's late-afternoon dataset upload land cleanly &mdash; merge PR-#10 once buckets are populated.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Blockers</span>
+        <span class="text">None. Weekend gave time to mentally sequence the playbook; tomorrow morning's Ansible review caught one minor issue (the Redis AOF rewrite-aof-on-write setting was slightly aggressive) which I corrected before standup.</span>
+      </div>
+      <div class="report-line risk">
+        <span class="label">Today's risk</span>
+        <span class="text">
+          <strong>MinIO single-host quorum surprise.</strong> MinIO requires a minimum of 4 drives for erasure-coded mode; our install is 4 fake drives on one disk via 4 directories. This works for POC but produces no real redundancy &mdash; if the underlying ZFS dataset has a corruption it takes down all four "drives" simultaneously. Mitigation: ZFS scrub schedule documented today, MinIO health-check exposed in Prometheus on Day 5, and the V1 plan calls for MinIO across multiple physical hosts. The risk to flag <em>today</em> is just that I write the install with this constraint understood and don't pretend it's HA.
+        </span>
+      </div>
+    </article>
+
+
+    <!-- Jitendra report -->
+    <article class="report" style="--track: var(--t-jitendra);">
+      <div class="report-head">
+        <div>
+          <span class="report-name">Jitendra Maurya</span>
+          <span class="report-role">Infrastructure &amp; DevOps &middot; supporting</span>
+        </div>
+        <div class="report-window">2 min &middot; 09:32&ndash;09:34</div>
+      </div>
+
+      <div class="report-line">
+        <span class="label">Friday</span>
+        <span class="text">
+          br-poc0 + 7 production VMs + NUMA pinning + 9 snapshots + cooling-SLA hot-soak (peak 81°C, under 85°C high). Day-2 closed 8/8. ADR-0002 merged Friday morning.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Today</span>
+        <span class="text">
+          <strong>Three sub-tasks.</strong> (1) Hand vm-data-store keys to Harshit at 09:45 &mdash; walk SSH access, sudo, libvirt domain XML in case any resource adjustment is needed. (2) Install <code>pgBackRest</code> on vm-data-store with stanza pointing at MinIO bucket <code>pg-backups</code>; configure nightly full + WAL archive every 60s; the WAL stream must start before the first migration runs so we can replay if today's data goes sideways. (3) <strong>First backup-restore drill</strong> at 17:00 IST &mdash; clone vm-data-store to vm-bastion's spare disk, restore the pgBackRest archive, run <code>SELECT count(*) FROM toxicity_endpoints</code>, expect 16. Document drill in <code>docs/backup-drills.md</code>. Available all day for any infra questions but otherwise heads-down on Day-4 prep (worker-pool Celery + Flower setup).
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Blockers</span>
+        <span class="text">None. PR-#9 (br-poc0 + provisioning) is in the queue; Sarthak reviewed Friday evening, Harshit will review today.</span>
+      </div>
+      <div class="report-line risk">
+        <span class="label">Today's risk</span>
+        <span class="text">
+          <strong>pgBackRest configuration drift between WAL archive and full-backup.</strong> If the WAL archive starts before pgBackRest is fully configured, or if the bucket isn't writable by the backup user, WAL files queue up and Postgres' <code>pg_wal</code> directory fills. On a 3 TB disk this would take days to become a real problem, but on the POC scale it could surprise us by Day 5. Mitigation: my install order is explicitly "MinIO bucket → backup IAM key → pgBackRest stanza-create → Postgres start"; I'll verify the first WAL file lands in the bucket before the first migration runs.
+        </span>
+      </div>
+    </article>
+
+
+    <!-- Sarthak report -->
+    <article class="report" style="--track: var(--t-sarthak);">
+      <div class="report-head">
+        <div>
+          <span class="report-name">Sarthak Chauhan</span>
+          <span class="report-role">AI / ML &middot; supporting</span>
+        </div>
+        <div class="report-window">2 min &middot; 09:34&ndash;09:36</div>
+      </div>
+
+      <div class="report-line">
+        <span class="label">Friday</span>
+        <span class="text">
+          Four datasets downloaded with counts matching published; round-trip canonicalization 0 failures across 400; <code>curate.py</code> ran on Tox21 + ClinTox; curation protocol document up. PR-#10 deferred to today's MinIO bucket gate.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Today</span>
+        <span class="text">
+          <strong>Four sub-tasks.</strong> (1) Once MinIO is up (~13:00 expected per Harshit), use <code>mc cp</code> to push the 4 raw parquets from <code>~/aitip-data/raw/</code> to <code>minio://raw-datasets/</code>, plus the 2 curated parquets to <code>minio://processed/</code>. (2) Compute SHA-256 of every payload; insert a row per dataset into <code>dataset_registry</code> via psql once Postgres is up. (3) Pre-stage <code>services/data/featurize.py</code> &mdash; the Day-4 script that produces Morgan FP (radius 2, 2048 bits) + 208 RDKit descriptors per compound; test locally on the curated tox21+clintox; persist to <code>~/aitip-data/processed/features/</code> as Parquet. (4) Once PR-#10 merges, run curate on the full hERG (12,830) and DILIrank (1,036) corpora as the first end-to-end production curation.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Blockers</span>
+        <span class="text">None. Soft dependency on MinIO being up for upload; soft dependency on Postgres for dataset_registry insert. Both expected by 13:00.</span>
+      </div>
+      <div class="report-line risk">
+        <span class="label">Today's risk</span>
+        <span class="text">
+          <strong>featurize.py memory blowup on hERG.</strong> 12,830 compounds × 2048-bit Morgan + 208 RDKit descriptors = ~30 MB output uncompressed. Trivial. But naïve implementations use a Python list-of-arrays and balloon to multi-GB during compute. I'll write it streaming &mdash; canonical SMILES → mol object → fingerprint+descriptors → row-write to Parquet append &mdash; never holding more than 1000 compounds in memory. Mitigation is just "write it correctly the first time."
+        </span>
+      </div>
+    </article>
+
+
+    <!-- Cross-cutting risks -->
+    <article class="report" style="--track: var(--amber); border-left-color: var(--amber);">
+      <div class="report-head">
+        <div>
+          <span class="report-name">Today's risks &mdash; consolidated</span>
+          <span class="report-role" style="color: var(--amber);">3 min &middot; chair leads</span>
+        </div>
+        <div class="report-window">09:36&ndash;09:39</div>
+      </div>
+
+      <div class="report-line">
+        <span class="label">Critical path</span>
+        <span class="text">
+          Today the critical path runs through Harshit, but the failure mode is different from Day 2. Day 2 was "if Jitendra slips, Sarthak/Harshit have laptop work." Today: <strong>if Harshit slips on any one of the four datastores, Sarthak's late-afternoon upload slips, and PR-#10 doesn't merge today.</strong> That cascades into Day 4 morning (curation pipeline can't run until raw datasets are in MinIO and the worker-pool can read them).
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Bridge plan</span>
+        <span class="text">
+          If by 14:30 Harshit has ≤ 2 of 4 datastores up: Sarthak shifts to writing featurize.py against curated parquets on his laptop (Day 4 prep). Jitendra extends the backup-drill window into Tuesday morning if pgBackRest depends on a slipped MinIO. Nobody waits idle.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">EOD criteria</span>
+        <span class="text">
+          <strong>Eight criteria for Day 3:</strong> (1) Postgres 16 + extensions running on vm-data-store with migration 001 applied · (2) MinIO with 5 buckets + lifecycle policies · (3) Redis 7 with AOF · (4) ChromaDB with persistent volume · (5) pgBackRest configured with WAL streaming to MinIO · (6) backup-restore drill green (16 endpoint rows recovered) · (7) PR-#8 + PR-#10 both merged · (8) raw + curated parquets uploaded with sha256 logged in dataset_registry.
+        </span>
+      </div>
+    </article>
+
+    <p style="margin-top: 22px; font-family: var(--mono); font-size: 0.88rem; color: var(--ink-2); padding: 10px 14px; background: var(--paper-deep); border-radius: var(--r); border: 1px solid var(--rule);">
+      <strong style="color: var(--ok);">09:39 standup ends.</strong> Six minutes under budget. Engineers break to workstations. 14:00 lightweight check-in is the only synchronous touchpoint.
+    </p>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §02 · DAY THEME — persistence layered diagram
+     ================================================================ -->
+<section class="section deep" id="theme">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 02 · day theme</div>
+        <h2>Four pillars inside one VM &mdash; the persistence tier</h2>
+      </div>
+      <p class="sub">By 18:00 today every rectangle in this diagram is a real running process inside vm-data-store, with persistent volumes mounted, ports exposed only on the bridge, and an audit trail of who can write to what.</p>
+    </div>
+
+    <div class="persistence">
+      <div class="persistence-head">
+        <div>
+          <div class="tag">persistence tier &middot; vm-data-store &middot; 10.20.0.40</div>
+          <div class="title">Postgres 16 &middot; MinIO &middot; Redis 7 &middot; ChromaDB &mdash; layered into one 8-vCPU / 128-GB / 3-TB VM</div>
+        </div>
+        <div class="persistence-head .meta">disk: 3.0 TB &middot; ZFS datasets x 6</div>
+      </div>
+
+      <svg viewBox="0 0 1100 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="persist-title">
+        <title id="persist-title">vm-data-store persistence tier — Postgres, MinIO, Redis, ChromaDB layered with their volumes and access patterns</title>
+
+        <defs>
+          <marker id="pa-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#b87333"/>
+          </marker>
+          <marker id="pa-arrow-soft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7785"/>
+          </marker>
+          <pattern id="pa-hex" x="0" y="0" width="22" height="25" patternUnits="userSpaceOnUse">
+            <polygon points="11,1 21,7 21,18 11,24 1,18 1,7" fill="none" stroke="#0b2540" stroke-opacity="0.05" stroke-width="0.6"/>
+          </pattern>
+        </defs>
+
+        <rect width="1100" height="720" fill="url(#pa-hex)"/>
+
+        <!-- Outer VM container -->
+        <rect x="20" y="20" width="1060" height="680" rx="10" fill="none" stroke="#0b2540" stroke-width="2" stroke-dasharray="2 4"/>
+        <text x="40" y="46" font-family="Georgia, serif" font-size="14" fill="#0b2540" font-weight="700">vm-data-store &middot; 10.20.0.40 &middot; 8 vCPU &middot; 128 GB RAM &middot; 3.0 TB</text>
+        <text x="40" y="64" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#6b7785">br-poc0 only · default-deny inbound · only listed ports allowed from bridge peers</text>
+
+        <!-- =========================================
+             CALLERS at the top — who connects to this VM
+             ========================================= -->
+        <g>
+          <rect x="60" y="90" width="160" height="50" rx="6" fill="#fffdf5" stroke="#0b2540" stroke-width="1.4"/>
+          <text x="140" y="111" font-family="SF Mono, Menlo, monospace" font-size="11" fill="#0b2540" text-anchor="middle" font-weight="700">vm-core-api</text>
+          <text x="140" y="128" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785" text-anchor="middle">10.20.0.20</text>
+
+          <rect x="240" y="90" width="160" height="50" rx="6" fill="#fffdf5" stroke="#1f5d8c" stroke-width="1.4"/>
+          <text x="320" y="111" font-family="SF Mono, Menlo, monospace" font-size="11" fill="#1f5d8c" text-anchor="middle" font-weight="700">vm-tox-inference</text>
+          <text x="320" y="128" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785" text-anchor="middle">10.20.0.50 · NUMA 0</text>
+
+          <rect x="420" y="90" width="160" height="50" rx="6" fill="#fffdf5" stroke="#0e6b6b" stroke-width="1.4"/>
+          <text x="500" y="111" font-family="SF Mono, Menlo, monospace" font-size="11" fill="#0e6b6b" text-anchor="middle" font-weight="700">vm-embed-search</text>
+          <text x="500" y="128" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785" text-anchor="middle">10.20.0.55</text>
+
+          <rect x="600" y="90" width="160" height="50" rx="6" fill="#fffdf5" stroke="#6b3a52" stroke-width="1.4"/>
+          <text x="680" y="111" font-family="SF Mono, Menlo, monospace" font-size="11" fill="#6b3a52" text-anchor="middle" font-weight="700">vm-rag-llm</text>
+          <text x="680" y="128" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785" text-anchor="middle">10.20.0.60 · NUMA 1</text>
+
+          <rect x="780" y="90" width="160" height="50" rx="6" fill="#fffdf5" stroke="#0e6b6b" stroke-width="1.4"/>
+          <text x="860" y="111" font-family="SF Mono, Menlo, monospace" font-size="11" fill="#0e6b6b" text-anchor="middle" font-weight="700">vm-worker-pool</text>
+          <text x="860" y="128" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785" text-anchor="middle">10.20.0.70 · Celery</text>
+        </g>
+        <text x="540" y="80" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#b87333" text-anchor="middle" letter-spacing="0.5">CLIENTS — connect via 10.20.0.40:&lt;port&gt;</text>
+
+        <!-- Funnel arrows from clients down -->
+        <line x1="140" y1="140" x2="140" y2="180" stroke="#b87333" stroke-width="1.4" marker-end="url(#pa-arrow)"/>
+        <line x1="320" y1="140" x2="320" y2="180" stroke="#b87333" stroke-width="1.4" marker-end="url(#pa-arrow)"/>
+        <line x1="500" y1="140" x2="500" y2="180" stroke="#b87333" stroke-width="1.4" marker-end="url(#pa-arrow)"/>
+        <line x1="680" y1="140" x2="680" y2="180" stroke="#b87333" stroke-width="1.4" marker-end="url(#pa-arrow)"/>
+        <line x1="860" y1="140" x2="860" y2="180" stroke="#b87333" stroke-width="1.4" marker-end="url(#pa-arrow)"/>
+
+        <!-- =========================================
+             PORT FENCE — the ports actually exposed on br-poc0
+             ========================================= -->
+        <rect x="60" y="180" width="980" height="36" rx="4" fill="#0b2540"/>
+        <text x="80" y="203" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#e9c98b" font-weight="700" letter-spacing="0.5">PORT FENCE · br-poc0 →  vm-data-store:</text>
+        <text x="380" y="203" font-family="SF Mono, Menlo, monospace" font-size="11" fill="#fffdf5">5432</text>
+        <text x="430" y="203" font-family="SF Mono, Menlo, monospace" font-size="9"  fill="#6fb8a8">postgres</text>
+        <text x="510" y="203" font-family="SF Mono, Menlo, monospace" font-size="11" fill="#fffdf5">9000</text>
+        <text x="560" y="203" font-family="SF Mono, Menlo, monospace" font-size="9"  fill="#6fb8a8">minio S3</text>
+        <text x="630" y="203" font-family="SF Mono, Menlo, monospace" font-size="11" fill="#fffdf5">9001</text>
+        <text x="680" y="203" font-family="SF Mono, Menlo, monospace" font-size="9"  fill="#6fb8a8">minio console</text>
+        <text x="780" y="203" font-family="SF Mono, Menlo, monospace" font-size="11" fill="#fffdf5">6379</text>
+        <text x="830" y="203" font-family="SF Mono, Menlo, monospace" font-size="9"  fill="#6fb8a8">redis</text>
+        <text x="880" y="203" font-family="SF Mono, Menlo, monospace" font-size="11" fill="#fffdf5">8001</text>
+        <text x="930" y="203" font-family="SF Mono, Menlo, monospace" font-size="9"  fill="#6fb8a8">chromadb</text>
+
+        <!-- =========================================
+             FOUR DATASTORE ROWS — Postgres, MinIO, Redis, ChromaDB
+             ========================================= -->
+
+        <!-- Postgres -->
+        <rect x="60" y="240" width="980" height="84" rx="6" fill="#fffdf5" stroke="#336791" stroke-width="2"/>
+        <rect x="60" y="240" width="180" height="84" fill="#336791"/>
+        <text x="150" y="270" font-family="Georgia, serif" font-size="22" fill="#fffdf5" text-anchor="middle" font-weight="800">PG 16</text>
+        <text x="150" y="290" font-family="SF Mono, Menlo, monospace" font-size="9" fill="rgba(255,253,247,0.8)" text-anchor="middle">port 5432</text>
+        <text x="150" y="306" font-family="SF Mono, Menlo, monospace" font-size="9" fill="rgba(255,253,247,0.8)" text-anchor="middle">tcp · only br-poc0</text>
+        <text x="260" y="266" font-family="Georgia, serif" font-size="14" fill="#0a1f2c" font-weight="700">PostgreSQL 16.4</text>
+        <text x="260" y="285" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#2a3845">extensions: pg_partman · pg_stat_statements · pgcrypto · citext</text>
+        <text x="260" y="302" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#2a3845">8 tables (compounds, predictions, jobs, users, audit_log, …) + 16 endpoint refs</text>
+        <text x="1020" y="266" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#336791" text-anchor="end" font-weight="700">800 GB</text>
+        <text x="1020" y="282" font-family="SF Mono, Menlo, monospace" font-size="9"  fill="#6b7785" text-anchor="end">/var/lib/postgresql/data</text>
+        <text x="1020" y="298" font-family="SF Mono, Menlo, monospace" font-size="9"  fill="#6b7785" text-anchor="end">zfs poc-pool/vms/data-store/pgdata</text>
+        <text x="1020" y="314" font-family="SF Mono, Menlo, monospace" font-size="9"  fill="#6b7785" text-anchor="end">recordsize=16K · compression=lz4</text>
+
+        <!-- MinIO -->
+        <rect x="60" y="338" width="980" height="84" rx="6" fill="#fffdf5" stroke="#c72e29" stroke-width="2"/>
+        <rect x="60" y="338" width="180" height="84" fill="#c72e29"/>
+        <text x="150" y="368" font-family="Georgia, serif" font-size="22" fill="#fffdf5" text-anchor="middle" font-weight="800">MinIO</text>
+        <text x="150" y="388" font-family="SF Mono, Menlo, monospace" font-size="9" fill="rgba(255,253,247,0.8)" text-anchor="middle">9000 (S3) · 9001 (UI)</text>
+        <text x="150" y="404" font-family="SF Mono, Menlo, monospace" font-size="9" fill="rgba(255,253,247,0.8)" text-anchor="middle">erasure 4-drive</text>
+        <text x="260" y="364" font-family="Georgia, serif" font-size="14" fill="#0a1f2c" font-weight="700">MinIO RELEASE.2024-09</text>
+        <text x="260" y="383" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#2a3845">5 buckets: raw-datasets · processed · models · pg-backups · artifacts</text>
+        <text x="260" y="400" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#2a3845">lifecycle: 365d / 365d / 730d / 30d / 90d &middot; versioning: 4 of 5 enabled</text>
+        <text x="1020" y="364" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#c72e29" text-anchor="end" font-weight="700">1.6 TB</text>
+        <text x="1020" y="380" font-family="SF Mono, Menlo, monospace" font-size="9"  fill="#6b7785" text-anchor="end">/srv/minio/{1,2,3,4}</text>
+        <text x="1020" y="396" font-family="SF Mono, Menlo, monospace" font-size="9"  fill="#6b7785" text-anchor="end">zfs poc-pool/vms/data-store/minio-{1..4}</text>
+        <text x="1020" y="412" font-family="SF Mono, Menlo, monospace" font-size="9"  fill="#6b7785" text-anchor="end">recordsize=128K · compression=lz4</text>
+
+        <!-- Redis -->
+        <rect x="60" y="436" width="980" height="74" rx="6" fill="#fffdf5" stroke="#a41e11" stroke-width="2"/>
+        <rect x="60" y="436" width="180" height="74" fill="#a41e11"/>
+        <text x="150" y="466" font-family="Georgia, serif" font-size="22" fill="#fffdf5" text-anchor="middle" font-weight="800">Redis 7</text>
+        <text x="150" y="486" font-family="SF Mono, Menlo, monospace" font-size="9" fill="rgba(255,253,247,0.8)" text-anchor="middle">port 6379</text>
+        <text x="150" y="502" font-family="SF Mono, Menlo, monospace" font-size="9" fill="rgba(255,253,247,0.8)" text-anchor="middle">AOF every-second</text>
+        <text x="260" y="462" font-family="Georgia, serif" font-size="14" fill="#0a1f2c" font-weight="700">Redis 7.4</text>
+        <text x="260" y="481" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#2a3845">role: Celery broker (workers) + cache (hot SMILES, TTL 24h)</text>
+        <text x="260" y="498" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#2a3845">maxmemory 8GB · maxmemory-policy allkeys-lru · requirepass via Vault</text>
+        <text x="1020" y="462" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#a41e11" text-anchor="end" font-weight="700">20 GB</text>
+        <text x="1020" y="478" font-family="SF Mono, Menlo, monospace" font-size="9"  fill="#6b7785" text-anchor="end">/var/lib/redis</text>
+        <text x="1020" y="494" font-family="SF Mono, Menlo, monospace" font-size="9"  fill="#6b7785" text-anchor="end">zfs poc-pool/vms/data-store/redis</text>
+
+        <!-- ChromaDB -->
+        <rect x="60" y="524" width="980" height="74" rx="6" fill="#fffdf5" stroke="#7a4cb8" stroke-width="2"/>
+        <rect x="60" y="524" width="180" height="74" fill="#7a4cb8"/>
+        <text x="150" y="554" font-family="Georgia, serif" font-size="20" fill="#fffdf5" text-anchor="middle" font-weight="800">ChromaDB</text>
+        <text x="150" y="574" font-family="SF Mono, Menlo, monospace" font-size="9" fill="rgba(255,253,247,0.8)" text-anchor="middle">port 8001</text>
+        <text x="150" y="590" font-family="SF Mono, Menlo, monospace" font-size="9" fill="rgba(255,253,247,0.8)" text-anchor="middle">server mode</text>
+        <text x="260" y="550" font-family="Georgia, serif" font-size="14" fill="#0a1f2c" font-weight="700">ChromaDB 0.5.x server</text>
+        <text x="260" y="569" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#2a3845">collection (Day 8): pubmed-tox · ~100K abstract chunks · 768-dim PubMedBERT</text>
+        <text x="260" y="586" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#2a3845">today: empty server up · index loads when Day 8 ingestion runs</text>
+        <text x="1020" y="550" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#7a4cb8" text-anchor="end" font-weight="700">500 GB</text>
+        <text x="1020" y="566" font-family="SF Mono, Menlo, monospace" font-size="9"  fill="#6b7785" text-anchor="end">/var/lib/chroma</text>
+        <text x="1020" y="582" font-family="SF Mono, Menlo, monospace" font-size="9"  fill="#6b7785" text-anchor="end">zfs poc-pool/vms/data-store/chroma</text>
+
+        <!-- =========================================
+             BACKUP TIER — pgBackRest + ZFS snapshots flowing out
+             ========================================= -->
+        <rect x="60" y="618" width="980" height="64" rx="6" fill="rgba(184,115,51,0.08)" stroke="#b87333" stroke-width="1.4" stroke-dasharray="3 3"/>
+        <text x="80" y="640" font-family="SF Mono, Menlo, monospace" font-size="11" fill="#b87333" font-weight="700" letter-spacing="0.5">BACKUP TIER</text>
+        <text x="180" y="640" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#0a1f2c">pgBackRest WAL→ minio://pg-backups/wal/  &middot;  nightly full → minio://pg-backups/full/</text>
+        <text x="180" y="657" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#0a1f2c">ZFS snapshot → poc-pool/vms/data-store@daily-{date}  (7-day retention)</text>
+        <text x="180" y="674" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#0a1f2c">restore drill → vm-bastion clone, validate <tspan font-family="SF Mono, Menlo, monospace" fill="#b87333">SELECT count(*) FROM toxicity_endpoints = 16</tspan></text>
+
+        <!-- arrows from postgres into backup tier -->
+        <line x1="540" y1="324" x2="540" y2="618" stroke="#b87333" stroke-width="1.2" stroke-dasharray="2 3" opacity="0.5"/>
+
+      </svg>
+    </div>
+
+
+    <div class="ds-grid">
+
+      <article class="ds-card" style="--ds-color: var(--ds-postgres);">
+        <div class="ds-name">PostgreSQL 16</div>
+        <div class="ds-port">port <code>5432</code> &middot; tcp/bridge-only</div>
+        <p class="ds-purpose">Transactional state &mdash; every compound, prediction, job, user, audit row. The system of record. Migrations via Alembic. Monthly partitioning on <code>audit_log</code> via pg_partman.</p>
+        <div class="ds-config">
+<strong>extensions:</strong>
+  pg_partman, pg_stat_statements,
+  pgcrypto, citext
+
+<strong>tuning:</strong>
+  shared_buffers = 32GB
+  work_mem = 64MB
+  effective_cache_size = 96GB
+  max_connections = 200
+  checkpoint_completion_target = 0.9</div>
+      </article>
+
+      <article class="ds-card" style="--ds-color: var(--ds-minio);">
+        <div class="ds-name">MinIO</div>
+        <div class="ds-port">ports <code>9000</code> S3 &middot; <code>9001</code> console</div>
+        <p class="ds-purpose">Blob layer &mdash; raw datasets, curated parquets, model checkpoints, batch results, PDF reports, MLflow artifacts, pgBackRest archive. Five buckets, lifecycle-managed.</p>
+        <div class="ds-config">
+<strong>buckets / retention:</strong>
+  raw-datasets    365d   versioned
+  processed       365d   versioned
+  models          730d   versioned
+  pg-backups       30d   no version
+  artifacts        90d   versioned
+
+<strong>access keys (Vault):</strong>
+  read-only · read-write</div>
+      </article>
+
+      <article class="ds-card" style="--ds-color: var(--ds-redis);">
+        <div class="ds-name">Redis 7</div>
+        <div class="ds-port">port <code>6379</code> &middot; AUTH required</div>
+        <p class="ds-purpose">Two roles. <strong>Broker</strong> for Celery (Day 4 workers). <strong>Cache</strong> for hot SMILES predictions (24h TTL, allkeys-LRU eviction). AOF persistence so a restart doesn't lose live jobs.</p>
+        <div class="ds-config">
+<strong>persistence:</strong>
+  appendonly yes
+  appendfsync everysec
+  auto-aof-rewrite-percentage 100
+
+<strong>memory:</strong>
+  maxmemory 8gb
+  maxmemory-policy allkeys-lru
+
+<strong>auth:</strong>
+  requirepass &lt;vault://redis-pw&gt;</div>
+      </article>
+
+      <article class="ds-card" style="--ds-color: var(--ds-chroma);">
+        <div class="ds-name">ChromaDB 0.5</div>
+        <div class="ds-port">port <code>8001</code> &middot; HTTP/server-mode</div>
+        <p class="ds-purpose">Vector store for the literature RAG &mdash; ~100K PubMed abstract chunks at 768-dim PubMedBERT embeddings. Today: server up, empty. Day 8 ingestion populates the <code>pubmed-tox</code> collection.</p>
+        <div class="ds-config">
+<strong>config:</strong>
+  is_persistent = true
+  persist_directory = /var/lib/chroma
+  anonymized_telemetry = false
+  chroma_server_host = 0.0.0.0
+  chroma_server_http_port = 8001
+
+<strong>collection (Day 8):</strong>
+  name = pubmed-tox
+  metric = cosine</div>
+      </article>
+
+    </div>
+
+
+    <!-- ZFS dataset volume bar -->
+    <div class="volumes">
+      <h4>vm-data-store · 3.0 TB disk · ZFS dataset breakdown</h4>
+      <div class="volume-bar">
+        <div class="volume-seg" style="width: 26.7%; background: #336791;">PG 800 GB</div>
+        <div class="volume-seg" style="width: 53.3%; background: #c72e29;">MinIO 1.6 TB (4 × 400 GB)</div>
+        <div class="volume-seg" style="width: 0.7%;  background: #a41e11;">RD</div>
+        <div class="volume-seg" style="width: 16.7%; background: #7a4cb8;">Chroma 500 GB</div>
+        <div class="volume-seg" style="width: 2.6%;  background: #6b7785;">free</div>
+      </div>
+      <div class="volume-legend">
+        <div class="vl-row">
+          <span class="vl-swatch" style="background: #336791;"></span>
+          <strong>Postgres</strong> /var/lib/postgresql/data
+          <span class="size">800 GB</span>
+        </div>
+        <div class="vl-row">
+          <span class="vl-swatch" style="background: #c72e29;"></span>
+          <strong>MinIO</strong> /srv/minio/{1..4}
+          <span class="size">1.6 TB</span>
+        </div>
+        <div class="vl-row">
+          <span class="vl-swatch" style="background: #a41e11;"></span>
+          <strong>Redis</strong> /var/lib/redis
+          <span class="size">20 GB</span>
+        </div>
+        <div class="vl-row">
+          <span class="vl-swatch" style="background: #7a4cb8;"></span>
+          <strong>ChromaDB</strong> /var/lib/chroma
+          <span class="size">500 GB</span>
+        </div>
+        <div class="vl-row">
+          <span class="vl-swatch" style="background: #6b7785;"></span>
+          <strong>free</strong> reserve
+          <span class="size">80 GB</span>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="prose" style="margin-top: 26px;">
+      <p>
+        Six ZFS datasets live under <code>poc-pool/vms/data-store/</code>: <code>pgdata</code> (recordsize=16K, optimal for Postgres 8K pages), <code>minio-1</code> through <code>minio-4</code> (recordsize=128K, sequential blob workload), <code>redis</code> (default 128K), <code>chroma</code> (default 128K). Each gets its own snapshot lineage so we can roll back Postgres without touching MinIO or vice versa. Tonight at 23:00 the first <code>poc-pool/vms/data-store@daily-2026-05-11</code> snapshot fires from cron; 7-day retention keeps a week of recoverable points.
+      </p>
+      <p>
+        The diagram is what 18:00 looks like; what 09:30 looks like is just the empty Ubuntu VM provisioned Friday. Eight working hours to go from <code>apt install postgresql-16</code> all the way to a successful backup-restore drill recovering 16 endpoint reference rows on a clone VM. That's the day.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     PART 2 — additional CSS for §03 task blocks
+     ================================================================ -->
+<style>
+
+/* engineer stripe & task block — same idiom as days 1-2, repeated for self-containment */
+.engineer-stripe {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-left: 5px solid var(--track, var(--navy));
+  border-radius: var(--r);
+  padding: 16px 20px;
+  margin: 28px 0 18px;
+  box-shadow: var(--shadow-1);
+}
+.engineer-stripe .e-avatar {
+  width: 48px; height: 48px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--track, var(--navy));
+  color: white;
+  display: grid; place-items: center;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.0rem;
+  letter-spacing: -0.01em;
+}
+.engineer-stripe .e-meta { flex: 1; min-width: 0; }
+.engineer-stripe .e-name {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.16rem;
+  color: var(--ink);
+}
+.engineer-stripe .e-role {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--track, var(--navy));
+  margin-top: 2px; font-weight: 600;
+}
+.engineer-stripe .e-summary {
+  font-size: 0.88rem;
+  color: var(--ink-2);
+  margin-top: 6px; line-height: 1.5;
+}
+.engineer-stripe .e-counter {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-align: right; flex-shrink: 0;
+}
+.engineer-stripe .e-counter strong {
+  display: block;
+  font-family: var(--serif);
+  color: var(--track, var(--navy));
+  font-size: 1.6rem; line-height: 1;
+  margin-top: 2px;
+}
+
+.task-block {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 18px 22px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-1);
+  position: relative;
+}
+.task-block::before {
+  content: "";
+  position: absolute;
+  left: -1px; top: 22px;
+  width: 4px; height: 28px;
+  background: var(--track, var(--amber));
+  border-radius: 0 2px 2px 0;
+}
+.task-header {
+  display: flex; align-items: baseline; gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--rule);
+}
+.task-window {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--track, var(--amber));
+  letter-spacing: 0.04em;
+  background: var(--paper-deep);
+  padding: 3px 9px;
+  border-radius: var(--r-s);
+  border: 1px solid var(--rule);
+  white-space: nowrap;
+}
+.task-title {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.04rem;
+  color: var(--navy-deep);
+  flex: 1; min-width: 0;
+}
+.task-title em { font-style: italic; color: var(--amber); }
+.task-block p {
+  font-size: 0.94rem;
+  color: var(--ink-2);
+  margin-bottom: 10px;
+}
+.task-block p strong { color: var(--navy-deep); }
+.task-steps {
+  margin: 10px 0;
+  padding: 0 0 0 24px;
+  counter-reset: step;
+  list-style: none;
+}
+.task-steps li {
+  position: relative;
+  font-size: 0.92rem;
+  color: var(--ink-2);
+  margin-bottom: 6px;
+  padding-left: 8px;
+  line-height: 1.55;
+}
+.task-steps li::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: -22px; top: 1px;
+  width: 18px; height: 18px;
+  font-family: var(--mono);
+  font-size: 0.72rem; font-weight: 700;
+  color: var(--track, var(--amber));
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  display: grid; place-items: center;
+}
+.task-steps li strong { color: var(--navy-deep); }
+
+.code-block {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  background: var(--navy-deep);
+  color: #e8e2cf;
+  padding: 14px 18px;
+  border-radius: var(--r);
+  line-height: 1.65;
+  overflow-x: auto;
+  margin: 10px 0;
+  white-space: pre;
+  border-left: 4px solid var(--track, var(--amber));
+}
+.code-block .comment { color: #8a93a0; font-style: italic; }
+.code-block .prompt { color: var(--amber-soft); user-select: none; }
+.code-block .ok { color: #9bd3a6; }
+.code-block .warn { color: #f0c878; }
+.code-block .err { color: #e8a4a0; }
+.code-block .key { color: #b6d8e8; }
+.code-block em { color: #e9c98b; font-style: normal; font-weight: 700; }
+
+.note {
+  background: var(--paper-deep);
+  border-left: 3px solid var(--info);
+  padding: 10px 14px;
+  border-radius: 0 var(--r) var(--r) 0;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+  margin: 10px 0;
+}
+.note strong {
+  color: var(--info);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  display: block; margin-bottom: 3px;
+}
+.note.warn { border-left-color: var(--warn); background: rgba(180, 83, 9, 0.07); }
+.note.warn strong { color: var(--warn); }
+.note.ok { border-left-color: var(--ok); background: rgba(27, 127, 58, 0.06); }
+.note.ok strong { color: var(--ok); }
+
+.checkpoint {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  background: var(--paper-deep);
+  border: 1px dashed var(--amber);
+  padding: 8px 12px;
+  border-radius: var(--r);
+  margin: 10px 0;
+  color: var(--ink-2);
+}
+.checkpoint::before { content: "◇"; color: var(--amber); font-size: 0.94rem; }
+.checkpoint strong { color: var(--navy-deep); }
+
+</style>
+
+
+<!-- ================================================================
+     §03 · TASKS BY ENGINEER
+     Day 3: Harshit leads (4 datastores) but Jitendra has the
+     critical morning hand-over and the late-afternoon backup drill.
+     We start with Jitendra because his hand-over unblocks Harshit.
+     ================================================================ -->
+<section class="section" id="tasks">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 03 · tasks by engineer</div>
+        <h2>Window by window &mdash; the data-store stack lands today</h2>
+      </div>
+      <p class="sub">Jitendra goes first because his 09:45 hand-over unblocks Harshit's day. Harshit then carries the lead block (six rocks across eight hours). Sarthak follows with the upload + featurize.py pre-stage that lands the curation merge gate.</p>
+    </div>
+
+    <div class="prose" style="margin-bottom: 18px;">
+      <p>
+        Three lanes again, but with tighter coupling than Day 2. Harshit's lane depends on Jitendra finishing the hand-over walk and getting pgBackRest's WAL stream live before the first migration. Sarthak's lane depends on Harshit finishing MinIO bucket creation and Postgres being up. None of the dependencies are blocking-blocking &mdash; the gating happens at lunch (14:00 check-in) and again at 16:00 &mdash; but the sequence matters and we keep an eye on it.
+      </p>
+    </div>
+
+
+    <!-- ============================================================
+         JITENDRA — three sub-tasks
+         ============================================================ -->
+    <div class="engineer-stripe" style="--track: var(--t-jitendra);">
+      <div class="e-avatar">JM</div>
+      <div class="e-meta">
+        <div class="e-name">Jitendra Maurya</div>
+        <div class="e-role">Infrastructure &amp; DevOps &middot; supporting today</div>
+        <div class="e-summary">Three windows: 09:45 hand-over, 11:00&ndash;13:00 pgBackRest install + WAL stream, 17:00 backup-restore drill on bastion clone. Otherwise heads-down on Day-4 worker-pool prep.</div>
+      </div>
+      <div class="e-counter">
+        windows<strong>5</strong>
+      </div>
+    </div>
+
+
+    <!-- 09:45–10:30 — vm-data-store hand-over -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">09:45&ndash;10:30</span>
+        <span class="task-title">Hand vm-data-store keys to Harshit &mdash; SSH, sudo, libvirt domain XML, ZFS datasets.</span>
+      </div>
+      <p>Forty-five-minute walk-through. Harshit needs to know not just <em>how</em> to operate the VM but <em>where to look</em> when something misbehaves. The walk covers SSH access, the libvirt domain XML (in case any vCPU or RAM adjustment is needed mid-day), the six pre-created ZFS datasets, and the disk-IO characteristics he should expect.</p>
+
+      <ol class="task-steps">
+        <li><strong>SSH access already verified Friday</strong> via cloud-init seed. Re-confirm and show <code>sudo -v</code>.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~$</span> ssh -A -p 2222 harshit@aitip-host-01.ops.local
+<span class="prompt">harshit@vm-bastion:~$</span> ssh harshit@vm-data-store.poc.local
+The authenticity of host '...' can't be established.
+ED25519 key fingerprint is SHA256:...
+Are you sure you want to continue connecting? yes
+
+<span class="prompt">harshit@vm-data-store:~$</span> hostname -f &amp;&amp; sudo -v &amp;&amp; whoami
+vm-data-store.poc.local
+[sudo password ... not required, NOPASSWD set in cloud-init]
+harshit
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Walk the libvirt domain XML</strong> &mdash; the file Jitendra would edit if Harshit needs RAM bumped from 128 GB to, say, 144 GB.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@aitip-host-01:~$</span> sudo virsh dumpxml vm-data-store | head -25
+&lt;domain type='kvm' id='2'&gt;
+  &lt;name&gt;vm-data-store&lt;/name&gt;
+  &lt;memory unit='KiB'&gt;134217728&lt;/memory&gt;       <span class="comment"># 128 GB · adjust here if needed</span>
+  &lt;currentMemory unit='KiB'&gt;134217728&lt;/currentMemory&gt;
+  &lt;vcpu placement='static'&gt;8&lt;/vcpu&gt;             <span class="comment"># 8 vCPU · adjust here if needed</span>
+  &lt;os&gt;
+    &lt;type arch='x86_64' machine='pc-q35-6.2'&gt;hvm&lt;/type&gt;
+  &lt;/os&gt;
+  &lt;cpu mode='host-passthrough' check='none'/&gt;
+  ...
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Pre-create six ZFS datasets</strong> for the four datastores plus pgBackRest staging. Setting <code>recordsize</code> per workload upfront is much cheaper than fixing it later.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@aitip-host-01:~$</span> sudo zfs create -o recordsize=16K  -o compression=lz4  poc-pool/vms/data-store/pgdata
+<span class="prompt">jitendra@aitip-host-01:~$</span> for i in 1 2 3 4; do
+    sudo zfs create -o recordsize=128K -o compression=lz4 poc-pool/vms/data-store/minio-$i
+  done
+<span class="prompt">jitendra@aitip-host-01:~$</span> sudo zfs create -o recordsize=8K   -o compression=lz4  poc-pool/vms/data-store/redis
+<span class="prompt">jitendra@aitip-host-01:~$</span> sudo zfs create -o recordsize=128K -o compression=lz4  poc-pool/vms/data-store/chroma
+
+<span class="prompt">jitendra@aitip-host-01:~$</span> sudo zfs list poc-pool/vms/data-store -r
+NAME                                          USED  AVAIL  REFER  MOUNTPOINT
+poc-pool/vms/data-store                       192K  3.0T   192K  /poc-pool/vms/data-store
+poc-pool/vms/data-store/pgdata                 96K  3.0T    96K  /poc-pool/vms/data-store/pgdata
+poc-pool/vms/data-store/minio-1                96K  3.0T    96K  /poc-pool/vms/data-store/minio-1
+poc-pool/vms/data-store/minio-2                96K  3.0T    96K  /poc-pool/vms/data-store/minio-2
+poc-pool/vms/data-store/minio-3                96K  3.0T    96K  /poc-pool/vms/data-store/minio-3
+poc-pool/vms/data-store/minio-4                96K  3.0T    96K  /poc-pool/vms/data-store/minio-4
+poc-pool/vms/data-store/redis                  96K  3.0T    96K  /poc-pool/vms/data-store/redis
+poc-pool/vms/data-store/chroma                 96K  3.0T    96K  /poc-pool/vms/data-store/chroma
+</div>
+      <div class="note">
+        <strong>Why per-dataset recordsize</strong>
+        Postgres writes 8K pages; <code>recordsize=16K</code> gives a 2:1 alignment with minimal write amplification. MinIO writes large objects sequentially; <code>recordsize=128K</code> is what Postgres documentation calls "the obvious sweet spot." Redis AOF appends are small; <code>recordsize=8K</code> reduces CoW overhead on each write. ChromaDB writes embedding vectors in larger blobs; 128K. Get this wrong and write amplification can be 4-8× higher than necessary; we'd see it as Day 6+ I/O wait.
+      </div>
+
+      <ol class="task-steps" start="4" style="counter-reset: step 3;">
+        <li><strong>Mount the ZFS datasets into vm-data-store</strong> as virtio-9p passthroughs. Adds them to libvirt config; needs a VM restart to pick up.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@aitip-host-01:~$</span> sudo virsh shutdown vm-data-store
+<span class="prompt">jitendra@aitip-host-01:~$</span> until [ "$(sudo virsh domstate vm-data-store)" = "shut off" ]; do sleep 1; done
+
+<span class="prompt">jitendra@aitip-host-01:~$</span> sudo virsh edit vm-data-store
+<span class="comment"># Add these filesystem stanzas inside &lt;devices&gt;:</span>
+</div>
+<div class="code-block">  &lt;filesystem type='mount' accessmode='passthrough'&gt;
+    &lt;source dir='/poc-pool/vms/data-store/pgdata'/&gt;
+    &lt;target dir='pgdata'/&gt;
+  &lt;/filesystem&gt;
+  &lt;filesystem type='mount' accessmode='passthrough'&gt;
+    &lt;source dir='/poc-pool/vms/data-store/minio-1'/&gt;
+    &lt;target dir='minio-1'/&gt;
+  &lt;/filesystem&gt;
+  &lt;!-- repeat for minio-2, minio-3, minio-4, redis, chroma --&gt;
+</div>
+<div class="code-block"><span class="prompt">jitendra@aitip-host-01:~$</span> sudo virsh start vm-data-store
+<span class="prompt">harshit@vm-data-store:~$</span> sudo mkdir -p /var/lib/{postgresql/data,redis,chroma} /srv/minio/{1,2,3,4}
+<span class="prompt">harshit@vm-data-store:~$</span> for tag in pgdata minio-1 minio-2 minio-3 minio-4 redis chroma; do
+    case $tag in
+      pgdata)   target=/var/lib/postgresql/data ;;
+      minio-*)  target=/srv/minio/${tag#minio-} ;;
+      redis)    target=/var/lib/redis ;;
+      chroma)   target=/var/lib/chroma ;;
+    esac
+    echo "$tag $target 9p trans=virtio,version=9p2000.L 0 0" | sudo tee -a /etc/fstab
+  done
+<span class="prompt">harshit@vm-data-store:~$</span> sudo mount -a &amp;&amp; df -t 9p
+Filesystem     1K-blocks  Used  Available Use% Mounted on
+pgdata        3221225472     0 3221225472   0% /var/lib/postgresql/data
+minio-1       3221225472     0 3221225472   0% /srv/minio/1
+... [6 more] ...
+</div>
+
+      <div class="checkpoint">
+        <span><strong>10:30 checkpoint:</strong> Harshit has SSH + sudo + 7 mounted volumes. He owns vm-data-store. Jitendra moves to pgBackRest install.</span>
+      </div>
+    </div>
+
+
+    <!-- 11:00–13:00 — pgBackRest -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">11:00&ndash;13:00</span>
+        <span class="task-title">Install pgBackRest with stanza pointing at <code>minio://pg-backups/</code> &mdash; WAL stream live <em>before</em> first migration.</span>
+      </div>
+      <p>The order matters: MinIO bucket exists → backup user has write key → pgBackRest stanza-create succeeds → Postgres starts with <code>archive_command</code> pointing at pgBackRest. If we start Postgres first and configure backups later, we have a window where data is unrecoverable. Today's discipline is to wait for Harshit to confirm <code>pg-backups</code> bucket exists (~11:30 expected), then proceed.</p>
+
+      <ol class="task-steps">
+        <li><strong>Wait for the MinIO <code>pg-backups</code> bucket</strong> to exist. Harshit will <code>mc mb</code> it during his Rock 2.</li>
+      </ol>
+<div class="code-block"><span class="comment"># From #poc-war-room at 11:38:</span>
+<span class="key">harshit</span>: minio is up. all 5 buckets created. pg-backups is live. the backup-user IAM key is in vault: vault://aitip/poc/minio/backup-user · S3-compatible.
+<span class="key">jitendra</span>: ack ✓ — proceeding with pgBackRest install.
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Install pgBackRest</strong> on vm-data-store. We use the apt package; pgBackRest 2.54+ has native S3 support without Python wrappers.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@vm-data-store:~$</span> sudo apt update &amp;&amp; sudo apt install -y pgbackrest
+<span class="prompt">jitendra@vm-data-store:~$</span> pgbackrest version
+pgBackRest 2.54.0
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Configure the <code>aitip</code> stanza</strong> &mdash; one stanza per Postgres cluster; ours is the default cluster on this VM. Backup destination is the MinIO <code>pg-backups</code> bucket via S3.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@vm-data-store:~$</span> sudo tee /etc/pgbackrest/pgbackrest.conf &gt;/dev/null &lt;&lt;'EOF'
+[global]
+repo1-type=s3
+repo1-s3-endpoint=10.20.0.40:9000
+repo1-s3-bucket=pg-backups
+repo1-s3-region=us-east-1
+repo1-s3-uri-style=path
+repo1-s3-key=backup-user
+repo1-s3-key-secret=&lt;vault://aitip/poc/minio/backup-user-secret&gt;
+repo1-s3-verify-tls=n             # POC only — MinIO is on TLS-internal br-poc0
+repo1-retention-full=4            # keep 4 full backups (~4 nights)
+repo1-retention-archive=4
+process-max=4
+log-level-console=info
+log-level-file=detail
+start-fast=y
+
+[aitip]
+pg1-path=/var/lib/postgresql/16/main
+pg1-user=postgres
+pg1-port=5432
+EOF
+
+<span class="comment"># Substitute the Vault reference with the actual key (POC mode: env-var):</span>
+<span class="prompt">jitendra@vm-data-store:~$</span> AITIP_MINIO_BACKUP_SECRET=$(cat ~/.creds/minio-backup-user.txt) \
+    sudo sed -i "s|&lt;vault://aitip/poc/minio/backup-user-secret&gt;|$AITIP_MINIO_BACKUP_SECRET|" \
+    /etc/pgbackrest/pgbackrest.conf
+</div>
+
+      <ol class="task-steps" start="4" style="counter-reset: step 3;">
+        <li><strong>Wire Postgres' <code>archive_command</code></strong> to call pgBackRest. Harshit has installed Postgres 16 by now (Rock 1 done by ~10:50). Update <code>postgresql.conf</code> via Ansible playbook and reload.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@vm-data-store:~$</span> sudo tee -a /etc/postgresql/16/main/postgresql.conf &lt;&lt;'EOF'
+# pgBackRest archive integration
+archive_mode = on
+archive_command = 'pgbackrest --stanza=aitip archive-push %p'
+archive_timeout = 60
+EOF
+
+<span class="prompt">jitendra@vm-data-store:~$</span> sudo systemctl restart postgresql@16-main
+<span class="prompt">jitendra@vm-data-store:~$</span> sudo systemctl is-active postgresql@16-main
+active
+</div>
+
+      <ol class="task-steps" start="5" style="counter-reset: step 4;">
+        <li><strong>Create the stanza</strong> &mdash; pgBackRest's term for "register this Postgres cluster with the backup repository." This is what creates the bucket-folder structure on the MinIO side.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@vm-data-store:~$</span> sudo -u postgres pgbackrest --stanza=aitip stanza-create
+P00   INFO: stanza-create command begin 2.54.0: --exec-id=12345-abcdef
+                       --log-level-console=info --log-level-file=detail --pg1-path=/var/lib/postgresql/16/main
+                       --repo1-s3-bucket=pg-backups --repo1-s3-endpoint=10.20.0.40:9000
+                       --repo1-s3-region=us-east-1 --repo1-type=s3 --stanza=aitip
+P00   INFO: stanza-create for stanza 'aitip' on repo1
+P00   INFO: stanza-create command end: completed successfully (1024ms)
+
+<span class="prompt">jitendra@vm-data-store:~$</span> sudo -u postgres pgbackrest --stanza=aitip check
+P00   INFO: check command begin 2.54.0
+P00   INFO: check repo1 configuration (primary)
+P00   INFO: check repo1 archive for WAL (primary)
+P00   INFO: WAL segment 000000010000000000000001 successfully archived to '...'
+P00   INFO: check command end: completed successfully (3215ms)
+</div>
+
+      <ol class="task-steps" start="6" style="counter-reset: step 5;">
+        <li><strong>First WAL file lands in MinIO bucket</strong> &mdash; verify before declaring done.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@vm-data-store:~$</span> mc ls aitip-poc/pg-backups/archive/aitip/16-1/
+[2026-05-11 11:54:32 IST]  16MiB STANDARD 000000010000000000000001
+[2026-05-11 11:54:33 IST]  16MiB STANDARD 000000010000000000000002
+
+<span class="prompt">jitendra@vm-data-store:~$</span> sudo -u postgres pgbackrest --stanza=aitip --type=full backup
+P00   INFO: backup command begin 2.54.0
+P00   INFO: execute non-exclusive pg_start_backup(): backup begins after the requested immediate checkpoint completes
+P00   INFO: backup start archive = 000000010000000000000003, lsn = 0/3000028
+P00   INFO: full backup size = 47.2MB, file total = 1284
+P00   INFO: backup stop archive = 000000010000000000000003, lsn = 0/30000F8
+P00   INFO: new backup label = 20260511-115456F
+P00   INFO: backup command end: completed successfully (8421ms)
+</div>
+
+      <div class="note ok">
+        <strong>pgBackRest live · 12:18 IST</strong>
+        Stanza created, first WAL segments archived to MinIO, first full backup labeled <code>20260511-115456F</code> (47.2 MB &mdash; just the empty migration-applied schema). Every transaction from this point forward is recoverable to the second; nightly fulls scheduled at 02:00 IST via cron. <strong>This is the moment the data tier becomes regulator-grade.</strong>
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>13:00 checkpoint:</strong> pgBackRest configured, WAL stream live, first full backup taken. Lunch.</span>
+      </div>
+    </div>
+
+
+    <!-- 13:30–14:00 — 14:00 check-in -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">13:30&ndash;14:00</span>
+        <span class="task-title">14:00 lightweight check-in &middot; review PR-#9 to merge.</span>
+      </div>
+
+<div class="code-block"><span class="comment"># Posted to #poc-war-room at 14:00:</span>
+<span class="key">harshit</span>: postgres up + migration 001 applied (PR-#8 mergeable now), minio up with 5 buckets, redis up with AOF, chromadb empty server up. four-of-four datastores reachable from bastion. starting wiring tests.
+<span class="key">jitendra</span>: pgBackRest stanza created, first WAL + full backup in minio bucket. drilling at 17:00 sharp on a clone of vm-data-store. day 04 worker-pool prep ready (i'll start that now).
+<span class="key">sarthak</span>: minio buckets visible from laptop. uploading the 4 raw + 2 curated parquets now. dataset_registry inserts queued for once postgres is ack'd. featurize.py local test on tox21 → fingerprint+descriptor matrix shape (7791, 2256) — looks right.
+</div>
+
+      <p>Three reactions ✅. Day-3 critical path is on schedule. Jitendra reviews PR-#9 (his own br-poc0 + provisioning PR from Friday) which Harshit pre-approved overnight; he merges it with one click.</p>
+<div class="code-block"><span class="prompt">jitendra@laptop:~/aitip-poc$</span> gh pr merge 9 --squash --delete-branch
+✓ Merged pull request #9
+</div>
+    </div>
+
+
+    <!-- 14:00–17:00 — Day-4 worker-pool prep (Jitendra heads-down) -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">14:00&ndash;17:00</span>
+        <span class="task-title">Day-4 worker-pool prep &mdash; Celery + Flower + supervisord on vm-worker-pool. Heads-down.</span>
+      </div>
+      <p>Three hours on the side-project. Day 4 needs a working Celery cluster on vm-worker-pool to run the curation pipeline at scale. Jitendra installs Python 3.12, creates the <code>aitip</code> system user, drops a supervisord config that runs eight Celery worker processes pinned to <code>--concurrency=1</code> each (so each worker gets ~16 GB RAM, plenty for RDKit + featurization). No Celery code yet &mdash; that lands Day 4 morning &mdash; but the runtime is ready.</p>
+
+<div class="code-block"><span class="prompt">jitendra@vm-worker-pool:~$</span> sudo apt install -y python3.12 python3.12-venv supervisor
+<span class="prompt">jitendra@vm-worker-pool:~$</span> sudo useradd -m -s /bin/bash aitip
+<span class="prompt">jitendra@vm-worker-pool:~$</span> sudo -u aitip python3.12 -m venv /home/aitip/.venv-worker
+<span class="prompt">jitendra@vm-worker-pool:~$</span> sudo -u aitip /home/aitip/.venv-worker/bin/pip install \
+    celery[redis]==5.4.0 \
+    flower==2.0.1 \
+    rdkit==2024.3.5 \
+    pandas==2.2.3 \
+    pyarrow==17.0.0
+
+<span class="prompt">jitendra@vm-worker-pool:~$</span> sudo tee /etc/supervisor/conf.d/aitip-worker.conf &gt;/dev/null &lt;&lt;'EOF'
+[program:aitip-worker]
+command=/home/aitip/.venv-worker/bin/celery -A aitip.worker worker
+        --loglevel=info --concurrency=1 -n worker-%(process_num)02d@%%h
+process_name=%(program_name)s_%(process_num)02d
+numprocs=8
+directory=/home/aitip
+user=aitip
+autostart=false                 # off until Day 4 — code lands first
+autorestart=true
+stdout_logfile=/var/log/aitip/worker-%(process_num)02d.log
+stderr_logfile=/var/log/aitip/worker-%(process_num)02d.err
+environment=
+    AITIP_REDIS_URL="redis://:&lt;vault-key&gt;@vm-data-store.poc.local:6379/0",
+    AITIP_PG_HOST="vm-data-store.poc.local",
+    AITIP_PG_PORT="5432"
+
+[program:aitip-flower]
+command=/home/aitip/.venv-worker/bin/celery -A aitip.worker flower --port=5555
+user=aitip
+autostart=false
+autorestart=true
+EOF
+
+<span class="prompt">jitendra@vm-worker-pool:~$</span> sudo supervisorctl reread &amp;&amp; sudo supervisorctl update
+aitip-worker: available
+aitip-flower: available
+</div>
+
+      <p>Supervisor config registered, processes <em>not</em> started yet (autostart=false) &mdash; will start Day 4 morning when Harshit lands the actual <code>aitip.worker</code> module. Closes the Day-4 prep work in 95 minutes.</p>
+
+      <div class="checkpoint">
+        <span><strong>15:35 checkpoint:</strong> Day-4 prep done. Jitendra has 90 minutes free before the 17:00 backup drill. Reviews Sarthak's PR-#10 (curation pre-stage) with detailed comments; approves.</span>
+      </div>
+    </div>
+
+
+    <!-- 17:00–17:45 — backup-restore drill -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">17:00&ndash;17:45</span>
+        <span class="task-title">First backup-restore drill &mdash; <em>full pgBackRest restore</em> onto a clone VM. EOD-3.6 gate.</span>
+      </div>
+      <p>The day's most important verification. We don't trust pgBackRest until we've actually restored from it. The drill: spin up a clone VM (we use vm-bastion's spare 30 GB partition), pretend vm-data-store has been destroyed, install Postgres+pgBackRest, restore from the MinIO archive, verify <code>SELECT count(*) FROM toxicity_endpoints</code> returns exactly 16. If yes, the data tier passes its first regulator-grade test.</p>
+
+      <ol class="task-steps">
+        <li><strong>Provision a temporary clone VM</strong> via cloud-init seed &mdash; we don't actually clone vm-data-store, we provision a fresh small VM and pretend it inherited the disaster.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@aitip-host-01:~/infra/vms$</span> ./gen-seed.sh vm-restore-drill 10.20.0.99 100
+✓ Seed ISO + 100 GB disk ready
+<span class="prompt">jitendra@aitip-host-01:~$</span> sudo virt-install \
+    --name vm-restore-drill \
+    --memory 16384 --vcpus 4 --cpu host-passthrough \
+    --disk path=/poc-pool/vms/vm-restore-drill.qcow2,format=qcow2,bus=virtio \
+    --disk path=/poc-pool/vms/vm-restore-drill-seed.iso,device=cdrom \
+    --os-variant ubuntu22.04 \
+    --network network=br-poc0,model=virtio,mac=52:54:00:00:00:99 \
+    --graphics none --console pty,target_type=serial --noautoconsole --import
+<span class="prompt">jitendra@aitip-host-01:~$</span> until ssh jitendra@vm-restore-drill.poc.local 'cloud-init status --wait' 2&gt;/dev/null; do
+    sleep 5
+  done
+✓ vm-restore-drill cloud-init complete
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Install Postgres 16 + pgBackRest</strong> on the clone, no data yet.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@vm-restore-drill:~$</span> sudo apt install -y postgresql-16 pgbackrest
+<span class="prompt">jitendra@vm-restore-drill:~$</span> sudo systemctl stop postgresql@16-main
+<span class="prompt">jitendra@vm-restore-drill:~$</span> sudo rm -rf /var/lib/postgresql/16/main/*
+<span class="comment"># Copy pgBackRest config from primary (in real DR this would come from infra-as-code)</span>
+<span class="prompt">jitendra@vm-restore-drill:~$</span> scp jitendra@vm-data-store.poc.local:/etc/pgbackrest/pgbackrest.conf /tmp/
+<span class="prompt">jitendra@vm-restore-drill:~$</span> sudo cp /tmp/pgbackrest.conf /etc/pgbackrest/pgbackrest.conf
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Restore from pgBackRest</strong>.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@vm-restore-drill:~$</span> sudo -u postgres pgbackrest --stanza=aitip \
+    --delta --type=default \
+    --recovery-option='recovery_target=immediate' \
+    --recovery-option='recovery_target_action=promote' \
+    restore
+P00   INFO: restore command begin 2.54.0
+P00   INFO: repo1: restore backup set 20260511-115456F
+P00   INFO: restore file /var/lib/postgresql/16/main/PG_VERSION
+P00   INFO: restore file /var/lib/postgresql/16/main/global/pg_control
+... [1284 files] ...
+P00   INFO: write updated /var/lib/postgresql/16/main/postgresql.auto.conf
+P00   INFO: restore size = 47.2MB, file total = 1284
+P00   INFO: restore command end: completed successfully (24317ms)
+
+<span class="prompt">jitendra@vm-restore-drill:~$</span> sudo systemctl start postgresql@16-main
+<span class="prompt">jitendra@vm-restore-drill:~$</span> sudo systemctl is-active postgresql@16-main
+active
+</div>
+
+      <ol class="task-steps" start="4" style="counter-reset: step 3;">
+        <li><strong>The verification query.</strong> If toxicity_endpoints has 16 rows, our regulator-grade audit trail just survived a (simulated) total disk loss.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@vm-restore-drill:~$</span> sudo -u postgres psql -d aitip -c \
+    'SELECT count(*) AS n_endpoints FROM toxicity_endpoints;'
+ n_endpoints
+-------------
+          16
+(1 row)
+
+<span class="prompt">jitendra@vm-restore-drill:~$</span> sudo -u postgres psql -d aitip -c \
+    "SELECT family, count(*) FROM toxicity_endpoints GROUP BY family ORDER BY family;"
+ family    | count
+-----------+-------
+ clintox   |     2
+ dili      |     1
+ herg      |     1
+ tox21-nr  |     7
+ tox21-sr  |     5
+(5 rows)
+</div>
+
+      <div class="note ok">
+        <strong>Drill PASS · 17:34 IST</strong>
+        Total elapsed: clone provision (5 min) + Postgres install (3 min) + pgBackRest config (2 min) + restore (24 sec) + verify (4 sec) = ~10 min from "data lost" to "data back." 16 endpoint rows recovered exactly. <strong>Disaster-recovery RTO measured at &lt; 15 minutes for the schema-only state we have today.</strong> When the table grows by Day 8 (PubMed corpus) the restore time will grow proportionally; we'll re-drill at the Friday Week-1 retro.
+      </div>
+
+      <ol class="task-steps" start="5" style="counter-reset: step 4;">
+        <li><strong>Document the drill</strong> in <code>docs/backup-drills.md</code> for the audit trail. Then destroy the drill VM &mdash; it has served its purpose.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@laptop:~/aitip-poc$</span> cat &gt;&gt; docs/backup-drills.md &lt;&lt;'EOF'
+## Drill 1 — Day 03, 2026-05-11
+
+- **Scenario:** simulated total loss of vm-data-store
+- **Method:** provisioned vm-restore-drill (10.20.0.99), installed Postgres 16 + pgBackRest,
+  restored from MinIO archive (backup label 20260511-115456F)
+- **RTO measured:** ~10 min from "data lost" to "data back"
+- **Verification:** SELECT count(*) FROM toxicity_endpoints = 16 ✓
+- **Outcome:** PASS at 17:34 IST
+- **Next drill:** Friday week-1 retro (Day 5), with non-empty corpus
+EOF
+
+<span class="prompt">jitendra@aitip-host-01:~$</span> sudo virsh destroy vm-restore-drill &amp;&amp; sudo virsh undefine vm-restore-drill --remove-all-storage
+Domain vm-restore-drill destroyed
+Domain vm-restore-drill has been undefined
+Volume vm-restore-drill.qcow2 marked for removal
+</div>
+
+      <div class="checkpoint">
+        <span><strong>17:45 checkpoint:</strong> drill PASS, documented, drill VM cleaned up. EOD-3.6 met.</span>
+      </div>
+    </div>
+
+
+    <!-- EOD wrap -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">17:45&ndash;18:00</span>
+        <span class="task-title">EOD wrap.</span>
+      </div>
+<div class="code-block"><span class="comment"># Posted to #poc-war-room at 17:55:</span>
+<span class="key">jitendra</span>:
+**did:** vm-data-store hand-over walk + 6 ZFS datasets mounted · pgBackRest install + stanza-create + first WAL stream + first full backup (47.2 MB) · day-4 worker-pool prep (8 celery slots configured but autostart=false until day 4) · backup-restore drill PASS in &lt;10 min RTO · PR-#9 merged
+**state:** GREEN. all 3 of my Day-3 sub-tasks met. drill log in docs/backup-drills.md.
+**next:** Day 04 i support sarthak (curation lead). will help with celery wiring once aitip.worker module lands.
+</div>
+
+      <div class="note ok">
+        <strong>EOD met &middot; 18:00 IST</strong>
+        Three Day-3 sub-tasks closed. Backup-restore drill is the headline result &mdash; we can now claim regulator-grade durability with measured RTO.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §03 (continued) — HARSHIT
+     Lead today. Six rocks across 8 hours: Ansible playbook,
+     migration + PR-#8 merge, MinIO + 5 buckets + lifecycle,
+     Redis, ChromaDB, smoke wiring, dataset-upload assist.
+     ================================================================ -->
+<section class="section deep">
+  <div class="shell">
+
+    <div class="engineer-stripe" style="--track: var(--t-harshit);">
+      <div class="e-avatar">HP</div>
+      <div class="e-meta">
+        <div class="e-name">Harshit Prajapati</div>
+        <div class="e-role">Backend &amp; MLOps &middot; lane lead today &middot; critical path</div>
+        <div class="e-summary">Six rocks: Ansible playbook idempotent by 10:30, Postgres+migration001 by 11:00, MinIO+5 buckets+lifecycle+keys by 11:30, Redis+AOF by 12:30, ChromaDB by 13:00, wiring smoke by 14:00, PR-#8 + PR-#10 both merged by EOD.</div>
+      </div>
+      <div class="e-counter">
+        windows<strong>9</strong>
+      </div>
+    </div>
+
+
+    <!-- 09:45–10:30 — Ansible playbook -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">09:45&ndash;10:30</span>
+        <span class="task-title">Rock&nbsp;1 &middot; <em>Ansible playbook</em> &mdash; idempotent <code>deploy-data-store.yml</code> covering all four datastores.</span>
+      </div>
+      <p>One playbook, four datastore roles, idempotent (running it twice is identical to running it once). Drafted overnight; today is the polish-and-run pass. Idempotency is the discipline &mdash; if installing Postgres a second time would do anything different than installing it once, the playbook is broken.</p>
+
+      <ol class="task-steps">
+        <li><strong>Polish the playbook overnight draft.</strong> Top-level structure: imports, host-targeting, then four sequential roles (postgres → minio → redis → chroma). Each role is its own folder under <code>infra/ansible/roles/</code>.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> git checkout -b infra/day03-ansible-data-store
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> mkdir -p infra/ansible/{playbooks,roles/{postgres,minio,redis,chroma}/{tasks,handlers,templates,defaults}}
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> cat &gt; infra/ansible/playbooks/deploy-data-store.yml &lt;&lt;'EOF'
+---
+- name: Provision the persistence tier on vm-data-store
+  hosts: data
+  become: true
+  gather_facts: true
+  vars:
+    aitip_pg_version: "16"
+    aitip_pg_host: "{{ ansible_host }}"
+    aitip_pg_db:   aitip
+    aitip_pg_user: aitip
+    aitip_minio_release: "RELEASE.2024-09-13T20-26-02Z"
+    aitip_redis_version: "7"
+    aitip_chroma_version: "0.5.18"
+
+  pre_tasks:
+    - name: confirm we are on vm-data-store
+      assert:
+        that:
+          - inventory_hostname == "vm-data-store"
+        fail_msg: "This playbook may only run against vm-data-store."
+
+    - name: confirm 9p mounts are present
+      command: findmnt -t 9p
+      register: nine_p_mounts
+      failed_when: nine_p_mounts.rc != 0
+      changed_when: false
+
+  roles:
+    - role: postgres
+      tags: [pg, postgres]
+    - role: minio
+      tags: [minio, s3]
+    - role: redis
+      tags: [redis, cache]
+    - role: chroma
+      tags: [chroma, vectors]
+
+  post_tasks:
+    - name: open ports on UFW (br-poc0 only)
+      ufw:
+        rule: allow
+        from_ip: 10.20.0.0/24
+        to_port: "{{ item }}"
+        proto: tcp
+      loop:
+        - 5432   # postgres
+        - 9000   # minio s3
+        - 9001   # minio console
+        - 6379   # redis
+        - 8001   # chromadb
+EOF
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Postgres role</strong> &mdash; install Postgres 16 + extensions, set datadir to the 9p-mounted ZFS dataset, tune for 32 GB shared_buffers.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> cat &gt; infra/ansible/roles/postgres/tasks/main.yml &lt;&lt;'EOF'
+---
+- name: install postgres apt key + repo
+  block:
+    - apt_key:
+        url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+        state: present
+    - apt_repository:
+        repo: "deb https://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+        state: present
+        filename: pgdg
+
+- name: install postgres + extensions
+  apt:
+    name:
+      - postgresql-16
+      - postgresql-16-partman
+      - postgresql-contrib-16
+      - libpq-dev
+      - python3-psycopg2
+    update_cache: yes
+    state: present
+
+- name: stop postgres before relocating datadir
+  systemd: { name: "postgresql@16-main", state: stopped }
+
+- name: clear factory datadir (idempotent — only if not already on 9p mount)
+  shell: |
+    set -e
+    if ! findmnt -T /var/lib/postgresql/data &gt;/dev/null 2&gt;&amp;1 ; then
+      mv /var/lib/postgresql/16/main/* /var/lib/postgresql/data/ 2&gt;/dev/null || true
+    fi
+  args:
+    creates: /var/lib/postgresql/data/PG_VERSION
+
+- name: point postgresql cluster at /var/lib/postgresql/data
+  replace:
+    path: /etc/postgresql/16/main/postgresql.conf
+    regexp: '^#?data_directory.*'
+    replace: "data_directory = '/var/lib/postgresql/data'"
+
+- name: tuning — shared_buffers + work_mem + checkpoint
+  blockinfile:
+    path: /etc/postgresql/16/main/postgresql.conf
+    marker: "# {mark} ANSIBLE-MANAGED · aitip tuning"
+    block: |
+      shared_buffers = 32GB
+      work_mem = 64MB
+      effective_cache_size = 96GB
+      max_connections = 200
+      checkpoint_completion_target = 0.9
+      wal_compression = on
+      max_wal_size = 4GB
+      shared_preload_libraries = 'pg_stat_statements,pg_partman_bgw'
+      pg_partman_bgw.interval = 3600
+      pg_partman_bgw.role = 'aitip'
+      pg_partman_bgw.dbname = 'aitip'
+  notify: restart postgres
+
+- name: pg_hba.conf — allow br-poc0 with md5 auth
+  blockinfile:
+    path: /etc/postgresql/16/main/pg_hba.conf
+    marker: "# {mark} ANSIBLE-MANAGED · aitip access"
+    block: |
+      host    aitip    aitip    10.20.0.0/24    md5
+      host    all      all      127.0.0.1/32    md5
+  notify: restart postgres
+
+- name: ensure cluster is running
+  systemd: { name: "postgresql@16-main", state: started, enabled: yes }
+
+- name: create aitip role + db
+  become_user: postgres
+  community.postgresql.postgresql_user:
+    name: "{{ aitip_pg_user }}"
+    password: "{{ lookup('env','AITIP_PG_PASSWORD') }}"
+    role_attr_flags: LOGIN
+- become_user: postgres
+  community.postgresql.postgresql_db:
+    name: "{{ aitip_pg_db }}"
+    owner: "{{ aitip_pg_user }}"
+
+- name: enable extensions on aitip db
+  become_user: postgres
+  community.postgresql.postgresql_ext:
+    db: "{{ aitip_pg_db }}"
+    name: "{{ item }}"
+  loop: [pgcrypto, pg_partman, pg_stat_statements, citext]
+EOF
+</div>
+      <div class="note">
+        <strong>Why <code>idempotent</code> matters here</strong>
+        Each task uses Ansible's declarative state. <code>postgresql_user</code> with the same password is a no-op on the second run; <code>blockinfile</code> with the same marker rewrites the same block. The <code>shell</code> task that relocates datadir is guarded with <code>creates: /var/lib/postgresql/data/PG_VERSION</code> &mdash; it runs only when the destination doesn't yet have a Postgres signature. Run the playbook twice and the second run reports zero changes.
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>10:30 checkpoint:</strong> Ansible playbook + postgres role drafted. Three more roles + handlers to write before invocation.</span>
+      </div>
+    </div>
+
+
+    <!-- 10:30–11:00 — invoke playbook (postgres) + migration -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">10:30&ndash;11:00</span>
+        <span class="task-title">Rock&nbsp;2 &middot; <em>run Postgres role</em>, apply migration 001, merge PR-#8.</span>
+      </div>
+
+      <ol class="task-steps">
+        <li><strong>Run just the postgres tag</strong> &mdash; we run the four roles incrementally so we can debug each one in isolation.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> AITIP_PG_PASSWORD=$(cat ~/.creds/aitip-pg.txt) \
+    ansible-playbook -i infra/inventory.ini \
+    infra/ansible/playbooks/deploy-data-store.yml \
+    --tags pg
+
+PLAY [Provision the persistence tier on vm-data-store] **********************
+TASK [Gathering Facts] *******************************************************
+ok: [vm-data-store]
+TASK [confirm we are on vm-data-store] ***************************************
+ok: [vm-data-store]
+TASK [confirm 9p mounts are present] *****************************************
+ok: [vm-data-store]
+TASK [postgres : install postgres apt key + repo] ****************************
+changed: [vm-data-store]
+TASK [postgres : install postgres + extensions] ******************************
+changed: [vm-data-store]
+TASK [postgres : stop postgres before relocating datadir] *********************
+changed: [vm-data-store]
+TASK [postgres : clear factory datadir] **************************************
+changed: [vm-data-store]
+TASK [postgres : point postgresql cluster at /var/lib/postgresql/data] *******
+changed: [vm-data-store]
+TASK [postgres : tuning — shared_buffers + work_mem + checkpoint] *********
+changed: [vm-data-store]
+TASK [postgres : pg_hba.conf — allow br-poc0 with md5 auth] ****************
+changed: [vm-data-store]
+TASK [postgres : ensure cluster is running] **********************************
+changed: [vm-data-store]
+TASK [postgres : create aitip role + db] *************************************
+changed: [vm-data-store]
+TASK [postgres : enable extensions on aitip db] ******************************
+changed: [vm-data-store] =&gt; (item=pgcrypto)
+changed: [vm-data-store] =&gt; (item=pg_partman)
+changed: [vm-data-store] =&gt; (item=pg_stat_statements)
+changed: [vm-data-store] =&gt; (item=citext)
+
+PLAY RECAP *******************************************************************
+vm-data-store : ok=12 changed=10 unreachable=0 failed=0 skipped=8
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Idempotency check</strong> &mdash; run the same tag again, confirm zero changes.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> ansible-playbook -i infra/inventory.ini \
+    infra/ansible/playbooks/deploy-data-store.yml --tags pg
+PLAY RECAP *******************************************************************
+vm-data-store : ok=12 changed=0 unreachable=0 failed=0 skipped=8     <span class="ok"># 0 changed — idempotent</span>
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Apply migration 001</strong> &mdash; from his laptop, against the freshly provisioned Postgres on vm-data-store. <strong>This is PR-#8's merge gate.</strong></li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc/services/db$</span> AITIP_PG_HOST=vm-data-store.poc.local \
+    AITIP_PG_PORT=5432 \
+    AITIP_PG_DB=aitip \
+    AITIP_PG_USER=aitip \
+    AITIP_PG_PASSWORD=$(cat ~/.creds/aitip-pg.txt) \
+    alembic upgrade head
+INFO  [alembic.runtime.migration] Context impl PostgreSQL.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -&gt; a1b2c3d4e5f6, 001 init
+
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> AITIP_PG_HOST=vm-data-store.poc.local \
+    psql -U aitip -d aitip -h vm-data-store.poc.local \
+    -c "SELECT name, family FROM toxicity_endpoints ORDER BY family, name LIMIT 5;"
+   name    |  family
+-----------+----------
+ CT_TOX    | clintox
+ FDA_APPRO | clintox
+ dili      | dili
+ herg      | herg
+ NR-AR     | tox21-nr
+(5 rows)
+</div>
+
+      <div class="note ok">
+        <strong>Migration applied · 10:48 IST</strong>
+        Schema landed on the production Postgres. 16 endpoint reference rows seeded. PR-#8's merge gate is met.
+      </div>
+
+      <ol class="task-steps" start="4" style="counter-reset: step 3;">
+        <li><strong>Merge PR-#8.</strong></li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> gh pr merge 8 --squash --delete-branch
+✓ Merged pull request #8 (feat(day02): alembic init, 001_init schema, ansible inventory, minio plan)
+</div>
+
+      <div class="checkpoint">
+        <span><strong>11:00 checkpoint:</strong> Postgres up, migration applied, PR-#8 merged. EOD-3.1 met ahead of schedule.</span>
+      </div>
+    </div>
+
+
+    <!-- 11:00–11:45 — MinIO -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">11:00&ndash;11:45</span>
+        <span class="task-title">Rock&nbsp;3 &middot; <em>MinIO</em> &mdash; 4-drive single-host install, 5 buckets, lifecycle, access keys.</span>
+      </div>
+
+      <ol class="task-steps">
+        <li><strong>MinIO role</strong> in Ansible &mdash; install <code>minio</code> + <code>mc</code> client binaries, systemd unit pointing at the four 9p-mounted directories <code>/srv/minio/{1..4}</code>.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> cat &gt; infra/ansible/roles/minio/tasks/main.yml &lt;&lt;'EOF'
+---
+- name: download minio binary
+  get_url:
+    url: "https://dl.min.io/server/minio/release/linux-amd64/minio.{{ aitip_minio_release }}"
+    dest: /usr/local/bin/minio
+    mode: '0755'
+
+- name: download mc client
+  get_url:
+    url: https://dl.min.io/client/mc/release/linux-amd64/mc
+    dest: /usr/local/bin/mc
+    mode: '0755'
+
+- name: minio system user
+  user: { name: minio, system: yes, home: /srv/minio, shell: /sbin/nologin }
+
+- name: chown the four mount points
+  file: { path: "/srv/minio/{{ item }}", owner: minio, group: minio, recurse: no }
+  loop: [1, 2, 3, 4]
+
+- name: minio environment file
+  copy:
+    dest: /etc/default/minio
+    content: |
+      MINIO_VOLUMES="/srv/minio/{1...4}"
+      MINIO_ROOT_USER=admin
+      MINIO_ROOT_PASSWORD={{ lookup('env','AITIP_MINIO_ROOT_PASSWORD') }}
+      MINIO_SERVER_URL="http://10.20.0.40:9000"
+      MINIO_BROWSER_REDIRECT_URL="http://10.20.0.40:9001"
+      MINIO_PROMETHEUS_AUTH_TYPE=public
+    mode: '0640'
+    owner: root
+    group: minio
+
+- name: minio systemd unit
+  copy:
+    dest: /etc/systemd/system/minio.service
+    content: |
+      [Unit]
+      Description=MinIO
+      After=network.target
+      [Service]
+      User=minio
+      Group=minio
+      EnvironmentFile=/etc/default/minio
+      ExecStart=/usr/local/bin/minio server $MINIO_VOLUMES --console-address ":9001"
+      Restart=always
+      LimitNOFILE=65536
+      [Install]
+      WantedBy=multi-user.target
+  notify: restart minio
+
+- name: enable + start
+  systemd: { name: minio, state: started, enabled: yes, daemon_reload: yes }
+
+- name: wait for minio to accept connections
+  wait_for: { port: 9000, host: 10.20.0.40, timeout: 30 }
+EOF
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Run the minio role.</strong></li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> AITIP_MINIO_ROOT_PASSWORD=$(cat ~/.creds/aitip-minio-root.txt) \
+    ansible-playbook -i infra/inventory.ini \
+    infra/ansible/playbooks/deploy-data-store.yml --tags minio
+
+PLAY RECAP *******************************************************************
+vm-data-store : ok=8 changed=8 unreachable=0 failed=0 skipped=0
+
+<span class="comment"># Verify from bastion (no DNS issue, no firewall problem):</span>
+<span class="prompt">harshit@vm-bastion:~$</span> curl -s http://vm-data-store.poc.local:9000/minio/health/live
+[empty 200 OK]
+<span class="prompt">harshit@vm-bastion:~$</span> mc alias set aitip-poc http://vm-data-store.poc.local:9000 admin "$(cat ~/.creds/aitip-minio-root.txt)"
+Added `aitip-poc` successfully.
+<span class="prompt">harshit@vm-bastion:~$</span> mc admin info aitip-poc
+●  10.20.0.40:9000
+   Uptime: 18 seconds
+   Version: 2024-09-13T20:26:02Z
+   Network: 1/1 OK
+   Drives: 4/4 OK
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Create the 5 buckets</strong> via <code>mc mb</code>, set versioning where required, apply lifecycle JSON from PR-#8.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@vm-bastion:~$</span> for b in raw-datasets processed models pg-backups artifacts; do
+    mc mb aitip-poc/$b
+  done
+Bucket created successfully `aitip-poc/raw-datasets`.
+Bucket created successfully `aitip-poc/processed`.
+Bucket created successfully `aitip-poc/models`.
+Bucket created successfully `aitip-poc/pg-backups`.
+Bucket created successfully `aitip-poc/artifacts`.
+
+<span class="prompt">harshit@vm-bastion:~$</span> for b in raw-datasets processed models artifacts; do
+    mc version enable aitip-poc/$b
+  done
+<span class="comment"># pg-backups stays unversioned — pgBackRest manages its own retention.</span>
+
+<span class="prompt">harshit@vm-bastion:~$</span> for b in raw-datasets processed models pg-backups artifacts; do
+    mc ilm import aitip-poc/$b &lt; ~/aitip-poc/infra/minio/lifecycle/$b.json
+  done
+Lifecycle configuration imported successfully to `aitip-poc/raw-datasets`.
+Lifecycle configuration imported successfully to `aitip-poc/processed`.
+Lifecycle configuration imported successfully to `aitip-poc/models`.
+Lifecycle configuration imported successfully to `aitip-poc/pg-backups`.
+Lifecycle configuration imported successfully to `aitip-poc/artifacts`.
+</div>
+
+      <ol class="task-steps" start="4" style="counter-reset: step 3;">
+        <li><strong>Generate scoped access keys</strong> &mdash; one read-only, one read-write, one backup-user (pgBackRest needs to write to <code>pg-backups</code> only).</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@vm-bastion:~$</span> mc admin user add aitip-poc readonly  $(openssl rand -hex 32)
+<span class="prompt">harshit@vm-bastion:~$</span> mc admin user add aitip-poc readwrite $(openssl rand -hex 32)
+<span class="prompt">harshit@vm-bastion:~$</span> mc admin user add aitip-poc backup-user $(openssl rand -hex 32)
+
+<span class="prompt">harshit@vm-bastion:~$</span> cat &gt; /tmp/backup-policy.json &lt;&lt;'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket"],
+      "Resource": ["arn:aws:s3:::pg-backups","arn:aws:s3:::pg-backups/*"]
+    }
+  ]
+}
+EOF
+<span class="prompt">harshit@vm-bastion:~$</span> mc admin policy create aitip-poc backup-only /tmp/backup-policy.json
+<span class="prompt">harshit@vm-bastion:~$</span> mc admin policy attach aitip-poc backup-only --user backup-user
+<span class="prompt">harshit@vm-bastion:~$</span> mc admin policy attach aitip-poc readonly  --user readonly
+<span class="prompt">harshit@vm-bastion:~$</span> mc admin policy attach aitip-poc readwrite --user readwrite
+
+<span class="comment"># Push secrets to Vault (POC mode — file-backed Vault on bastion).</span>
+<span class="prompt">harshit@vm-bastion:~$</span> vault kv put aitip/poc/minio/backup-user-secret value=$(mc admin user info aitip-poc backup-user --json | jq -r .secretKey)
+<span class="prompt">harshit@vm-bastion:~$</span> vault kv put aitip/poc/minio/readwrite-secret    value=$(mc admin user info aitip-poc readwrite --json | jq -r .secretKey)
+<span class="prompt">harshit@vm-bastion:~$</span> vault kv put aitip/poc/minio/readonly-secret     value=$(mc admin user info aitip-poc readonly  --json | jq -r .secretKey)
+</div>
+
+      <ol class="task-steps" start="5" style="counter-reset: step 4;">
+        <li><strong>Slack-ack to Jitendra</strong> &mdash; pgBackRest is waiting on the <code>backup-user</code> key.</li>
+      </ol>
+<div class="code-block"><span class="comment"># Posted to #poc-war-room at 11:38:</span>
+<span class="key">harshit</span>: minio is up. all 5 buckets created. pg-backups is live. the backup-user IAM key is in vault: vault://aitip/poc/minio/backup-user · S3-compatible.
+</div>
+
+      <div class="note ok">
+        <strong>MinIO live · 11:42 IST</strong>
+        4-drive erasure-coded mode running on <code>/srv/minio/{1..4}</code>. 5 buckets, lifecycle policies applied, three scoped access keys generated and stored in Vault. EOD-3.2 met.
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>11:45 checkpoint:</strong> Two of four datastores live. Redis next.</span>
+      </div>
+    </div>
+
+
+    <!-- 11:45–12:30 — Redis -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">11:45&ndash;12:30</span>
+        <span class="task-title">Rock&nbsp;4 &middot; <em>Redis 7 with AOF</em> &mdash; broker for Celery, cache for hot SMILES.</span>
+      </div>
+
+      <ol class="task-steps">
+        <li><strong>Redis role</strong> &mdash; <code>apt install redis-server</code>, configure AOF every-second persistence, set <code>requirepass</code> from Vault.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> cat &gt; infra/ansible/roles/redis/tasks/main.yml &lt;&lt;'EOF'
+---
+- name: install redis
+  apt: { name: redis-server, state: present, update_cache: yes }
+
+- name: configure redis
+  blockinfile:
+    path: /etc/redis/redis.conf
+    marker: "# {mark} ANSIBLE-MANAGED · aitip"
+    block: |
+      bind 0.0.0.0
+      protected-mode yes
+      port 6379
+      requirepass {{ lookup('env','AITIP_REDIS_PASSWORD') }}
+      dir /var/lib/redis
+      appendonly yes
+      appendfsync everysec
+      auto-aof-rewrite-percentage 100
+      auto-aof-rewrite-min-size 64mb
+      maxmemory 8gb
+      maxmemory-policy allkeys-lru
+  notify: restart redis
+
+- name: ensure redis is running
+  systemd: { name: redis-server, state: started, enabled: yes }
+
+- name: wait for redis
+  wait_for: { port: 6379, host: 10.20.0.40, timeout: 15 }
+EOF
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Run the redis tag.</strong></li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> AITIP_REDIS_PASSWORD=$(openssl rand -hex 32) \
+    ansible-playbook -i infra/inventory.ini \
+    infra/ansible/playbooks/deploy-data-store.yml --tags redis
+
+<span class="comment"># Save the password to Vault before forgetting it:</span>
+<span class="prompt">harshit@vm-bastion:~$</span> vault kv put aitip/poc/redis/password value=$AITIP_REDIS_PASSWORD
+
+<span class="comment"># Smoke from bastion:</span>
+<span class="prompt">harshit@vm-bastion:~$</span> redis-cli -h vm-data-store.poc.local -a $(vault kv get -field=value aitip/poc/redis/password) PING
+PONG
+
+<span class="comment"># Confirm AOF is enabled and persisting:</span>
+<span class="prompt">harshit@vm-bastion:~$</span> redis-cli -h vm-data-store.poc.local -a "$(vault kv get -field=value aitip/poc/redis/password)" CONFIG GET appendonly
+1) "appendonly"
+2) "yes"
+<span class="prompt">harshit@vm-bastion:~$</span> redis-cli -h vm-data-store.poc.local -a "..." CONFIG GET appendfsync
+1) "appendfsync"
+2) "everysec"
+</div>
+
+      <div class="note ok">
+        <strong>Redis live · 12:18 IST</strong>
+        AOF every-second persistence on, AUTH required, 8 GB cap with allkeys-LRU eviction. Ready for Celery broker (Day 4) + hot-SMILES cache (Day 5+).
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>12:30 checkpoint:</strong> three of four datastores live. Lunch.</span>
+      </div>
+    </div>
+
+
+    <!-- 13:00–13:45 — ChromaDB -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">13:00&ndash;13:45</span>
+        <span class="task-title">Rock&nbsp;5 &middot; <em>ChromaDB</em> &mdash; persistent server-mode container, empty until Day 8.</span>
+      </div>
+      <p>ChromaDB is the only datastore we run as a container today. The other three are bare-metal services on the VM; ChromaDB is shipped as a Docker image by the project and we follow that pattern. The containerized server has its <code>/chroma/.chroma/index</code> volume bind-mounted to the 9p-mounted ZFS dataset.</p>
+
+      <ol class="task-steps">
+        <li><strong>Chroma role</strong> &mdash; install Docker, run the official <code>chromadb/chroma:0.5.18</code> image with persistent volume.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> cat &gt; infra/ansible/roles/chroma/tasks/main.yml &lt;&lt;'EOF'
+---
+- name: install docker engine
+  apt:
+    name: [docker.io, docker-compose-plugin, ca-certificates]
+    state: present
+    update_cache: yes
+
+- name: docker daemon — limit log size
+  copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": { "max-size": "100m", "max-file": "3" },
+        "storage-driver": "overlay2"
+      }
+  notify: restart docker
+
+- name: ensure docker running
+  systemd: { name: docker, state: started, enabled: yes }
+
+- name: pull chroma image
+  community.docker.docker_image:
+    name: "chromadb/chroma:{{ aitip_chroma_version }}"
+    source: pull
+
+- name: run chroma container
+  community.docker.docker_container:
+    name: aitip-chroma
+    image: "chromadb/chroma:{{ aitip_chroma_version }}"
+    state: started
+    restart_policy: unless-stopped
+    published_ports: ["10.20.0.40:8001:8000"]
+    env:
+      IS_PERSISTENT: "TRUE"
+      ANONYMIZED_TELEMETRY: "FALSE"
+      CHROMA_SERVER_AUTHN_PROVIDER: "chromadb.auth.token_authn.TokenAuthenticationServerProvider"
+      CHROMA_SERVER_AUTHN_CREDENTIALS: "{{ lookup('env','AITIP_CHROMA_TOKEN') }}"
+    volumes:
+      - "/var/lib/chroma:/chroma/chroma"
+EOF
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Run the chroma tag</strong> + smoke test.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> AITIP_CHROMA_TOKEN=$(openssl rand -hex 32) \
+    ansible-playbook -i infra/inventory.ini \
+    infra/ansible/playbooks/deploy-data-store.yml --tags chroma
+
+<span class="prompt">harshit@vm-bastion:~$</span> vault kv put aitip/poc/chroma/token value=$AITIP_CHROMA_TOKEN
+
+<span class="comment"># Smoke from bastion using the official client:</span>
+<span class="prompt">harshit@vm-bastion:~$</span> python3 -c "
+import chromadb
+from chromadb.config import Settings
+client = chromadb.HttpClient(
+    host='vm-data-store.poc.local', port=8001,
+    settings=Settings(
+        chroma_client_auth_provider='chromadb.auth.token_authn.TokenAuthClientProvider',
+        chroma_client_auth_credentials='$(vault kv get -field=value aitip/poc/chroma/token)'
+    )
+)
+print('heartbeat:', client.heartbeat())
+print('collections:', client.list_collections())
+"
+heartbeat: 1715432891234567
+collections: []
+</div>
+
+      <div class="note ok">
+        <strong>ChromaDB live · 13:42 IST</strong>
+        Server-mode running, persistent volume mounted, token auth enabled. Empty by design &mdash; the <code>pubmed-tox</code> collection lands Day 8 when ingestion runs.
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>13:45 checkpoint:</strong> all four datastores live. EOD-3.4 met.</span>
+      </div>
+    </div>
+
+
+    <!-- 13:45–14:30 — wiring smoke -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">13:45&ndash;14:30</span>
+        <span class="task-title">Rock&nbsp;6 &middot; <em>connectivity smoke</em> &mdash; can vm-core-api reach all four datastores?</span>
+      </div>
+      <p>The whole point of putting these on the bridge is that other VMs can call them. Smoke-test from <code>vm-core-api</code> &mdash; not from bastion or laptop &mdash; because <code>vm-core-api</code> is the VM that will run FastAPI from Day 5. If something doesn't work from there, we want to know now, not Wednesday.</p>
+
+      <ol class="task-steps">
+        <li><strong>Telnet each port from vm-core-api.</strong></li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@vm-bastion:~$</span> ssh harshit@vm-core-api.poc.local
+<span class="prompt">harshit@vm-core-api:~$</span> for tuple in \
+    "vm-data-store.poc.local 5432 postgres" \
+    "vm-data-store.poc.local 9000 minio-s3" \
+    "vm-data-store.poc.local 9001 minio-console" \
+    "vm-data-store.poc.local 6379 redis" \
+    "vm-data-store.poc.local 8001 chromadb" ; do
+  set -- $tuple
+  if nc -z -w2 $1 $2 ; then echo "✓ $3 ($1:$2) reachable"
+  else echo "✗ $3 ($1:$2) UNREACHABLE"; fi
+done
+✓ postgres (vm-data-store.poc.local:5432) reachable
+✓ minio-s3 (vm-data-store.poc.local:9000) reachable
+✓ minio-console (vm-data-store.poc.local:9001) reachable
+✓ redis (vm-data-store.poc.local:6379) reachable
+✓ chromadb (vm-data-store.poc.local:8001) reachable
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>One-line auth-smoke</strong> against Postgres &mdash; the canonical "is the wire actually working" test.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@vm-core-api:~$</span> sudo apt install -y postgresql-client-16 2&gt;/dev/null
+<span class="prompt">harshit@vm-core-api:~$</span> PGPASSWORD=$(vault kv get -field=value aitip/poc/pg/password) \
+    psql -h vm-data-store.poc.local -U aitip -d aitip \
+    -c "SELECT now() AS server_time, version() AS pg_version;"
+         server_time          |                    pg_version
+------------------------------+-----------------------------------------
+ 2026-05-11 14:14:32.521+05:30| PostgreSQL 16.4 on x86_64-pc-linux-gnu...
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Health-check page</strong> &mdash; one-shot script <code>infra/health-check.sh</code> that runs from any VM and pings the bridge ports. Commits to repo.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> cat &gt; infra/health-check.sh &lt;&lt;'EOF'
+#!/usr/bin/env bash
+# infra/health-check.sh — smoke-test datastore reachability from anywhere on br-poc0.
+set -e
+HOST=vm-data-store.poc.local
+declare -A ports=( [postgres]=5432 [minio-s3]=9000 [minio-console]=9001 [redis]=6379 [chromadb]=8001 )
+for svc in "${!ports[@]}"; do
+  if nc -z -w2 $HOST ${ports[$svc]} ; then echo "✓ $svc"
+  else echo "✗ $svc UNREACHABLE"; exit 1; fi
+done
+EOF
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> chmod +x infra/health-check.sh
+</div>
+
+      <div class="checkpoint">
+        <span><strong>14:30 checkpoint:</strong> Wiring confirmed. The persistence tier is fully callable from any VM on the bridge.</span>
+      </div>
+    </div>
+
+
+    <!-- 14:30–16:30 — help Sarthak's upload + dataset_registry -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">14:30&ndash;16:30</span>
+        <span class="task-title">Rock&nbsp;7 &middot; <em>support Sarthak's upload</em> &mdash; share Vault keys, watch <code>dataset_registry</code> populate.</span>
+      </div>
+      <p>Sarthak now has access to MinIO and Postgres; Harshit's job is to be available for any "this returns 403, what scope am I missing" question and to verify the rows landing in <code>dataset_registry</code> match what Sarthak uploaded.</p>
+
+      <ol class="task-steps">
+        <li><strong>Share scoped Vault keys</strong> with Sarthak via DM (POC mode: file-backed Vault on bastion; in V1 this would be RBAC-controlled).</li>
+      </ol>
+<div class="code-block"><span class="comment"># DM to sarthak at 14:32:</span>
+<span class="key">harshit</span>: ssh into bastion. for the upload:
+  AITIP_MINIO_RW_KEY=readwrite
+  AITIP_MINIO_RW_SECRET=$(vault kv get -field=value aitip/poc/minio/readwrite-secret)
+for the dataset_registry insert:
+  AITIP_PG_PASSWORD=$(vault kv get -field=value aitip/poc/pg/password)
+ping me if anything returns 403 or "permission denied" — likely a missing policy attach.
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Watch the buckets fill</strong>.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@vm-bastion:~$</span> watch -n10 'mc ls --recursive --summarize aitip-poc/raw-datasets/'
+<span class="comment"># 14:48:</span>
+[2026-05-11 14:46:18] tox21-raw.parquet     87 KiB
+[2026-05-11 14:46:21] clintox-raw.parquet   17 KiB
+[2026-05-11 14:46:23] herg-raw.parquet      31 MiB
+[2026-05-11 14:46:42] dilirank-raw.parquet  41 KiB
+Total Size: 31 MiB
+Total Objects: 4
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Verify <code>dataset_registry</code> rows</strong> appear with correct sha256.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@vm-bastion:~$</span> PGPASSWORD=$(vault kv get -field=value aitip/poc/pg/password) \
+    psql -h vm-data-store.poc.local -U aitip -d aitip -c \
+    "SELECT name, version, n_compounds, encode(sha256, 'hex') as sha256, storage_uri
+     FROM dataset_registry ORDER BY name;"
+   name   | version | n_compounds |             sha256              |              storage_uri
+----------+---------+-------------+---------------------------------+-----------------------------------------
+ clintox  | v0-raw  |        1478 | 7f3a2b...c1d4ef                 | minio://raw-datasets/clintox-raw.parquet
+ dilirank | v0-raw  |        1036 | 9e1d4a...82c0f3                 | minio://raw-datasets/dilirank-raw.parquet
+ herg     | v0-raw  |       12830 | 4a8f72...b9d105                 | minio://raw-datasets/herg-raw.parquet
+ tox21    | v0-raw  |        7831 | 2c5b8e...3a7f01                 | minio://raw-datasets/tox21-raw.parquet
+(4 rows)
+</div>
+
+      <ol class="task-steps" start="4" style="counter-reset: step 3;">
+        <li><strong>PR-#10 merge gate</strong> &mdash; Sarthak's curate.py now has its uploaded inputs and a populated registry. Merging.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> gh pr merge 10 --squash --delete-branch
+✓ Merged pull request #10 (feat(day02): curate.py pre-stage + curation protocol v0)
+</div>
+
+      <div class="note ok">
+        <strong>Both deferred PRs merged · 16:18 IST</strong>
+        PR-#8 merged at 10:50, PR-#10 merged at 16:18. EOD-3.7 met. Sarthak now runs the full hERG + DILIrank curation against the production toolchain.
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>16:30 checkpoint:</strong> Both PRs merged, registry populated, curation proceeding. 30 minutes free before EOD wrap.</span>
+      </div>
+    </div>
+
+
+    <!-- 16:30–17:00 — ADR-0004 + post-rocks consolidation -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">16:30&ndash;17:00</span>
+        <span class="task-title">Rock&nbsp;8 &middot; <em>ADR-0004</em> &mdash; document the connection-string env-var pattern.</span>
+      </div>
+      <p>The <code>AITIP_*</code> env-var contract is now load-bearing across three environments (laptop, vm-data-store, CI). It's worth documenting before more services start to assume it.</p>
+
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> git checkout -b docs/adr-0004-env-var-contract
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> cat &gt; docs/decisions/0004-aitip-env-var-contract.md &lt;&lt;'EOF'
+# ADR-0004 — AITIP_* environment-variable contract for service connections
+
+- **Status:** accepted (2026-05-11)
+- **Deciders:** Harshit, Jitendra, Sarthak
+- **Tags:** structural, services, day-03
+
+## Context
+
+Three environments need to connect to the persistence tier in identical ways:
+laptop development (Postgres-in-Docker, MinIO-in-Docker), production VMs
+(vm-data-store on br-poc0), and CI (ephemeral service containers). Hard-coding
+host strings or maintaining three forks of the connection layer is a known
+trap.
+
+## Decision
+
+All AITIP services read connection details from `AITIP_*` environment
+variables via a shared `aitip_db.config.DatabaseSettings` (Pydantic Settings)
+class. The variable names are fixed:
+
+```
+AITIP_PG_HOST           AITIP_MINIO_HOST       AITIP_REDIS_HOST
+AITIP_PG_PORT           AITIP_MINIO_PORT       AITIP_REDIS_PORT
+AITIP_PG_DB             AITIP_MINIO_BUCKET_*   AITIP_REDIS_PASSWORD
+AITIP_PG_USER           AITIP_MINIO_RW_KEY     AITIP_REDIS_DB
+AITIP_PG_PASSWORD       AITIP_MINIO_RW_SECRET  AITIP_CHROMA_HOST
+                                               AITIP_CHROMA_PORT
+                                               AITIP_CHROMA_TOKEN
+```
+
+Defaults match laptop development. CI overrides via job env. Production VMs
+load via systemd `EnvironmentFile=` referencing files written by Ansible from
+Vault.
+
+## Consequences
+
+- (+) One file owns the connection contract; one place to look when a service
+       can't connect.
+- (+) Trivial to migrate a service between environments.
+- (–) Naming discipline required — adding a new connection requires updating
+       this ADR + the Settings class + Ansible's env-file template.
+EOF
+
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> git add docs/decisions/0004-aitip-env-var-contract.md
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> git commit -m "docs(adr): 0004 AITIP_* env-var contract"
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> gh pr create --fill
+✓ Created pull request #11
+</div>
+      <p>Two thumbs needed in <code>#poc-decisions</code>; expects to merge tonight or Day 4 morning.</p>
+    </div>
+
+
+    <!-- 17:00–17:45 — bridge time, watch drill -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">17:00&ndash;17:45</span>
+        <span class="task-title">Watch Jitendra's backup-restore drill (EOD-3.6 gate).</span>
+      </div>
+      <p>The drill is Jitendra's task but Harshit watches because he's the one whose schema landed first. If something restores wrong &mdash; missing index, partition definition off &mdash; he is the one who would diagnose it.</p>
+
+<div class="code-block"><span class="comment"># Posted to #poc-war-room at 17:34 by Jitendra:</span>
+<span class="key">jitendra</span>: drill PASS. clone restore in &lt;10 min RTO. SELECT count(*) FROM toxicity_endpoints = 16 ✓. drill log committed.
+<span class="key">harshit</span>: 🎯 nice. EOD-3.6 confirmed. one less thing to worry about.
+</div>
+    </div>
+
+
+    <!-- 17:45–18:00 — EOD wrap -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">17:45&ndash;18:00</span>
+        <span class="task-title">EOD wrap.</span>
+      </div>
+<div class="code-block"><span class="comment"># Posted to #poc-war-room at 17:55:</span>
+<span class="key">harshit</span>:
+**did:** ansible playbook `deploy-data-store.yml` (4 roles, idempotent verified) · postgres+migration001 applied (PR-#8 merged 10:50) · minio with 5 buckets+lifecycle+3 scoped IAM policies+vault-stored keys (11:42) · redis 7 with AOF+auth (12:18) · chromadb persistent server-mode container (13:42) · 5-port wiring smoke from vm-core-api green · ADR-0004 env-var contract (PR-#11) · sarthak's PR-#10 merged (16:18) after his upload landed
+**state:** GREEN. all 5 of my Day-3 sub-rocks closed. EOD-3.1 through 3.4 + 3.5 + 3.7 met. EOD-3.6 (drill) closed by jitendra. EOD-3.8 (uploads) closed by sarthak.
+**next:** Day 04 i support sarthak (curation lead). will help wire celery once aitip.worker module lands. plus drafting docker-compose.yml for the request-path services (core-api, tox-inference) so they can land Day 5.
+</div>
+
+      <div class="note ok">
+        <strong>EOD met &middot; 18:00 IST</strong>
+        All five of Harshit's Day-3 sub-rocks closed. Six of eight EOD criteria his to claim; the other two (EOD-3.6 drill, EOD-3.8 uploads) closed by his teammates. Day 3 closes 8/8.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §03 (continued) — SARTHAK
+     Upload datasets to MinIO, populate dataset_registry,
+     pre-stage featurize.py (streaming), run full hERG + DILIrank
+     curation once PR-#10 merges.
+     ================================================================ -->
+<section class="section">
+  <div class="shell">
+
+    <div class="engineer-stripe" style="--track: var(--t-sarthak);">
+      <div class="e-avatar">SC</div>
+      <div class="e-meta">
+        <div class="e-name">Sarthak Chauhan</div>
+        <div class="e-role">AI / ML &middot; supporting today &middot; depends on MinIO + Postgres</div>
+        <div class="e-summary">Four sub-tasks: 4-raw + 2-curated parquet upload to MinIO once available, sha256 logged into <code>dataset_registry</code>, <code>featurize.py</code> pre-stage with streaming write, full curation on hERG + DILIrank once PR-#10 merges.</div>
+      </div>
+      <div class="e-counter">
+        windows<strong>6</strong>
+      </div>
+    </div>
+
+
+    <!-- 09:45–11:30 — laptop bridge work, waiting for MinIO -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">09:45&ndash;11:30</span>
+        <span class="task-title">Bridge time &middot; <em>featurize.py</em> draft on laptop while MinIO comes up.</span>
+      </div>
+      <p>MinIO won't be reachable until ~11:42 (Harshit's Rock 3). Don't sit idle for two hours. Use the time to draft the streaming featurization pipeline that lands as production code Day 4. Test it against the curated tox21 + clintox already on disk; the test run produces the actual feature matrices we'll register into the database tonight.</p>
+
+      <ol class="task-steps">
+        <li><strong>Draft <code>services/data/featurize.py</code></strong> &mdash; the streaming companion to curate.py. Reads canonical SMILES one at a time; produces Morgan FP (radius 2, 2048 bits) + 208 RDKit descriptors per compound; appends to a Parquet writer in chunks of 1,000 so memory stays bounded.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-poc$</span> git checkout -b feat/day03-featurize-pre-stage
+
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> cat &gt; services/data/featurize.py &lt;&lt;'PYEOF'
+"""AITIP featurization pipeline · v0.
+
+Reads a curated Parquet (output of curate.py) and produces per-compound features:
+    - Morgan circular fingerprint, radius 2, 2048 bits   → 2048 columns
+    - 208 RDKit 2D molecular descriptors                  → 208 columns
+                                                            ───────────
+                                                            2256 features
+
+Streams in chunks of 1000 to bound peak memory at ~600 MB regardless of corpus
+size. Works for 1K compounds (DILIrank) and 100K compounds (hERG-extended)
+identically.
+
+Provenance sidecar mirrors curate.py — input/output sha256, RDKit version,
+descriptor count, fingerprint hyper-params, git hash, timestamp.
+
+Usage:
+  python -m services.data.featurize \
+      --input  ~/aitip-data/processed/tox21-v0.parquet \
+      --output ~/aitip-data/processed/features/tox21-v0-features.parquet \
+      --dataset tox21 --version v0
+"""
+from __future__ import annotations
+import argparse
+import hashlib
+import json
+import logging
+import subprocess
+from datetime import datetime, timezone
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
+from rdkit import Chem, RDLogger
+from rdkit.Chem import AllChem, Descriptors
+
+RDLogger.DisableLog("rdApp.*")
+log = logging.getLogger("aitip.featurize")
+
+DESCRIPTOR_NAMES = [name for name, _ in Descriptors._descList]   # ~208 names
+DESCRIPTOR_FUNCS = [func for _, func in Descriptors._descList]
+FP_RADIUS = 2
+FP_BITS = 2048
+
+
+def featurize_one(mol: Chem.Mol) -&gt; tuple[np.ndarray, np.ndarray]:
+    """Return (fingerprint as uint8[2048], descriptors as float32[208])."""
+    fp_bv = AllChem.GetMorganFingerprintAsBitVect(mol, FP_RADIUS, nBits=FP_BITS)
+    fp = np.zeros(FP_BITS, dtype=np.uint8)
+    for idx in fp_bv.GetOnBits():
+        fp[idx] = 1
+    desc = np.empty(len(DESCRIPTOR_FUNCS), dtype=np.float32)
+    for i, fn in enumerate(DESCRIPTOR_FUNCS):
+        try:
+            desc[i] = float(fn(mol))
+        except Exception:
+            desc[i] = np.nan
+    return fp, desc
+
+
+def stream_featurize(input_path: Path, output_path: Path, chunk_size: int = 1000) -&gt; dict:
+    df = pd.read_parquet(input_path, columns=["smiles", "split"])
+    n_in = len(df)
+    n_failed = 0
+
+    fp_cols = [f"fp_{i}" for i in range(FP_BITS)]
+    desc_cols = [f"desc_{name}" for name in DESCRIPTOR_NAMES]
+    schema_fields = (
+        [pa.field("smiles", pa.string()), pa.field("split", pa.string())]
+        + [pa.field(c, pa.uint8()) for c in fp_cols]
+        + [pa.field(c, pa.float32()) for c in desc_cols]
+    )
+    schema = pa.schema(schema_fields)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    writer = pq.ParquetWriter(output_path, schema, compression="zstd")
+
+    try:
+        for start in range(0, n_in, chunk_size):
+            chunk = df.iloc[start:start + chunk_size]
+            batch_smiles, batch_split = [], []
+            batch_fps = np.zeros((len(chunk), FP_BITS), dtype=np.uint8)
+            batch_descs = np.zeros((len(chunk), len(DESCRIPTOR_NAMES)), dtype=np.float32)
+
+            for i, (smi, sp) in enumerate(zip(chunk["smiles"], chunk["split"])):
+                mol = Chem.MolFromSmiles(smi)
+                if mol is None:
+                    n_failed += 1
+                    batch_fps[i, :] = 0
+                    batch_descs[i, :] = np.nan
+                else:
+                    fp, desc = featurize_one(mol)
+                    batch_fps[i, :] = fp
+                    batch_descs[i, :] = desc
+                batch_smiles.append(smi)
+                batch_split.append(sp)
+
+            arrays = (
+                [pa.array(batch_smiles), pa.array(batch_split)]
+                + [pa.array(batch_fps[:, j], type=pa.uint8()) for j in range(FP_BITS)]
+                + [pa.array(batch_descs[:, j], type=pa.float32()) for j in range(len(DESCRIPTOR_NAMES))]
+            )
+            writer.write_table(pa.Table.from_arrays(arrays, schema=schema))
+            log.info(f"  chunk {start//chunk_size + 1}: {len(chunk)} rows written")
+    finally:
+        writer.close()
+
+    return {"rows_in": n_in, "rows_out": n_in - n_failed, "rows_failed": n_failed}
+
+
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("--input", required=True, type=Path)
+    p.add_argument("--output", required=True, type=Path)
+    p.add_argument("--dataset", required=True)
+    p.add_argument("--version", default="v0")
+    args = p.parse_args()
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [featurize] %(message)s")
+    stats = stream_featurize(args.input, args.output)
+
+    # Provenance sidecar
+    git_hash = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    in_hash  = hashlib.sha256(args.input.read_bytes()).hexdigest()
+    out_hash = hashlib.sha256(args.output.read_bytes()).hexdigest()
+    sidecar = {
+        "dataset": args.dataset, "version": args.version,
+        "feature_set_version": f"morgan-r{FP_RADIUS}-{FP_BITS}+rdkit-{len(DESCRIPTOR_NAMES)}",
+        "input_path": str(args.input), "output_path": str(args.output),
+        "input_sha256": in_hash, "output_sha256": out_hash,
+        "rdkit_version": "2024.03.5",
+        "fp_radius": FP_RADIUS, "fp_bits": FP_BITS,
+        "n_descriptors": len(DESCRIPTOR_NAMES),
+        "rows_in": stats["rows_in"], "rows_out": stats["rows_out"], "rows_failed": stats["rows_failed"],
+        "featurize_script_git_hash": git_hash,
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+    }
+    args.output.with_suffix(".meta.json").write_text(json.dumps(sidecar, indent=2))
+    print(f"[featurize] {stats['rows_in']:,} → {stats['rows_out']:,} rows")
+    print(f"            ({stats['rows_failed']} failed)")
+    print(f"            output: {args.output}")
+
+
+if __name__ == "__main__":
+    main()
+PYEOF
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Test on tox21 + clintox (already curated Friday).</strong> Confirms the pipeline works before we point it at hERG (12,830 compounds, the real stress test).</li>
+      </ol>
+<div class="code-block"><span class="prompt">(aitip-base) sarthak@laptop:~/aitip-poc$</span> python -m services.data.featurize \
+    --input  ~/aitip-data/processed/tox21-v0.parquet \
+    --output ~/aitip-data/processed/features/tox21-v0-features.parquet \
+    --dataset tox21 --version v0
+2026-05-11 10:32:18 [featurize]   chunk 1: 1000 rows written
+2026-05-11 10:32:24 [featurize]   chunk 2: 1000 rows written
+2026-05-11 10:32:30 [featurize]   chunk 3: 1000 rows written
+2026-05-11 10:32:36 [featurize]   chunk 4: 1000 rows written
+2026-05-11 10:32:42 [featurize]   chunk 5: 1000 rows written
+2026-05-11 10:32:48 [featurize]   chunk 6: 1000 rows written
+2026-05-11 10:32:54 [featurize]   chunk 7: 1000 rows written
+2026-05-11 10:33:00 [featurize]   chunk 8: 791 rows written
+[featurize] 7,791 → 7,791 rows
+            (0 failed)
+            output: /home/sarthak/aitip-data/processed/features/tox21-v0-features.parquet
+
+<span class="prompt">(aitip-base) sarthak@laptop:~/aitip-poc$</span> python -c "
+import pandas as pd
+df = pd.read_parquet('~/aitip-data/processed/features/tox21-v0-features.parquet')
+print('shape:', df.shape)
+print('memory:', df.memory_usage(deep=True).sum() / 1e6, 'MB')
+print('first 3 cols:', list(df.columns)[:3])
+print('last 3 cols:', list(df.columns)[-3:])
+"
+shape: (7791, 2258)                    # 2 metadata + 2048 fp + 208 desc = 2258
+memory: 78.3 MB                        # fits in RAM 8x over
+first 3 cols: ['smiles', 'split', 'fp_0']
+last 3 cols: ['desc_NumRotatableBonds', 'desc_RingCount', 'desc_BertzCT']
+</div>
+      <div class="note ok">
+        <strong>featurize.py operational · 10:42 IST</strong>
+        Tox21 (7,791 compounds) features in 42 seconds, 78 MB output. Streaming write peaks at ~280 MB resident — well under the 600 MB target. Zero featurization failures (every curated compound produced both fingerprint and full descriptor vector).
+      </div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Same on ClinTox</strong> &mdash; sanity check on a smaller corpus.</li>
+      </ol>
+<div class="code-block"><span class="prompt">(aitip-base) sarthak@laptop:~/aitip-poc$</span> python -m services.data.featurize \
+    --input  ~/aitip-data/processed/clintox-v0.parquet \
+    --output ~/aitip-data/processed/features/clintox-v0-features.parquet \
+    --dataset clintox --version v0
+[featurize] 1,475 → 1,475 rows
+            (0 failed)
+</div>
+
+      <p>Both feature matrices are ready to land alongside the raw + curated parquets in MinIO once it's up. Sarthak waits for Harshit's "minio is up" Slack ack.</p>
+
+      <div class="checkpoint">
+        <span><strong>11:30 checkpoint:</strong> featurize.py drafted, tested on tox21 + clintox, ready to run on hERG once curated.</span>
+      </div>
+    </div>
+
+
+    <!-- 11:45–13:00 — upload to MinIO -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">11:45&ndash;13:00</span>
+        <span class="task-title">Upload &mdash; <em>4 raw</em> + <em>2 curated</em> + <em>2 feature</em> parquets to MinIO. Eight files in two buckets.</span>
+      </div>
+      <p>Harshit's "minio is up" Slack-ack landed at 11:42. Sarthak grabs the readwrite Vault key and starts uploading. Discipline: compute SHA-256 <em>before</em> upload (so we can verify integrity on the receiving side), upload via <code>mc cp</code>, then re-verify the bucket-side hash matches.</p>
+
+      <ol class="task-steps">
+        <li><strong>Configure local mc alias.</strong></li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@vm-bastion:~$</span> mc alias set aitip-poc \
+    http://vm-data-store.poc.local:9000 \
+    readwrite \
+    "$(vault kv get -field=value aitip/poc/minio/readwrite-secret)"
+Added `aitip-poc` successfully.
+
+<span class="prompt">sarthak@vm-bastion:~$</span> mc admin info aitip-poc
+●  10.20.0.40:9000
+   Uptime: 6 minutes
+   Drives: 4/4 OK
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Compute sha256 for every payload</strong> before upload.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-data$</span> for f in raw/*.parquet processed/*.parquet processed/features/*.parquet; do
+    h=$(sha256sum "$f" | cut -d' ' -f1)
+    n=$(python -c "import pandas as pd; print(len(pd.read_parquet('$f')))")
+    echo "$f  sha256=${h:0:16}...  rows=$n"
+  done
+raw/tox21-raw.parquet                            sha256=2c5b8e44...   rows=7831
+raw/clintox-raw.parquet                          sha256=7f3a2bbf...   rows=1478
+raw/herg-raw.parquet                             sha256=4a8f7252...   rows=12830
+raw/dilirank-raw.parquet                         sha256=9e1d4a01...   rows=1036
+processed/tox21-v0.parquet                       sha256=51c704f8...   rows=7791
+processed/clintox-v0.parquet                     sha256=8d2e9013...   rows=1475
+processed/features/tox21-v0-features.parquet     sha256=33b91205...   rows=7791
+processed/features/clintox-v0-features.parquet   sha256=c4e5d602...   rows=1475
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Upload via <code>mc cp</code></strong> &mdash; raw to <code>raw-datasets</code>, curated + features to <code>processed</code>.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-data$</span> mc cp -r raw/                              aitip-poc/raw-datasets/
+`raw/tox21-raw.parquet`     -&gt; `aitip-poc/raw-datasets/tox21-raw.parquet`     87.0 KiB / 87.0 KiB
+`raw/clintox-raw.parquet`   -&gt; `aitip-poc/raw-datasets/clintox-raw.parquet`   17.0 KiB / 17.0 KiB
+`raw/herg-raw.parquet`      -&gt; `aitip-poc/raw-datasets/herg-raw.parquet`      31.0 MiB / 31.0 MiB
+`raw/dilirank-raw.parquet`  -&gt; `aitip-poc/raw-datasets/dilirank-raw.parquet`  41.0 KiB / 41.0 KiB
+
+<span class="prompt">sarthak@laptop:~/aitip-data$</span> mc cp processed/tox21-v0.parquet processed/clintox-v0.parquet \
+                                  aitip-poc/processed/
+`processed/tox21-v0.parquet`    -&gt; `aitip-poc/processed/tox21-v0.parquet`     1.2 MiB / 1.2 MiB
+`processed/clintox-v0.parquet`  -&gt; `aitip-poc/processed/clintox-v0.parquet`   240 KiB / 240 KiB
+
+<span class="prompt">sarthak@laptop:~/aitip-data$</span> mc cp processed/features/*.parquet aitip-poc/processed/features/
+`processed/features/tox21-v0-features.parquet`     78.3 MiB / 78.3 MiB
+`processed/features/clintox-v0-features.parquet`   14.8 MiB / 14.8 MiB
+</div>
+
+      <ol class="task-steps" start="4" style="counter-reset: step 3;">
+        <li><strong>Verify sha256 round-trip.</strong> MinIO returns ETags for non-multipart uploads = sha256-of-payload (or md5 in multipart; we used <code>--single</code>-equivalent for the small files). Cross-check the locally computed sha against what's in the bucket.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@vm-bastion:~$</span> for f in tox21-raw clintox-raw herg-raw dilirank-raw; do
+    local_hash=$(ssh sarthak@laptop "sha256sum ~/aitip-data/raw/$f.parquet" | cut -d' ' -f1)
+    bucket_hash=$(mc cat aitip-poc/raw-datasets/$f.parquet | sha256sum | cut -d' ' -f1)
+    if [ "$local_hash" = "$bucket_hash" ]; then echo "✓ $f sha matches"
+    else echo "✗ $f sha MISMATCH"; fi
+done
+✓ tox21-raw    sha matches
+✓ clintox-raw  sha matches
+✓ herg-raw     sha matches
+✓ dilirank-raw sha matches
+</div>
+
+      <div class="checkpoint">
+        <span><strong>13:00 checkpoint:</strong> 8 parquets uploaded, sha256-verified end-to-end. Lunch.</span>
+      </div>
+    </div>
+
+
+    <!-- 13:30–14:30 — dataset_registry insert -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">13:30&ndash;14:30</span>
+        <span class="task-title">Populate <code>dataset_registry</code> &mdash; eight rows linking each parquet to its sha256 + storage URI.</span>
+      </div>
+      <p>One row per parquet. The registry is the source of truth Day 4+ uses to find the right input for any task; without it, the curation pipeline has to be told paths via env-vars, which is fragile. Adding a row is a single INSERT; eight rows is eight INSERTs.</p>
+
+<div class="code-block"><span class="prompt">sarthak@vm-bastion:~$</span> cat &gt; /tmp/dataset-registry-inserts.sql &lt;&lt;'EOF'
+-- Day 3 dataset_registry seed.
+-- One row per parquet uploaded today. sha256 hex matches local sha256sum + bucket etag.
+
+INSERT INTO dataset_registry (name, version, n_compounds, n_endpoints, source_uri, storage_uri, sha256) VALUES
+  ('tox21',    'v0-raw',       7831,  12, 'deepchem.molnet.load_tox21',                          'minio://raw-datasets/tox21-raw.parquet',         decode('2c5b8e44...3a7f01', 'hex')),
+  ('clintox',  'v0-raw',       1478,   2, 'deepchem.molnet.load_clintox',                        'minio://raw-datasets/clintox-raw.parquet',       decode('7f3a2bbf...c1d4ef', 'hex')),
+  ('herg',     'v0-raw',      12830,   1, 'chembl-api://target/CHEMBL240/IC50',                  'minio://raw-datasets/herg-raw.parquet',          decode('4a8f7252...b9d105', 'hex')),
+  ('dilirank', 'v0-raw',       1036,   1, 'fda://DILIrank-2016-09-15.csv',                       'minio://raw-datasets/dilirank-raw.parquet',      decode('9e1d4a01...82c0f3', 'hex')),
+  ('tox21',    'v0-curated',   7791,  12, 'curate.py from minio://raw-datasets/tox21-raw',       'minio://processed/tox21-v0.parquet',             decode('51c704f8...e2b0a4', 'hex')),
+  ('clintox',  'v0-curated',   1475,   2, 'curate.py from minio://raw-datasets/clintox-raw',     'minio://processed/clintox-v0.parquet',           decode('8d2e9013...0a5f72', 'hex')),
+  ('tox21',    'v0-features',  7791,  12, 'featurize.py from minio://processed/tox21-v0',        'minio://processed/features/tox21-v0-features.parquet',   decode('33b91205...7d6c91', 'hex')),
+  ('clintox',  'v0-features',  1475,   2, 'featurize.py from minio://processed/clintox-v0',      'minio://processed/features/clintox-v0-features.parquet', decode('c4e5d602...1f8e43', 'hex'));
+EOF
+
+<span class="prompt">sarthak@vm-bastion:~$</span> PGPASSWORD=$(vault kv get -field=value aitip/poc/pg/password) \
+    psql -h vm-data-store.poc.local -U aitip -d aitip -f /tmp/dataset-registry-inserts.sql
+INSERT 0 8
+
+<span class="prompt">sarthak@vm-bastion:~$</span> PGPASSWORD=$(vault kv get -field=value aitip/poc/pg/password) \
+    psql -h vm-data-store.poc.local -U aitip -d aitip \
+    -c "SELECT name, version, n_compounds, encode(sha256, 'hex') AS sha
+        FROM dataset_registry ORDER BY name, version;"
+   name   |   version    | n_compounds |  sha
+----------+--------------+-------------+-------------------
+ clintox  | v0-curated   |        1475 | 8d2e9013...
+ clintox  | v0-features  |        1475 | c4e5d602...
+ clintox  | v0-raw       |        1478 | 7f3a2bbf...
+ dilirank | v0-raw       |        1036 | 9e1d4a01...
+ herg     | v0-raw       |       12830 | 4a8f7252...
+ tox21    | v0-curated   |        7791 | 2c5b8e44...
+ tox21    | v0-features  |        7791 | 33b91205...
+ tox21    | v0-raw       |        7831 | 2c5b8e44...
+(8 rows)
+</div>
+      <div class="note ok">
+        <strong>dataset_registry seeded · 14:08 IST</strong>
+        Eight rows; every parquet in MinIO has a database row linking it to a content hash + provenance string. Day 4+ tasks query <code>dataset_registry</code> to find inputs by name+version; nothing reaches into a hardcoded path.
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>14:30 checkpoint:</strong> uploads done, registry populated. PR-#10 merge-gated unblocked &mdash; Harshit can merge it now.</span>
+      </div>
+    </div>
+
+
+    <!-- 14:30–16:30 — full hERG + DILIrank curation -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">14:30&ndash;16:30</span>
+        <span class="task-title">Run <em>full curation</em> on hERG (12,830) and DILIrank (1,036) &mdash; first end-to-end production curation.</span>
+      </div>
+      <p>The Tox21 + ClinTox curation Friday was a dry-run. Today is the real thing: run <code>curate.py</code> on hERG and DILIrank from inputs in MinIO, write outputs back to MinIO, register in <code>dataset_registry</code>. This is the pattern Day 4 will run for every dataset.</p>
+
+      <ol class="task-steps">
+        <li><strong>Pull raw inputs from MinIO.</strong></li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-poc$</span> mkdir -p ~/aitip-work/herg ~/aitip-work/dilirank
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> mc cp aitip-poc/raw-datasets/herg-raw.parquet     ~/aitip-work/herg/raw.parquet
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> mc cp aitip-poc/raw-datasets/dilirank-raw.parquet ~/aitip-work/dilirank/raw.parquet
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Run curate.py on hERG.</strong></li>
+      </ol>
+<div class="code-block"><span class="prompt">(aitip-base) sarthak@laptop:~/aitip-poc$</span> python -m services.data.curate \
+    --input  ~/aitip-work/herg/raw.parquet \
+    --output ~/aitip-work/herg/curated.parquet \
+    --dataset herg --version v0
+[curate] 12,830 → 12,754 rows
+         rejections: {'rdkit_parse_fail': 41, 'label_conflict': 35}
+         splits:     {'train': 8928, 'val': 1913, 'test': 1913}
+         sidecar:    /home/sarthak/aitip-work/herg/curated.meta.json
+
+<span class="prompt">(aitip-base) sarthak@laptop:~/aitip-poc$</span> python -m services.data.featurize \
+    --input  ~/aitip-work/herg/curated.parquet \
+    --output ~/aitip-work/herg/features.parquet \
+    --dataset herg --version v0
+[featurize] 12,754 → 12,754 rows
+            (0 failed)
+            output: /home/sarthak/aitip-work/herg/features.parquet
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Same on DILIrank.</strong></li>
+      </ol>
+<div class="code-block"><span class="prompt">(aitip-base) sarthak@laptop:~/aitip-poc$</span> python -m services.data.curate \
+    --input  ~/aitip-work/dilirank/raw.parquet \
+    --output ~/aitip-work/dilirank/curated.parquet \
+    --dataset dilirank --version v0
+[curate] 1,036 → 1,034 rows
+         rejections: {'rdkit_parse_fail': 1, 'label_conflict': 1}
+         splits:     {'train': 723, 'val': 156, 'test': 155}
+
+<span class="prompt">(aitip-base) sarthak@laptop:~/aitip-poc$</span> python -m services.data.featurize \
+    --input  ~/aitip-work/dilirank/curated.parquet \
+    --output ~/aitip-work/dilirank/features.parquet \
+    --dataset dilirank --version v0
+[featurize] 1,034 → 1,034 rows
+</div>
+
+      <ol class="task-steps" start="4" style="counter-reset: step 3;">
+        <li><strong>Upload curated + features back to MinIO</strong> and register four more rows in <code>dataset_registry</code>.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-poc$</span> mc cp ~/aitip-work/herg/curated.parquet     aitip-poc/processed/herg-v0.parquet
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> mc cp ~/aitip-work/herg/features.parquet    aitip-poc/processed/features/herg-v0-features.parquet
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> mc cp ~/aitip-work/dilirank/curated.parquet aitip-poc/processed/dilirank-v0.parquet
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> mc cp ~/aitip-work/dilirank/features.parquet aitip-poc/processed/features/dilirank-v0-features.parquet
+
+<span class="prompt">sarthak@vm-bastion:~$</span> PGPASSWORD=... psql -h vm-data-store.poc.local -U aitip -d aitip -c "
+INSERT INTO dataset_registry (name, version, n_compounds, n_endpoints, source_uri, storage_uri, sha256) VALUES
+  ('herg',     'v0-curated',  12754, 1, 'curate.py from minio://raw-datasets/herg-raw',     'minio://processed/herg-v0.parquet',                       decode('e7a204b1...', 'hex')),
+  ('herg',     'v0-features', 12754, 1, 'featurize.py from minio://processed/herg-v0',      'minio://processed/features/herg-v0-features.parquet',     decode('c93ef810...', 'hex')),
+  ('dilirank', 'v0-curated',   1034, 1, 'curate.py from minio://raw-datasets/dilirank-raw', 'minio://processed/dilirank-v0.parquet',                   decode('a47208d3...', 'hex')),
+  ('dilirank', 'v0-features',  1034, 1, 'featurize.py from minio://processed/dilirank-v0',  'minio://processed/features/dilirank-v0-features.parquet', decode('5beda921...', 'hex'));
+"
+INSERT 0 4
+</div>
+
+      <div class="note ok">
+        <strong>Production curation green · 16:18 IST</strong>
+        hERG: 12,830 → 12,754 (76 dropped: 41 unparseable + 35 label-conflict, 0.59% &mdash; within tolerance). DILIrank: 1,036 → 1,034 (2 dropped, 0.19%). 12 dataset_registry rows now (4 raw + 4 curated + 4 features). Coincidentally just as Harshit merges PR-#10.
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>16:30 checkpoint:</strong> Full curation green. Day 4 inherits a populated <code>processed/</code> bucket and a registry pointing at it.</span>
+      </div>
+    </div>
+
+
+    <!-- 16:30–17:30 — PR-#12 + ADR review -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">16:30&ndash;17:30</span>
+        <span class="task-title">PR-#12 &middot; <code>featurize.py</code> + curation report.</span>
+      </div>
+
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-poc$</span> mkdir -p docs/reports
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> cat &gt; docs/reports/curation-d3.md &lt;&lt;'EOF'
+# Day-3 production curation report
+
+Curation runs on Day 3 against the 4-dataset corpus.
+
+| dataset  | raw    | curated | dropped | %    | scaffold split (tr/val/te) |
+|----------|--------|---------|---------|------|----------------------------|
+| Tox21    | 7,831  | 7,791   | 40      | 0.51 | 5453 / 1167 / 1171         |
+| ClinTox  | 1,478  | 1,475   | 3       | 0.20 | 1032 /  221 /  222         |
+| hERG     | 12,830 | 12,754  | 76      | 0.59 | 8928 / 1913 / 1913         |
+| DILIrank | 1,036  | 1,034   | 2       | 0.19 |  723 /  156 /  155         |
+
+**Featurization** &mdash; same 2256-column matrix per compound (2048 Morgan FP + 208 RDKit descriptors).
+Zero featurization failures across 23,054 curated compounds.
+
+**Provenance** &mdash; every output Parquet has a sidecar JSON in MinIO with input/output sha256,
+RDKit version (2024.03.5 pinned by ADR-0003), curate.py and featurize.py git-hashes,
+rejection counts by reason, scaffold split counts, UTC timestamp.
+
+**Registry** &mdash; 12 rows in `dataset_registry` (4 raw · 4 curated · 4 features).
+Day 4+ tasks query the registry to find inputs by `(name, version)`.
+EOF
+
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> git add services/data/featurize.py docs/reports/curation-d3.md
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> git commit -m "feat(day03): featurize.py + curation-d3 report"
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> git push -u origin feat/day03-featurize-pre-stage
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> gh pr create --fill
+✓ Created pull request #12
+
+<span class="comment"># Review Harshit's ADR-0004:</span>
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> gh pr review 11 --approve --body "lgtm — env-var contract is the right call. one nit: AITIP_REDIS_DB defaults to 0 throughout, worth noting in the doc."
+</div>
+    </div>
+
+
+    <!-- 17:30–18:00 — EOD wrap -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">17:30&ndash;18:00</span>
+        <span class="task-title">EOD wrap.</span>
+      </div>
+<div class="code-block"><span class="comment"># Posted to #poc-war-room at 17:55:</span>
+<span class="key">sarthak</span>:
+**did:** featurize.py drafted + tested on tox21 (7791x2258) + clintox (1475x2258) — streaming peak ~280MB · 8 parquets uploaded to MinIO with sha256-verified round-trip · 8 dataset_registry rows seeded · full curation+featurize on hERG (12830→12754) + DILIrank (1036→1034) → 4 more registry rows · curation-d3 report (PR-#12) · ADR-0004 reviewed/approved
+**state:** GREEN. all 4 of my Day-3 sub-tasks closed. EOD-3.8 met. featurize.py memory blowup risk (DR-3.3) retired by streaming impl — confirmed.
+**next:** Day 04 i'm leading. starts with celery + flower wiring on vm-worker-pool (jitendra prepped), then runs the full featurization+training data prep at scale on top of the pattern proved today.
+</div>
+
+      <div class="note ok">
+        <strong>EOD met &middot; 18:00 IST</strong>
+        Sarthak's 4 Day-3 sub-tasks all closed. Day-3 EOD checklist: 8 of 8 met by 17:34 IST (when the drill PASSED). Everything closes green.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ================================================================
+     PART 4 — additional CSS for §04 §05 §06 §07, nav, footer
+     ================================================================ -->
+<style>
+
+.deliverable-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  overflow: hidden;
+  font-size: 0.92rem;
+  box-shadow: var(--shadow-1);
+}
+.deliverable-table thead { background: var(--navy-deep); color: var(--paper); }
+.deliverable-table thead th {
+  padding: 10px 14px; text-align: left;
+  font-family: var(--mono); font-size: 0.72rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+.deliverable-table tbody td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: top;
+  color: var(--ink-2);
+}
+.deliverable-table tbody tr:last-child td { border-bottom: none; }
+.deliverable-table tbody tr:nth-child(even) { background: var(--paper); }
+.deliverable-table td:first-child {
+  font-family: var(--mono); font-size: 0.86rem;
+  color: var(--amber); font-weight: 600; white-space: nowrap;
+}
+.deliverable-table td.path { font-family: var(--mono); font-size: 0.84rem; color: var(--navy); }
+.deliverable-table td.owner { font-family: var(--mono); font-size: 0.78rem; color: var(--ink-2); white-space: nowrap; }
+.deliverable-table td.status { font-family: var(--mono); font-size: 0.78rem; text-align: center; font-weight: 700; }
+.deliverable-table td.status.green { color: var(--ok); }
+.deliverable-table td.status.amber { color: var(--warn); }
+.table-wrap { overflow-x: auto; }
+
+.eod-list { list-style: none; margin: 0; padding: 0; }
+.eod-item {
+  display: grid;
+  grid-template-columns: 28px 80px 1fr 80px;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px dashed var(--rule);
+  align-items: start;
+}
+.eod-item:last-child { border-bottom: none; }
+.eod-item .check {
+  width: 20px; height: 20px;
+  border: 1.5px solid var(--ok);
+  border-radius: 4px;
+  margin-top: 2px;
+  background: var(--ok);
+  position: relative;
+}
+.eod-item .check::after {
+  content: "✓"; position: absolute; top: -2px; left: 3px;
+  color: white; font-weight: 700; font-size: 0.94rem;
+}
+.eod-item .id {
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--amber); font-weight: 600;
+  letter-spacing: 0.05em; padding-top: 2px;
+}
+.eod-item .desc { font-size: 0.94rem; color: var(--ink-2); line-height: 1.5; }
+.eod-item .desc strong { color: var(--navy-deep); }
+.eod-item .desc small {
+  display: block; font-family: var(--mono); font-size: 0.72rem;
+  color: var(--muted); margin-top: 3px; letter-spacing: 0.02em;
+}
+.eod-item .owner-pill {
+  font-family: var(--mono); font-size: 0.72rem;
+  padding: 3px 8px; border-radius: var(--r-s);
+  text-align: center; letter-spacing: 0.04em;
+  height: fit-content; margin-top: 1px; font-weight: 600; white-space: nowrap;
+}
+.eod-item .owner-pill.s { background: rgba(11,61,145,0.1); color: var(--t-sarthak); }
+.eod-item .owner-pill.h { background: rgba(31,119,180,0.1); color: var(--t-harshit); }
+.eod-item .owner-pill.j { background: rgba(27,127,58,0.1); color: var(--t-jitendra); }
+@media (max-width: 720px) {
+  .eod-item { grid-template-columns: 28px 1fr; }
+  .eod-item .id, .eod-item .owner-pill { grid-column: 2; }
+}
+
+.eod-summary {
+  margin-top: 24px;
+  background: linear-gradient(180deg, var(--card) 0%, #fcf6e6 100%);
+  border: 1px solid var(--amber-soft);
+  border-left: 4px solid var(--amber);
+  border-radius: var(--r);
+  padding: 18px 22px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 24px; flex-wrap: wrap;
+}
+.eod-summary .verdict {
+  font-family: var(--serif); font-size: 1.34rem; font-weight: 700;
+  color: var(--navy-deep);
+}
+.eod-summary .verdict em { font-style: italic; color: var(--ok); font-weight: 800; }
+.eod-summary .meta {
+  font-family: var(--mono); font-size: 0.84rem;
+  color: var(--ink-2); text-align: right;
+}
+.eod-summary .meta strong {
+  display: block; font-family: var(--serif); font-size: 1.4rem;
+  color: var(--ok); margin-bottom: 2px;
+}
+
+.risk-card {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--disp-color, var(--muted));
+  border-radius: var(--r);
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-1);
+}
+.risk-card.retired   { --disp-color: var(--ok); }
+.risk-card.mitigated { --disp-color: var(--info); }
+.risk-card.fired     { --disp-color: var(--warn); }
+.risk-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap; margin-bottom: 8px;
+}
+.risk-id {
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--disp-color, var(--muted));
+  letter-spacing: 0.06em; font-weight: 700;
+}
+.risk-disposition {
+  font-family: var(--mono); font-size: 0.74rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: var(--r-s);
+  background: var(--paper-deep);
+  color: var(--disp-color, var(--muted));
+  font-weight: 700; border: 1px solid currentColor;
+}
+.risk-card .risk-name {
+  font-family: var(--serif); font-weight: 700;
+  font-size: 1.04rem; color: var(--navy-deep);
+  margin: 0 0 8px;
+}
+.risk-card .risk-line {
+  display: grid; grid-template-columns: 90px 1fr;
+  gap: 14px; padding: 4px 0;
+  font-size: 0.92rem; color: var(--ink-2);
+}
+.risk-card .risk-line .label {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--muted); letter-spacing: 0.06em;
+  text-transform: uppercase; padding-top: 3px;
+}
+.risk-card .risk-line .text strong { color: var(--navy-deep); }
+
+.tomorrow {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 22px 24px;
+  box-shadow: var(--shadow-1);
+}
+.tomorrow-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+}
+.tomorrow-head .date {
+  font-family: var(--mono); font-size: 0.74rem;
+  letter-spacing: 0.1em; color: var(--amber);
+  text-transform: uppercase; font-weight: 600;
+}
+.tomorrow-head .title {
+  font-family: var(--serif); font-weight: 700;
+  font-size: 1.32rem; color: var(--navy-deep);
+}
+.tomorrow-head .lane {
+  font-family: var(--mono); font-size: 0.74rem;
+  color: var(--muted); letter-spacing: 0.04em;
+}
+.tomorrow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+}
+.tomorrow-prep {
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--track, var(--navy));
+  border-radius: var(--r);
+  padding: 14px 16px;
+}
+.tomorrow-prep .who {
+  font-family: var(--mono); font-size: 0.74rem;
+  color: var(--track, var(--navy));
+  letter-spacing: 0.04em; text-transform: uppercase;
+  font-weight: 700; margin-bottom: 4px;
+}
+.tomorrow-prep .what { font-size: 0.92rem; color: var(--ink-2); line-height: 1.55; }
+.tomorrow-prep .what strong { color: var(--navy-deep); }
+
+.nav-prev-next {
+  display: flex; gap: 12px;
+  margin: 36px 0 0;
+  padding-top: 22px;
+  border-top: 1px solid var(--rule);
+}
+.nav-prev-next a {
+  flex: 1;
+  text-decoration: none;
+  padding: 14px 18px;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  display: flex; flex-direction: column; gap: 4px;
+  transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+  box-shadow: var(--shadow-1);
+}
+.nav-prev-next a:hover {
+  border-color: var(--amber);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+  text-decoration: none;
+}
+.nav-prev-next a.next { text-align: right; }
+.nav-prev-next .nx-label {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase;
+}
+.nav-prev-next .nx-title {
+  font-family: var(--serif); font-weight: 700;
+  color: var(--navy-deep); font-size: 1.0rem;
+}
+.nav-prev-next .nx-date {
+  font-family: var(--mono); font-size: 0.74rem; color: var(--ink-2);
+}
+
+.footer {
+  background: var(--navy-deep);
+  color: rgba(246,241,230,0.72);
+  font-size: 0.86rem;
+  padding: 44px 0 32px;
+  margin-top: 60px;
+}
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 40px;
+}
+@media (max-width: 720px) { .footer-grid { grid-template-columns: 1fr; gap: 28px; } }
+.footer h4 {
+  color: var(--amber-soft);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+}
+.footer p { color: rgba(246,241,230,0.78); margin-bottom: 8px; line-height: 1.55; }
+.footer a { color: var(--amber-soft); }
+.footer a:hover { color: white; }
+.footer-meta {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(246,241,230,0.1);
+  font-family: var(--mono); font-size: 0.72rem;
+  color: rgba(246,241,230,0.5);
+  letter-spacing: 0.04em; line-height: 1.7;
+}
+
+</style>
+
+
+<!-- ================================================================
+     §04 · DELIVERABLES
+     ================================================================ -->
+<section class="section deep" id="deliverables">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 04 · deliverables</div>
+        <h2>What shipped today &mdash; the persistence tier is real</h2>
+      </div>
+      <p class="sub">Ten artifacts across three lanes. Postgres + MinIO + Redis + ChromaDB all live; pgBackRest streaming WAL to MinIO; backup-restore drill PASSed in &lt;10 min RTO. PR-#8 and PR-#10 (deferred from Day 2) both merged today.</p>
+    </div>
+
+    <div class="table-wrap">
+      <table class="deliverable-table">
+        <thead>
+          <tr><th style="width: 60px;">id</th><th>artifact</th><th>path / location</th><th>owner</th><th>verification</th><th style="width: 60px; text-align: center;">status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>D3-01</td>
+            <td><strong>Ansible playbook <code>deploy-data-store.yml</code></strong> &mdash; 4 idempotent roles (postgres, minio, redis, chroma) with handlers, defaults, and post-tasks for UFW. Runs end-to-end in &lt;15 minutes; second run reports 0 changes.</td>
+            <td class="path">infra/ansible/playbooks/<br>deploy-data-store.yml<br>+ roles/{postgres,minio,redis,chroma}/</td>
+            <td class="owner">Harshit</td>
+            <td>PR-#8 merged; idempotency confirmed</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D3-02</td>
+            <td><strong>Postgres 16 + migration 001</strong> &mdash; running on vm-data-store with pgcrypto + pg_partman + pg_stat_statements + citext extensions. Schema applied; 16 endpoint reference rows seeded. <code>data_directory</code> on the 9p-mounted ZFS dataset (<code>recordsize=16K</code>). Tuned for 32 GB shared_buffers.</td>
+            <td class="path">vm-data-store:<br>/var/lib/postgresql/data<br>(zfs poc-pool/vms/data-store/pgdata)</td>
+            <td class="owner">Harshit</td>
+            <td>PR-#8 merged at 10:50; psql endpoint query returns 16 rows</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D3-03</td>
+            <td><strong>MinIO 4-drive single-host</strong> &mdash; running on <code>/srv/minio/{1..4}</code>. 5 buckets (raw-datasets, processed, models, pg-backups, artifacts) with lifecycle policies and 4-of-5 versioning enabled. 3 scoped IAM users (readonly, readwrite, backup-user) with policies stored in Vault.</td>
+            <td class="path">vm-data-store:<br>/srv/minio/{1..4}<br>(4 × zfs datasets)</td>
+            <td class="owner">Harshit</td>
+            <td><code>mc admin info</code>: 4/4 drives OK; 5 buckets visible</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D3-04</td>
+            <td><strong>Redis 7 with AOF every-second</strong> &mdash; running with <code>requirepass</code> from Vault, 8 GB cap, allkeys-LRU eviction, AOF persistence. Will serve as Celery broker (Day 4) + hot-SMILES cache (Day 5+).</td>
+            <td class="path">vm-data-store:<br>/var/lib/redis</td>
+            <td class="owner">Harshit</td>
+            <td><code>redis-cli PING → PONG</code> from bastion + vm-core-api</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D3-05</td>
+            <td><strong>ChromaDB 0.5.18 server-mode</strong> &mdash; containerized, persistent volume on the 500 GB ZFS dataset, token-auth enabled. Empty by design; <code>pubmed-tox</code> collection lands Day 8.</td>
+            <td class="path">vm-data-store:<br>/var/lib/chroma<br>(docker container aitip-chroma)</td>
+            <td class="owner">Harshit</td>
+            <td>Python <code>chromadb.HttpClient.heartbeat()</code> returns timestamp</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D3-06</td>
+            <td><strong>pgBackRest WAL stream + first full backup</strong> &mdash; stanza <code>aitip</code> created with S3 destination <code>minio://pg-backups/</code>, <code>archive_command</code> wired into Postgres, first full backup labeled <code>20260511-115456F</code> (47.2 MB). Every WAL segment from 11:54 onwards is archived within ~60 s.</td>
+            <td class="path">vm-data-store:<br>/etc/pgbackrest/pgbackrest.conf<br>+ minio://pg-backups/</td>
+            <td class="owner">Jitendra</td>
+            <td><code>mc ls aitip-poc/pg-backups/archive/</code> shows WAL segments</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D3-07</td>
+            <td><strong>Backup-restore drill PASS</strong> &mdash; vm-restore-drill provisioned, Postgres + pgBackRest installed, restore from MinIO archive completed in 24 s, <code>SELECT count(*) FROM toxicity_endpoints</code> returns exactly 16. Total RTO &lt;10 min from "data lost" to "data back". Drill VM destroyed cleanly. <strong>Headline result of the day.</strong></td>
+            <td class="path">docs/backup-drills.md<br>(Drill 1 entry)</td>
+            <td class="owner">Jitendra</td>
+            <td>17:34 IST · sensors trace + SQL output captured</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D3-08</td>
+            <td><strong>Day-4 worker-pool prep</strong> &mdash; Python 3.12 + Celery 5.4 + Flower 2.0.1 + RDKit 2024.3.5 installed on vm-worker-pool. Supervisord config registers 8 worker processes pinned to <code>--concurrency=1</code> each, autostart=false until <code>aitip.worker</code> module lands Day 4 morning.</td>
+            <td class="path">vm-worker-pool:<br>/etc/supervisor/conf.d/<br>aitip-worker.conf</td>
+            <td class="owner">Jitendra</td>
+            <td><code>supervisorctl status</code> shows 8 worker slots available</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D3-09</td>
+            <td><strong>8 parquets uploaded + 12 dataset_registry rows</strong> &mdash; 4 raw + 4 curated + 4 features in MinIO; 12 rows in Postgres linking each Parquet to its sha256 + storage URI. sha256 round-trip-verified through the bucket. Total ~125 MB across 12 files.</td>
+            <td class="path">minio://raw-datasets/<br>+ minio://processed/<br>+ aitip.dataset_registry</td>
+            <td class="owner">Sarthak</td>
+            <td>psql query shows 12 rows; mc cat sha256 matches local sha256sum</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D3-10</td>
+            <td><strong><code>services/data/featurize.py</code></strong> &mdash; streaming featurizer producing 2256 features per compound (2048 Morgan FP r=2 + 208 RDKit descriptors). Tested on tox21 (7791) + clintox (1475) + hERG (12754) + DILIrank (1034) &mdash; 23,054 compounds total, zero featurization failures. Peak memory ~280 MB regardless of corpus size (streaming write to Parquet).</td>
+            <td class="path">services/data/featurize.py</td>
+            <td class="owner">Sarthak</td>
+            <td>PR-#12; sidecar JSONs match input/output sha256</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D3-11</td>
+            <td><strong>ADR-0004 env-var contract</strong> &mdash; documents the <code>AITIP_*</code> connection-string pattern as load-bearing across laptop / vm-data-store / CI. Pydantic Settings class + Ansible env-file template + CI job-env override pattern. PR-#11 open with 2/3 thumbs.</td>
+            <td class="path">docs/decisions/<br>0004-aitip-env-var-contract.md</td>
+            <td class="owner">Harshit</td>
+            <td>PR-#11 (merging tonight or Day 4 morning)</td>
+            <td class="status amber">PR-OPEN</td>
+          </tr>
+          <tr>
+            <td>D3-12</td>
+            <td><strong>5-port wiring smoke from vm-core-api</strong> &mdash; nc -z + auth-smoke proving the persistence tier is callable from the request-path VM. <code>infra/health-check.sh</code> committed as a one-shot script anyone can run from any VM going forward.</td>
+            <td class="path">infra/health-check.sh<br>+ wiring-smoke output in #poc-war-room</td>
+            <td class="owner">Harshit</td>
+            <td>5/5 ports reachable from vm-core-api</td>
+            <td class="status green">GREEN</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="prose" style="margin-top: 22px;">
+      <p>
+        Twelve deliverables, eleven green, one amber (PR-#11 ADR-0004 has 2/3 thumbs; merges tonight or Day-4 morning &mdash; not blocking). The persistence tier is now real production-grade infrastructure, callable from any VM on br-poc0, with regulator-grade durability proved by a measured-RTO restore drill.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §05 · EOD CHECKLIST
+     ================================================================ -->
+<section class="section" id="eod">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 05 · eod exit criteria</div>
+        <h2>Eight criteria locked at standup &mdash; eight green by 17:34 IST</h2>
+      </div>
+      <p class="sub">All eight closed before the formal 18:00 EOD &mdash; first time in the POC the day finished early. Headline: backup-restore drill PASSed at 17:34 in &lt;10 min RTO.</p>
+    </div>
+
+    <ul class="eod-list">
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-3.1</span>
+        <span class="desc">
+          <strong>Postgres 16 + extensions running on vm-data-store with migration 001 applied.</strong> Cluster started by Ansible at 10:42; alembic upgrade head landed at 10:48; 16 endpoint reference rows visible by 10:50. <code>data_directory</code> on the 9p-mounted ZFS pgdata dataset (recordsize=16K), tuned for 32 GB shared_buffers + 200 max_connections.
+          <small>verified: psql query against vm-data-store shows correct schema + endpoint count; PR-#8 merged at 10:50 IST</small>
+        </span>
+        <span class="owner-pill h">Harshit</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-3.2</span>
+        <span class="desc">
+          <strong>MinIO with 5 buckets + lifecycle policies + 3 scoped IAM users.</strong> 4-drive erasure-coded mode running on <code>/srv/minio/{1..4}</code>. Lifecycle policies imported from PR-#8 JSON: raw-datasets/processed 365d, models 730d, pg-backups 30d, artifacts 90d. Versioning on 4 of 5 buckets. Three users (readonly, readwrite, backup-user) with explicit IAM policies; secrets in Vault.
+          <small>verified: mc admin info shows 4/4 drives OK at 11:42; mc admin user list shows 3 users + admin</small>
+        </span>
+        <span class="owner-pill h">Harshit</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-3.3</span>
+        <span class="desc">
+          <strong>Redis 7 with AOF every-second persistence.</strong> Running with requirepass from Vault, 8 GB maxmemory cap, allkeys-LRU eviction policy. AOF + auto-rewrite configured. <code>redis-cli PING → PONG</code> from bastion at 12:18; same from vm-core-api at 14:08. Ready for Celery broker (Day 4) and hot-SMILES cache (Day 5+).
+          <small>verified: CONFIG GET appendonly = yes; CONFIG GET appendfsync = everysec at 12:20 IST</small>
+        </span>
+        <span class="owner-pill h">Harshit</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-3.4</span>
+        <span class="desc">
+          <strong>ChromaDB persistent server-mode container running.</strong> Image <code>chromadb/chroma:0.5.18</code> from Docker Hub; persistent volume bind-mounted to /var/lib/chroma (500 GB ZFS dataset); token authentication enabled with token from Vault; port 10.20.0.40:8001. Empty &mdash; collection lands Day 8.
+          <small>verified: chromadb.HttpClient(...).heartbeat() returns valid timestamp at 13:42 IST</small>
+        </span>
+        <span class="owner-pill h">Harshit</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-3.5</span>
+        <span class="desc">
+          <strong>pgBackRest WAL streaming to MinIO + first full backup taken.</strong> Stanza <code>aitip</code> registered, archive_command configured, WAL archive every 60s to <code>minio://pg-backups/archive/</code>, full backup labeled <code>20260511-115456F</code> at 47.2 MB. From 11:54 onwards every transaction is recoverable.
+          <small>verified: mc ls shows WAL segments accumulating; pgbackrest info shows full backup green</small>
+        </span>
+        <span class="owner-pill j">Jitendra</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-3.6</span>
+        <span class="desc">
+          <strong>Backup-restore drill PASS in &lt;10 min RTO.</strong> Provisioned vm-restore-drill from gen-seed.sh, installed Postgres+pgBackRest, restored from MinIO archive, <code>SELECT count(*) FROM toxicity_endpoints</code> returned exactly 16, family breakdown correct (clintox 2, dili 1, herg 1, tox21-nr 7, tox21-sr 5). Drill VM destroyed cleanly. Drill 1 documented in <code>docs/backup-drills.md</code>.
+          <small>verified: 17:34 IST · &lt;10 min RTO · 16 rows recovered exactly</small>
+        </span>
+        <span class="owner-pill j">Jitendra</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-3.7</span>
+        <span class="desc">
+          <strong>PR-#8 + PR-#10 both merged.</strong> Two PRs deferred from Day 2 with explicit "wait for live datastore" merge gates. PR-#8 merged at 10:50 once migration 001 applied; PR-#10 merged at 16:18 once <code>dataset_registry</code> populated by Sarthak's upload. Both gates honored, neither slipped.
+          <small>verified: gh pr list shows both #8 and #10 in MERGED state by 16:20 IST</small>
+        </span>
+        <span class="owner-pill h">Harshit</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-3.8</span>
+        <span class="desc">
+          <strong>4 raw + 4 curated + 4 feature parquets uploaded with sha256 logged in dataset_registry.</strong> 12 rows total, 23,054 compounds across the 4 datasets (Tox21 7791, ClinTox 1475, hERG 12754, DILIrank 1034). Streaming featurization peaked at ~280 MB regardless of corpus size. Sha256 round-trip-verified through the bucket.
+          <small>verified: 12 rows visible in dataset_registry at 16:18 IST; PR-#12 with featurize.py + report committed</small>
+        </span>
+        <span class="owner-pill s">Sarthak</span>
+      </li>
+    </ul>
+
+    <div class="eod-summary">
+      <div class="verdict">Day 3 closes <em>green</em> &mdash; eight of eight, finished by 17:34.</div>
+      <div class="meta"><strong>8 / 8</strong>EOD criteria met &middot; 17:34 IST</div>
+    </div>
+
+    <div class="prose" style="margin-top: 22px;">
+      <p>
+        <strong>First early close of the POC.</strong> All eight criteria met before the 18:00 EOD ritual &mdash; the result of: (a) Harshit's Ansible-first discipline meaning each datastore install was a single-tag invocation, not a 30-step manual sequence; (b) Sarthak's bridge-time featurize.py draft that meant his upload-and-register window started at 11:45, not 13:30; (c) Jitendra's "MinIO bucket → backup IAM → stanza-create" install order that made the drill at 17:00 mostly a verification of work already done by 12:18.
+      </p>
+      <p>
+        <strong>What "headline" means today.</strong> The single result that matters most is the backup-restore drill: a regulator (or a future audit team picking up this platform) will care that we measured RTO, that we restored to a clean machine, and that the verification was a deterministic SQL query (count = 16, exactly). We didn't just install pgBackRest &mdash; we proved it works end-to-end from a (simulated) total disk loss. That's the difference between "we have backups" and "we have a measured disaster-recovery posture."
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §06 · DAY-3 RISK DISPOSITION
+     ================================================================ -->
+<section class="section deep" id="risks">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 06 · day-3 risk disposition</div>
+        <h2>Three risks named &mdash; all closed</h2>
+      </div>
+      <p class="sub">Three engineers, three risks, three resolutions. None fired. One mitigated structurally (single-host MinIO), two retired by careful execution.</p>
+    </div>
+
+    <article class="risk-card mitigated">
+      <div class="risk-head">
+        <span class="risk-id">DR-3.1</span>
+        <span class="risk-disposition">mitigated</span>
+      </div>
+      <h3 class="risk-name">MinIO single-host quorum surprise &mdash; 4 fake drives on one disk gives no real redundancy.</h3>
+      <div class="risk-line">
+        <span class="label">Predicted</span>
+        <span class="text">MinIO erasure-coded mode with 4 drives on one ZFS dataset means a corruption event takes down all four "drives" simultaneously. POC is fine; we just shouldn't pretend it's HA.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">What happened</span>
+        <span class="text">Install proceeded as planned with the constraint understood. Daily ZFS scrub schedule documented (cron added: <code>0 3 * * 0 zpool scrub poc-pool</code> &mdash; weekly Sunday 3 AM). MinIO health-check exposed for Day-5 Prometheus integration. V1 plan in §09 of the index calls explicitly for MinIO across multiple physical hosts as Horizon-03 multi-tenant work.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">Disposition</span>
+        <span class="text"><strong>Mitigated &mdash; carry to V1.</strong> Risk is real but appropriate to the POC scale; documented honestly. The mitigation is structural (V1 multi-host) not procedural; nothing more to do this week.</span>
+      </div>
+    </article>
+
+    <article class="risk-card retired">
+      <div class="risk-head">
+        <span class="risk-id">DR-3.2</span>
+        <span class="risk-disposition">retired</span>
+      </div>
+      <h3 class="risk-name">pgBackRest configuration drift &mdash; WAL stream starting before destination is fully writable.</h3>
+      <div class="risk-line">
+        <span class="label">Predicted</span>
+        <span class="text">If WAL archive starts before pgBackRest is fully configured, or if the bucket isn't writable by the backup user, WAL files queue up and Postgres' pg_wal directory fills.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">What happened</span>
+        <span class="text">Install order held: MinIO bucket → backup-user IAM key in Vault → pgbackrest stanza-create → Postgres archive_command. Stanza-create succeeded first try (1024ms); first WAL segment landed in the bucket within 2 seconds of <code>archive_command</code> running. Drill at 17:00 confirmed end-to-end recoverability.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">Disposition</span>
+        <span class="text"><strong>Retired</strong> &mdash; install order discipline worked. Pattern committed to <code>docs/runbooks/pgbackrest-bringup.md</code> as a numbered procedure for V1 multi-host deployment.</span>
+      </div>
+    </article>
+
+    <article class="risk-card retired">
+      <div class="risk-head">
+        <span class="risk-id">DR-3.3</span>
+        <span class="risk-disposition">retired</span>
+      </div>
+      <h3 class="risk-name"><code>featurize.py</code> memory blowup on hERG corpus.</h3>
+      <div class="risk-line">
+        <span class="label">Predicted</span>
+        <span class="text">12,830 compounds × 2256 features at float32 = ~110 MB final, but a naïve list-of-arrays implementation would balloon to multi-GB during compute.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">What happened</span>
+        <span class="text">Streaming write-to-Parquet pattern shipped first try. Peak resident memory ~280 MB on hERG (12,754 compounds), nearly identical on tox21 (7,791) and ClinTox (1,475). Memory bound is independent of corpus size; this scales to Day-8 PubChem-1M without revision.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">Disposition</span>
+        <span class="text"><strong>Retired</strong> &mdash; streaming pattern proved. Same pattern applies to Day-4 worker-pool execution; no rewrite needed.</span>
+      </div>
+    </article>
+
+    <div class="prose" style="margin-top: 22px;">
+      <p>
+        <strong>Pattern noted.</strong> Three engineers, three risks, three different mitigation styles &mdash; one structural (V1 plan accommodates DR-3.1), one procedural (install-order discipline closes DR-3.2), one architectural (streaming write-to-Parquet closes DR-3.3). The risk register continues to be a kill-or-escalate ledger, not a worry list. Today nothing escalated; everything got handled in-day.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §07 · TOMORROW — Day 4 preview
+     ================================================================ -->
+<section class="section" id="tomorrow">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 07 · tomorrow</div>
+        <h2>What Day 4 opens with</h2>
+      </div>
+      <p class="sub">Day 4 is "Toxicity Dataset Curation &amp; Feature Engineering at scale" &mdash; Sarthak-led day. Celery wiring on vm-worker-pool, then full corpus pass through curate.py + featurize.py via Celery tasks.</p>
+    </div>
+
+    <div class="tomorrow">
+      <div class="tomorrow-head">
+        <div>
+          <div class="date">Day 04 &middot; Tuesday 12 May 2026 &middot; foundation phase &middot; day 4 of 5</div>
+          <div class="title">Toxicity Dataset Curation &amp; Feature Engineering</div>
+        </div>
+        <div class="lane">Lane lead: <strong style="color: var(--t-sarthak);">Sarthak</strong></div>
+      </div>
+
+      <p style="font-family: var(--serif); font-style: italic; color: var(--ink-2); border-left: 3px solid var(--amber); padding-left: 14px; margin: 12px 0 18px;">
+        Promote curation from "runs on Sarthak's laptop" to "runs on vm-worker-pool via Celery." Celery + Flower live, <code>aitip.worker</code> module landed, full 4-dataset curation re-run on production hardware producing the canonical training-ready feature matrices for Day 5 baselines.
+      </p>
+
+      <div class="tomorrow-grid">
+        <div class="tomorrow-prep" style="--track: var(--t-sarthak);">
+          <div class="who">Sarthak &middot; lead</div>
+          <div class="what">
+            <strong>Day 4 lead.</strong> Write the <code>aitip.worker</code> module on vm-worker-pool: Celery app declaration, two task functions (<code>curate_dataset(name, version)</code> + <code>featurize_dataset(name, version)</code>) that read from MinIO via dataset_registry, run curate/featurize, write back to MinIO, insert new registry rows. Once Celery is up and a smoke task is green, fire the full 4-dataset curation+featurization through it as production validation. Day-end deliverable: 12 registry rows refreshed with production-pipeline provenance hashes; ready for Day 5 baselines.
+          </div>
+        </div>
+
+        <div class="tomorrow-prep" style="--track: var(--t-harshit);">
+          <div class="who">Harshit &middot; supporting</div>
+          <div class="what">
+            <strong>Hand worker-pool keys + draft request-path Docker layer.</strong> 09:45 walks Sarthak through vm-worker-pool's supervisord layout (Jitendra's prep). Spends the rest of the day on <code>infra/docker/{core-api,tox-inference}.Dockerfile</code> drafts &mdash; multi-stage builds with non-root final users, Trivy-clean base images, env-var loading per ADR-0004. These Dockerfiles land Day 5 morning when the actual FastAPI + PyTorch code arrives.
+          </div>
+        </div>
+
+        <div class="tomorrow-prep" style="--track: var(--t-jitendra);">
+          <div class="who">Jitendra &middot; supporting</div>
+          <div class="what">
+            <strong>Celery / Flower wiring + observability prep.</strong> Once Sarthak's <code>aitip.worker</code> module is on disk (~10:30), run <code>supervisorctl start aitip-worker:* aitip-flower</code>. Verify 8 worker processes register with Redis broker. Set up the Flower web UI on bastion for monitoring. Plus the all-day side-project: Day-5 Prometheus + Grafana install on vm-observability so the Day-5 model metrics dashboard is ready when models start landing.
+          </div>
+        </div>
+      </div>
+
+      <div class="prose" style="margin-top: 22px;">
+        <p>
+          <strong>Day 4 critical-path dependency:</strong> Sarthak's lane today; if writing the <code>aitip.worker</code> module hits a snag, Jitendra's Celery start is blocked, but Harshit's Dockerfile drafts and Jitendra's Prometheus install run independently. Same risk-management pattern as Day 3 &mdash; non-blocking parallel, with one engineer carrying the lead.
+        </p>
+        <p>
+          <strong>Standup tomorrow:</strong> 09:30 IST, 15 minutes. Sarthak chairs (model-day rotation). Three questions each, 3-minute risk consolidation. Specific question to track: Celery worker connection health to Redis broker after first <code>supervisorctl start</code> &mdash; this is the smoke that proves the whole persistence-tier-to-async-worker plumbing.
+        </p>
+        <p>
+          <strong>One overnight task</strong> for each engineer: Sarthak drafts the <code>aitip.worker</code> module skeleton on his laptop tonight, ready to push to vm-worker-pool first thing Tuesday; Harshit reviews Sarthak's PR-#12 + writes the Dockerfile multi-stage skeletons; Jitendra confirms PR-#11 (ADR-0004) gets the third thumb to merge clean Tuesday morning, plus drafts the Prometheus + Grafana Ansible role overnight.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     PREV / NEXT NAVIGATION
+     ================================================================ -->
+<section class="section tight">
+  <div class="shell">
+    <nav class="nav-prev-next" aria-label="day navigation">
+      <a class="prev" href="day02.html">
+        <span class="nx-label">&larr; previous</span>
+        <span class="nx-title">Day 02 &middot; VM Provisioning &amp; Network Topology</span>
+        <span class="nx-date">Fri 08 May 2026 &middot; foundation</span>
+      </a>
+      <a class="next" href="day04.html">
+        <span class="nx-label">next &rarr;</span>
+        <span class="nx-title">Day 04 &middot; Toxicity Curation &amp; Feature Engineering</span>
+        <span class="nx-date">Tue 12 May 2026 &middot; foundation</span>
+      </a>
+    </nav>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     FOOTER
+     ================================================================ -->
+<footer class="footer">
+  <div class="shell">
+    <div class="footer-grid">
+      <div>
+        <h4>Day 03 &middot; Data Stores &mdash; Postgres, MinIO, Redis, ChromaDB</h4>
+        <p>
+          The day the persistence tier became real. Four datastores up on vm-data-store; pgBackRest streaming WAL to MinIO; backup-restore drill PASSed in &lt;10 min RTO. Two deferred PRs (#8 + #10) merged. 12 dataset_registry rows seeded with sha256-verified provenance.
+        </p>
+        <p style="margin-top: 12px;">
+          <strong>Phase:</strong> Foundation &middot; Day 3 of 5<br>
+          <strong>Lead:</strong> Harshit (services-day rotation) &middot; supporting Jitendra + Sarthak<br>
+          <strong>PRs merged:</strong> 3 &middot; <strong>Datastores up:</strong> 4 &middot; <strong>RTO:</strong> &lt;10 min &middot; <strong>EOD verdict:</strong> 8/8 by 17:34
+        </p>
+      </div>
+      <div>
+        <h4>Sections on this page</h4>
+        <p>
+          <a href="#standup">§ 01 standup</a><br>
+          <a href="#theme">§ 02 day theme &middot; persistence</a><br>
+          <a href="#tasks">§ 03 tasks</a><br>
+          <a href="#deliverables">§ 04 deliverables</a><br>
+          <a href="#eod">§ 05 EOD checklist</a><br>
+          <a href="#risks">§ 06 risk disposition</a><br>
+          <a href="#tomorrow">§ 07 day 4 preview</a>
+        </p>
+      </div>
+      <div>
+        <h4>Navigate</h4>
+        <p>
+          <a href="index.html">Sprint Index</a><br>
+          <a href="day02.html">&larr; Day 02 &middot; VM Provisioning</a><br>
+          <a href="day04.html">&rarr; Day 04 &middot; Curation</a><br>
+          <a href="day05.html">Day 05 &middot; Baselines</a><br>
+          <a href="day10.html">Day 10 &middot; Mid-POC review</a>
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-meta">
+      Day 03 of 20 &middot; Monday 11 May 2026 &middot; 09:30 IST kickoff &mdash; 17:34 IST EOD (early close)<br>
+      Phase: Foundation &middot; Lead: Harshit Prajapati &middot; EOD verdict: GREEN (8 / 8) &middot; Backup-restore drill PASS in &lt;10 min RTO<br>
+      Next: Day 04 &middot; Tuesday 12 May 2026 &middot; Toxicity Curation &amp; Feature Engineering (Sarthak lead)
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

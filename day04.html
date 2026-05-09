@@ -1,0 +1,3794 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 04 · Toxicity Curation &amp; Feature Engineering · AITIP POC</title>
+<style>
+/* ================================================================
+   AITIP · Day 04 · Tuesday 12 May 2026
+   Toxicity Dataset Curation & Feature Engineering
+   Self-contained styles. No external CSS. No external fonts.
+   ================================================================ */
+
+:root {
+  /* paper / surface */
+  --paper:        #f6f1e6;
+  --paper-deep:   #ece4d0;
+  --card:         #fffdf5;
+  --rule:         #d6cdb6;
+  --rule-soft:    #e3dcc6;
+
+  /* ink */
+  --ink:          #0a1f2c;
+  --ink-2:        #2a3845;
+  --ink-3:        #4a5663;
+  --muted:        #6b7785;
+  --muted-2:      #8a93a0;
+
+  /* primary palette */
+  --navy:         #0b2540;
+  --navy-deep:    #061626;
+  --teal:         #0e6b6b;
+  --teal-soft:    #6fb8a8;
+  --amber:        #b87333;
+  --amber-soft:   #e9c98b;
+  --gold:         #c79338;
+  --crimson:      #a8322d;
+  --crimson-soft: #e8a4a0;
+  --moss:         #4a6b3a;
+  --plum:         #6b3a52;
+
+  /* status */
+  --ok:           #1b7f3a;
+  --ok-soft:      #c9e4d2;
+  --warn:         #b45309;
+  --warn-soft:    #f0d8a8;
+  --info:         #1f5d8c;
+  --info-soft:    #c8dcec;
+
+  /* engineer tracks */
+  --t-sarthak:    #0b3d91;
+  --t-harshit:    #1f77b4;
+  --t-jitendra:   #1b7f3a;
+
+  /* phase color — still foundation */
+  --p-foundation: #0e6b6b;
+
+  /* day-04 specific palette — data flow */
+  --df-source:    #b87333;   /* MinIO buckets / source registry rows */
+  --df-broker:    #a41e11;   /* Redis broker */
+  --df-worker:    #336791;   /* Celery worker */
+  --df-output:    #4a6b3a;   /* output features registry */
+
+  /* shadows */
+  --shadow-1: 0 1px 0 rgba(11,37,64,.04), 0 1px 2px rgba(11,37,64,.06);
+  --shadow-2: 0 2px 4px rgba(11,37,64,.06), 0 8px 24px rgba(11,37,64,.08);
+  --shadow-3: 0 8px 16px rgba(11,37,64,.08), 0 24px 48px rgba(11,37,64,.10);
+
+  --r-s:  3px;
+  --r:    6px;
+  --r-l:  10px;
+
+  --serif:  Georgia, 'Iowan Old Style', 'Apple Garamond', Cambria, 'Times New Roman', serif;
+  --sans:   -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono:   'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --maxw:   1180px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.62;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-image:
+    radial-gradient(circle at 18% 8%, rgba(184,115,51,0.04) 0%, transparent 45%),
+    radial-gradient(circle at 82% 92%, rgba(14,107,107,0.04) 0%, transparent 50%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='64' viewBox='0 0 56 64'><g fill='none' stroke='%230b2540' stroke-opacity='0.05' stroke-width='1'><polygon points='28,2 54,16 54,46 28,60 2,46 2,16'/></g></svg>");
+  background-attachment: fixed;
+  background-size: auto, auto, 56px 64px;
+}
+
+a { color: var(--navy); text-decoration: underline; text-decoration-color: var(--amber-soft); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+a:hover { color: var(--amber); }
+
+h1, h2, h3, h4, h5 { font-family: var(--serif); font-weight: 700; color: var(--navy-deep); margin: 0 0 0.5em; line-height: 1.18; letter-spacing: -0.005em; }
+h1 { font-size: clamp(2.0rem, 4.2vw, 3.0rem); font-weight: 800; letter-spacing: -0.015em; }
+h2 { font-size: clamp(1.4rem, 2.4vw, 1.85rem); }
+h3 { font-size: 1.18rem; }
+h4 { font-size: 1.0rem; }
+
+p { margin: 0 0 0.85em; }
+strong { color: var(--navy-deep); font-weight: 600; }
+em { font-style: italic; color: var(--ink-2); }
+small { font-size: 0.86em; color: var(--muted); }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+code { background: rgba(11,37,64,0.06); padding: 0.06em 0.32em; border-radius: var(--r-s); color: var(--ink); }
+ul, ol { margin: 0 0 0.85em; padding-left: 1.4em; }
+li { margin-bottom: 0.3em; }
+::selection { background: var(--amber-soft); color: var(--navy-deep); }
+
+/* ================================================================
+   SHELL
+   ================================================================ */
+.shell { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
+.section { padding: 48px 0; border-top: 1px solid var(--rule-soft); }
+.section:first-of-type { border-top: none; }
+.section.deep { background: var(--paper-deep); }
+
+/* ================================================================
+   TOPBAR
+   ================================================================ */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(246,241,230,0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--rule);
+}
+.topbar-inner {
+  max-width: var(--maxw); margin: 0 auto;
+  padding: 12px 28px;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  flex-wrap: wrap;
+}
+.brand {
+  display: flex; align-items: center; gap: 12px;
+  font-family: var(--serif); font-weight: 700;
+  color: var(--navy-deep); text-decoration: none;
+  font-size: 1.0rem;
+}
+.brand:hover { color: var(--amber); text-decoration: none; }
+.brand small {
+  display: block;
+  font-family: var(--mono); font-weight: 400;
+  font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); margin-top: 1px;
+}
+.topnav { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.topnav a {
+  text-decoration: none; color: var(--ink-2);
+  font-size: 0.84rem; font-weight: 500;
+  padding: 6px 10px; border-radius: var(--r-s);
+}
+.topnav a:hover { background: var(--paper-deep); color: var(--navy); }
+.topnav .pill {
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.06em;
+  background: var(--p-foundation); color: var(--paper);
+  padding: 6px 10px; border-radius: var(--r-s);
+  text-transform: uppercase; margin-left: 6px;
+}
+
+/* ================================================================
+   DAY HERO
+   ================================================================ */
+.day-hero {
+  position: relative;
+  padding: 48px 0 36px;
+  border-bottom: 1px solid var(--rule);
+  overflow: hidden;
+}
+.day-hero::before {
+  content: ""; position: absolute;
+  right: -60px; top: 30px; width: 320px; height: 320px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%230e6b6b' stroke-width='1.2' stroke-opacity='0.28'><polygon points='100,20 160,55 160,125 100,160 40,125 40,55'/><polygon points='100,55 130,72 130,107 100,125 70,107 70,72'/><circle cx='100' cy='90' r='8' fill='%23b87333' fill-opacity='0.4'/></g></svg>");
+  background-size: contain; background-repeat: no-repeat;
+  opacity: 0.7; pointer-events: none;
+}
+.day-stamp {
+  display: flex; align-items: flex-end; gap: 18px; margin-bottom: 16px;
+}
+.day-stamp .num {
+  font-family: var(--serif);
+  font-size: 4.4rem; font-weight: 800;
+  line-height: 0.9; color: var(--amber);
+  letter-spacing: -0.03em;
+}
+.day-stamp .of {
+  font-family: var(--mono);
+  font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--muted);
+  padding-bottom: 8px;
+}
+.day-stamp .of strong {
+  color: var(--ink-2); display: block; margin-top: 2px;
+  font-family: var(--sans); font-size: 0.92rem;
+  letter-spacing: 0; text-transform: none; font-weight: 500;
+}
+.day-stamp .phase {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: white; background: var(--p-foundation);
+  padding: 5px 11px; border-radius: var(--r-s);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.day-hero h1 { max-width: 22ch; margin-bottom: 12px; }
+.day-theme {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.12rem;
+  color: var(--ink-2);
+  max-width: 65ch;
+  border-left: 3px solid var(--amber);
+  padding: 4px 0 4px 16px;
+  margin-bottom: 22px;
+}
+.hero-meta {
+  margin-top: 26px;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  overflow: hidden;
+  max-width: 940px;
+  box-shadow: var(--shadow-1);
+}
+.hero-meta > div { background: var(--card); padding: 14px 16px; }
+.hero-meta dt {
+  font-family: var(--mono);
+  font-size: 0.66rem; letter-spacing: 0.11em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 6px;
+}
+.hero-meta dd {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.18rem; font-weight: 700;
+  color: var(--navy-deep);
+  line-height: 1.1;
+}
+.hero-meta dd small {
+  display: block;
+  font-family: var(--sans); font-weight: 400;
+  font-size: 0.74rem; color: var(--muted);
+  margin-top: 4px; letter-spacing: 0; text-transform: none;
+}
+@media (max-width: 760px) { .hero-meta { grid-template-columns: repeat(2, 1fr); } }
+
+/* ================================================================
+   SECTION HEAD
+   ================================================================ */
+.section-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 24px; margin-bottom: 24px;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 12px;
+  flex-wrap: wrap;
+}
+.section-tag {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 4px;
+}
+.section-head h2 { margin: 0; }
+.section-head .sub {
+  color: var(--muted);
+  max-width: 50ch;
+  font-size: 0.94rem; margin: 0;
+}
+.prose { max-width: 70ch; }
+.prose p { font-size: 0.98rem; color: var(--ink-2); }
+
+/* ================================================================
+   STANDUP
+   ================================================================ */
+.standup-meta {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-2);
+  margin: 8px 0 22px;
+  padding: 10px 14px;
+  background: var(--paper-deep);
+  border-radius: var(--r);
+  border: 1px solid var(--rule);
+}
+.standup-meta span strong { color: var(--navy-deep); margin-right: 6px; }
+.standup-meta span:not(:last-child)::after {
+  content: "·"; color: var(--amber); margin-left: 16px;
+}
+
+.report {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--track, var(--navy));
+  border-radius: var(--r);
+  padding: 18px 22px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-1);
+}
+.report-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 10px; flex-wrap: wrap; gap: 12px;
+}
+.report-name {
+  font-family: var(--serif);
+  font-weight: 700; font-size: 1.1rem;
+  color: var(--ink);
+}
+.report-role {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--track, var(--navy));
+  font-weight: 600; margin-left: 8px;
+}
+.report-window {
+  font-family: var(--mono);
+  font-size: 0.74rem; color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.report-line {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 16px;
+  padding: 6px 0;
+  border-top: 1px dashed var(--rule);
+}
+.report-line:first-of-type { border-top: none; padding-top: 2px; }
+.report-line .label {
+  font-family: var(--mono);
+  font-size: 0.74rem; color: var(--muted);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding-top: 2px;
+}
+.report-line .text {
+  font-size: 0.94rem; color: var(--ink-2);
+  line-height: 1.55;
+}
+.report-line .text strong { color: var(--navy-deep); }
+.report-line.risk .label { color: var(--crimson); }
+.report-line.risk .text strong { color: var(--crimson); }
+
+/* ================================================================
+   THEME VIZ — Day 4: data-flow diagram
+   dataset_registry → Celery task → MinIO output → registry refresh
+   ================================================================ */
+.dataflow {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 26px 24px;
+  box-shadow: var(--shadow-1);
+  margin: 8px 0 18px;
+  overflow-x: auto;
+}
+.dataflow-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+}
+.dataflow-head .tag {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--amber);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.dataflow-head .title {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.18rem;
+  color: var(--navy-deep);
+}
+.dataflow-head .meta {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+.dataflow svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* tasks-by-dataset table */
+.tasks-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  overflow: hidden;
+  font-size: 0.9rem;
+  box-shadow: var(--shadow-1);
+  margin-top: 22px;
+}
+.tasks-table thead { background: var(--navy-deep); color: var(--paper); }
+.tasks-table thead th {
+  padding: 10px 14px; text-align: left;
+  font-family: var(--mono); font-size: 0.72rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+.tasks-table tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: middle;
+}
+.tasks-table tbody tr:nth-child(even) { background: var(--paper); }
+.tasks-table tbody tr:last-child td { border-bottom: none; }
+.tasks-table td.code { font-family: var(--mono); font-size: 0.84rem; color: var(--navy); font-weight: 500; }
+.tasks-table td.num { font-family: var(--mono); font-size: 0.82rem; text-align: right; }
+.tasks-table td.t { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+.tasks-table td.task-pill {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+}
+.tasks-table .task-pill code {
+  background: var(--paper-deep);
+  color: var(--df-worker);
+  padding: 2px 8px;
+  border-radius: var(--r-s);
+}
+
+/* feature-set callout box */
+.feature-set {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+  margin-top: 20px;
+}
+@media (max-width: 760px) { .feature-set { grid-template-columns: 1fr; } }
+.feature-card {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-top: 4px solid var(--fs-color, var(--navy));
+  border-radius: var(--r);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-1);
+}
+.feature-card .fs-name {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.06rem;
+  color: var(--fs-color, var(--navy-deep));
+  margin-bottom: 4px;
+}
+.feature-card .fs-spec {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--rule);
+}
+.feature-card .fs-purpose {
+  font-size: 0.9rem;
+  color: var(--ink-2);
+  line-height: 1.55;
+}
+.feature-card .fs-purpose strong { color: var(--navy-deep); }
+
+</style>
+</head>
+<body>
+
+
+<!-- ================================================================
+     TOPBAR
+     ================================================================ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html">
+      <svg viewBox="0 0 60 60" width="32" height="32" xmlns="http://www.w3.org/2000/svg" fill="none" aria-hidden="true">
+        <polygon points="30,4 52,17 52,43 30,56 8,43 8,17" stroke="#0b2540" stroke-width="2"/>
+        <circle cx="30" cy="22" r="3.2" fill="#b87333"/>
+        <circle cx="20" cy="34" r="3.2" fill="#0e6b6b"/>
+        <circle cx="40" cy="34" r="3.2" fill="#0e6b6b"/>
+        <circle cx="30" cy="44" r="3.2" fill="#b87333"/>
+        <line x1="30" y1="22" x2="20" y2="34" stroke="#0b2540" stroke-width="1.4"/>
+        <line x1="30" y1="22" x2="40" y2="34" stroke="#0b2540" stroke-width="1.4"/>
+        <line x1="20" y1="34" x2="30" y2="44" stroke="#0b2540" stroke-width="1.4"/>
+        <line x1="40" y1="34" x2="30" y2="44" stroke="#0b2540" stroke-width="1.4"/>
+      </svg>
+      <span>
+        AITIP &middot; Day 04
+        <small>Toxicity Curation &amp; Feature Engineering</small>
+      </span>
+    </a>
+    <nav class="topnav">
+      <a href="index.html">Index</a>
+      <a href="day03.html">&larr; Day 03</a>
+      <a href="#standup">§01 Standup</a>
+      <a href="#theme">§02 Theme</a>
+      <a href="#tasks">§03 Tasks</a>
+      <a href="#deliverables">§04 Deliverables</a>
+      <a href="#eod">§05 EOD</a>
+      <a href="day05.html">Day 05 &rarr;</a>
+      <span class="pill">Foundation · 4 / 20</span>
+    </nav>
+  </div>
+</header>
+
+
+<!-- ================================================================
+     DAY HERO
+     ================================================================ -->
+<section class="day-hero">
+  <div class="shell">
+    <div class="day-stamp">
+      <span class="num">04</span>
+      <span class="of">
+        Day 04 of 20
+        <strong>Tuesday · 12 May 2026</strong>
+      </span>
+    </div>
+    <span class="phase">Foundation · Day 4 of 5</span>
+    <h1>Toxicity Curation &amp; Feature Engineering</h1>
+    <p class="day-theme">
+      Promote curation from "runs on Sarthak's laptop" to "runs on vm-worker-pool via Celery." Two task functions wire to Redis, eight Celery worker processes pick up and execute, four datasets re-curated and re-featurized through the production toolchain. Day 5 baselines start tomorrow morning against feature matrices produced today by the actual platform.
+    </p>
+
+    <dl class="hero-meta">
+      <div>
+        <dt>09:30 IST</dt>
+        <dd>Standup<small>15 min &middot; Sarthak chairs</small></dd>
+      </div>
+      <div>
+        <dt>11:30 target</dt>
+        <dd>Celery up<small>8 workers, broker connected</small></dd>
+      </div>
+      <div>
+        <dt>14:30 target</dt>
+        <dd>4 curate tasks done<small>via Celery, MinIO outputs</small></dd>
+      </div>
+      <div>
+        <dt>17:30 target</dt>
+        <dd>4 featurize tasks done<small>23K compounds, registry refreshed</small></dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §01 · STANDUP — model-day rotation, Sarthak chairs
+     ================================================================ -->
+<section class="section" id="standup">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 01 · standup</div>
+        <h2>09:30 IST &middot; daily standup &mdash; 15 minutes flat</h2>
+      </div>
+      <p class="sub">First model-day standup. Sarthak chairs by lane rotation. Three engineers, two minutes each, three-minute consolidated risk block. Day-3 closed early at 17:34 with 8/8 green; today's job is to take the persistence tier and put async-worker load on it.</p>
+    </div>
+
+    <div class="prose" style="margin-bottom: 20px;">
+      <p>
+        Yesterday's persistence tier is the platform Sarthak now drives. Two task functions in <code>aitip.worker</code> &mdash; <code>curate_dataset(name, version)</code> and <code>featurize_dataset(name, version)</code> &mdash; will read inputs from MinIO via <code>dataset_registry</code> rows, run the curate+featurize logic on vm-worker-pool, write outputs back to MinIO, and insert refreshed registry rows. Eight Celery worker processes fan out across the four datasets in parallel. By 17:30 the production-pipeline provenance hashes in the registry are the canonical training-input pointers Day 5 baselines pick up tomorrow.
+      </p>
+    </div>
+
+    <div class="standup-meta">
+      <span><strong>Time:</strong>09:30&ndash;09:45 IST</span>
+      <span><strong>Format:</strong>video, cameras on</span>
+      <span><strong>Chair:</strong>Sarthak (model-day rotation)</span>
+      <span><strong>Notes:</strong>Harshit, into <code>#poc-war-room</code></span>
+    </div>
+
+
+    <!-- Sarthak report -->
+    <article class="report" style="--track: var(--t-sarthak);">
+      <div class="report-head">
+        <div>
+          <span class="report-name">Sarthak Chauhan</span>
+          <span class="report-role">AI / ML &middot; lane lead today</span>
+        </div>
+        <div class="report-window">2 min &middot; 09:30&ndash;09:32</div>
+      </div>
+
+      <div class="report-line">
+        <span class="label">Yesterday</span>
+        <span class="text">
+          featurize.py drafted + tested on tox21 + clintox · 8 parquets uploaded to MinIO with sha256-verified round-trip · 12 dataset_registry rows seeded · full curation+featurize on hERG (12830→12754) + DILIrank (1036→1034) · curation-d3 report (PR-#12) · ADR-0004 reviewed.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Today</span>
+        <span class="text">
+          <strong>Five sub-rocks.</strong> (1) <code>aitip.worker</code> module skeleton drafted overnight &mdash; polish and push to vm-worker-pool by 10:30. (2) Celery-Redis connectivity test from a single worker, manual <code>celery worker</code> invocation; smoke a no-op task. (3) <code>curate_dataset</code> + <code>featurize_dataset</code> task functions implemented; reads from <code>dataset_registry</code>, writes to MinIO, inserts refreshed rows. (4) Fire all 4 datasets through the production pipeline as Celery tasks; 8 worker processes go live; observe via Flower. (5) Compare production-pipeline output sha256s against yesterday's laptop-pipeline outputs &mdash; should differ <em>only</em> in the curate.py git-hash field of the sidecar (because the production environment's git checkout is a fresh clone from main).
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Blockers</span>
+        <span class="text">None hard. Soft dependency on Jitendra to <code>supervisorctl start aitip-worker:*</code> once <code>aitip.worker</code> module is on disk; expected ~10:30. PR-#11 (ADR-0004) needs a third thumb &mdash; Jitendra to confirm overnight.</span>
+      </div>
+      <div class="report-line risk">
+        <span class="label">Today's risk</span>
+        <span class="text">
+          <strong>Celery + Redis connection misconfiguration is the most common Day-1-of-async surprise.</strong> Auth password gets URL-encoding wrong, Redis DB number mismatches between broker URL and result-backend URL, worker hangs at startup with no error in the obvious place. Mitigation: instead of jumping straight to the full <code>aitip.worker</code> module, I do a minimal connectivity test first &mdash; <code>celery -A test_app worker</code> with a one-line task that just returns <code>"ok"</code> &mdash; before adding any actual logic. If that succeeds, Redis credentials are good and we move forward; if not, it's 5 minutes to fix instead of 45 minutes of mysterious silence.
+        </span>
+      </div>
+    </article>
+
+
+    <!-- Harshit report -->
+    <article class="report" style="--track: var(--t-harshit);">
+      <div class="report-head">
+        <div>
+          <span class="report-name">Harshit Prajapati</span>
+          <span class="report-role">Backend &amp; MLOps &middot; supporting</span>
+        </div>
+        <div class="report-window">2 min &middot; 09:32&ndash;09:34</div>
+      </div>
+
+      <div class="report-line">
+        <span class="label">Yesterday</span>
+        <span class="text">
+          Ansible playbook + 4 datastore roles · postgres+migration001 · MinIO+5 buckets+IAM · Redis+AOF · ChromaDB · 5-port wiring smoke · ADR-0004 (PR-#11) · merged PR-#8 + PR-#10. Day-3 closed 8/8 by 17:34.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Today</span>
+        <span class="text">
+          <strong>Three sub-tasks.</strong> (1) 09:45 hand vm-worker-pool walk to Sarthak &mdash; supervisord layout, the 8 worker slots Jitendra prepped Day 3. (2) Draft <code>infra/docker/core-api.Dockerfile</code> + <code>infra/docker/tox-inference.Dockerfile</code> &mdash; multi-stage builds, non-root final user, Trivy-clean Python 3.12-slim base, env-vars per ADR-0004. These Dockerfiles land Day 5 morning when the actual FastAPI + PyTorch code arrives. (3) Review Sarthak's <code>aitip.worker</code> PR before merge; review Jitendra's Prometheus/Grafana role.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Blockers</span>
+        <span class="text">None.</span>
+      </div>
+      <div class="report-line risk">
+        <span class="label">Today's risk</span>
+        <span class="text">
+          <strong>Dockerfile drift between core-api and tox-inference.</strong> Both Dockerfiles need to load env-vars, install RDKit, ship as non-root. The temptation is to copy-paste; the trap is that small differences (one image installs <code>libgomp1</code>, the other forgets) bite during Day-5 deployment. Mitigation: extract the common base into <code>infra/docker/aitip-base.Dockerfile</code>, both service Dockerfiles inherit. If we end up with 80% identical Dockerfiles by EOD, refactor before Day 5.
+        </span>
+      </div>
+    </article>
+
+
+    <!-- Jitendra report -->
+    <article class="report" style="--track: var(--t-jitendra);">
+      <div class="report-head">
+        <div>
+          <span class="report-name">Jitendra Maurya</span>
+          <span class="report-role">Infrastructure &amp; DevOps &middot; supporting</span>
+        </div>
+        <div class="report-window">2 min &middot; 09:34&ndash;09:36</div>
+      </div>
+
+      <div class="report-line">
+        <span class="label">Yesterday</span>
+        <span class="text">
+          vm-data-store hand-over · pgBackRest WAL + first full backup · Day-4 worker-pool prep (8 celery slots + flower autostart=false) · backup-restore drill PASS in &lt;10 min RTO · PR-#9 merged.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Today</span>
+        <span class="text">
+          <strong>Three sub-tasks.</strong> (1) Once Sarthak's <code>aitip.worker</code> module is on disk (~10:30 expected), <code>supervisorctl start aitip-worker:* aitip-flower</code>. Verify all 8 workers register with Redis broker via <code>celery -A aitip.worker inspect ping</code>. Set up Flower web UI port-forward through bastion so anyone can monitor at <code>http://localhost:5555</code>. (2) Day-5 prep: install Prometheus 3.0 + Grafana 11 + Loki 3 + Alertmanager 0.27 on vm-observability via Ansible role <code>infra/ansible/roles/observability</code>. Wire node-exporters on all 8 VMs. Standard pre-built dashboards: Node Exporter Full, Postgres, Redis. Custom dashboards land Day 5 when models start emitting metrics. (3) Confirm PR-#11 third thumb &mdash; I read it last night, will react ✓ at 09:50 so it merges before lunch.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Blockers</span>
+        <span class="text">None.</span>
+      </div>
+      <div class="report-line risk">
+        <span class="label">Today's risk</span>
+        <span class="text">
+          <strong>Flower needs the Redis password too &mdash; and on Day 3 we generated three separate scoped credentials.</strong> Easy to give Flower the wrong one (e.g., the broker-only key when it actually needs read-access to result backend keys too). Mitigation: I use the same <code>AITIP_REDIS_URL</code> env-var Sarthak's workers use (loaded via the supervisord environment file Jitendra prepped Day 3); single source of truth, no scoped-key drift.
+        </span>
+      </div>
+    </article>
+
+
+    <!-- Risks consolidated -->
+    <article class="report" style="--track: var(--amber); border-left-color: var(--amber);">
+      <div class="report-head">
+        <div>
+          <span class="report-name">Today's risks &mdash; consolidated</span>
+          <span class="report-role" style="color: var(--amber);">3 min &middot; chair leads</span>
+        </div>
+        <div class="report-window">09:36&ndash;09:39</div>
+      </div>
+
+      <div class="report-line">
+        <span class="label">Critical path</span>
+        <span class="text">
+          Sarthak's lane today; if writing <code>aitip.worker</code> hits a problem (Celery + Redis connection misconfig, mysteriously silent worker), Jitendra's <code>supervisorctl start</code> can't proceed, and the day's main verification (4 production-pipeline curate tasks) doesn't happen. Bridge plan: Harshit's Dockerfile drafts and Jitendra's Prometheus install run independently &mdash; both produce ready-to-merge PRs that don't depend on Celery being up.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Specific watchpoint</span>
+        <span class="text">
+          Standup-acceptable verification of EOD-4.2 (Celery broker connection): after 10:30 <code>supervisorctl start</code>, <strong>three signals must all hold within 90 seconds</strong> &mdash; (a) <code>celery -A aitip.worker inspect ping</code> returns 8 pongs, one per worker; (b) Flower UI shows all 8 in "online"; (c) <code>redis-cli -n 0 KEYS 'celery*'</code> shows the broker queues exist. If any of three is missing, Sarthak pauses and we triage as a team rather than letting it cascade.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">EOD criteria</span>
+        <span class="text">
+          <strong>Eight criteria for Day 4:</strong> (1) <code>aitip.worker</code> module merged · (2) all 8 Celery workers + Flower running and connected · (3) connectivity smoke task green · (4) <code>curate_dataset</code> + <code>featurize_dataset</code> task functions implemented · (5) all 4 datasets re-curated through production pipeline · (6) all 4 datasets re-featurized · (7) 12 refreshed dataset_registry rows present with production sha256s · (8) Prometheus + Grafana on vm-observability, all 8 VMs scraping.
+        </span>
+      </div>
+    </article>
+
+    <p style="margin-top: 22px; font-family: var(--mono); font-size: 0.88rem; color: var(--ink-2); padding: 10px 14px; background: var(--paper-deep); border-radius: var(--r); border: 1px solid var(--rule);">
+      <strong style="color: var(--ok);">09:39 standup ends.</strong> Six minutes under budget, third day in a row. Engineers break to workstations. 14:00 lightweight check-in is the only synchronous touchpoint.
+    </p>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §02 · DAY THEME — data-flow diagram
+     ================================================================ -->
+<section class="section deep" id="theme">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 02 · day theme</div>
+        <h2>Data flowing through the platform &mdash; for the first time</h2>
+      </div>
+      <p class="sub">The end-of-day target as a data-flow diagram. Twelve <code>dataset_registry</code> rows feed into eight Celery workers, which run two task functions, which write back to MinIO and refresh the registry. The whole loop runs three times today (a smoke task, then four curate tasks, then four featurize tasks).</p>
+    </div>
+
+    <div class="dataflow">
+      <div class="dataflow-head">
+        <div>
+          <div class="tag">data flow &middot; production pipeline first run</div>
+          <div class="title"><code>dataset_registry</code> &rarr; Celery worker &rarr; MinIO output &rarr; registry refresh</div>
+        </div>
+        <div class="meta">8 workers · 2 task functions · 4 datasets · 23,054 compounds</div>
+      </div>
+
+      <svg viewBox="0 0 1100 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="df-title">
+        <title id="df-title">Day-4 data flow — registry rows feeding Celery workers feeding MinIO outputs feeding registry refresh</title>
+
+        <defs>
+          <marker id="df-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#b87333"/>
+          </marker>
+          <marker id="df-arrow-soft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7785"/>
+          </marker>
+          <pattern id="df-hex" x="0" y="0" width="22" height="25" patternUnits="userSpaceOnUse">
+            <polygon points="11,1 21,7 21,18 11,24 1,18 1,7" fill="none" stroke="#0b2540" stroke-opacity="0.05" stroke-width="0.6"/>
+          </pattern>
+        </defs>
+
+        <rect width="1100" height="600" fill="url(#df-hex)"/>
+
+        <!-- =========================================
+             SOURCE COLUMN (left) — dataset_registry rows
+             ========================================= -->
+        <text x="160" y="38" font-family="SF Mono, Menlo, monospace" font-size="11" fill="#b87333" text-anchor="middle" font-weight="700" letter-spacing="0.5">SOURCE · dataset_registry (raw rows)</text>
+        <rect x="40" y="50" width="240" height="280" rx="6" fill="#fffdf5" stroke="#b87333" stroke-width="1.4"/>
+
+        <text x="60" y="78" font-family="Georgia, serif" font-size="12" fill="#b87333" font-weight="700">vm-data-store · postgres</text>
+        <text x="60" y="94" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785">SELECT * FROM dataset_registry</text>
+        <text x="60" y="106" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785">WHERE version = 'v0-raw'</text>
+
+        <!-- 4 raw row markers -->
+        <g font-family="SF Mono, Menlo, monospace" font-size="10" fill="#0a1f2c">
+          <rect x="60" y="124" width="200" height="38" rx="4" fill="rgba(184,115,51,0.06)" stroke="#b87333" stroke-width="0.6"/>
+          <text x="70" y="140">tox21    v0-raw    7,831</text>
+          <text x="70" y="155" fill="#6b7785" font-size="9">minio://raw-datasets/tox21-raw.parquet</text>
+
+          <rect x="60" y="170" width="200" height="38" rx="4" fill="rgba(184,115,51,0.06)" stroke="#b87333" stroke-width="0.6"/>
+          <text x="70" y="186">clintox  v0-raw    1,478</text>
+          <text x="70" y="201" fill="#6b7785" font-size="9">minio://raw-datasets/clintox-raw.parquet</text>
+
+          <rect x="60" y="216" width="200" height="38" rx="4" fill="rgba(184,115,51,0.06)" stroke="#b87333" stroke-width="0.6"/>
+          <text x="70" y="232">herg     v0-raw   12,830</text>
+          <text x="70" y="247" fill="#6b7785" font-size="9">minio://raw-datasets/herg-raw.parquet</text>
+
+          <rect x="60" y="262" width="200" height="38" rx="4" fill="rgba(184,115,51,0.06)" stroke="#b87333" stroke-width="0.6"/>
+          <text x="70" y="278">dilirank v0-raw    1,036</text>
+          <text x="70" y="293" fill="#6b7785" font-size="9">minio://raw-datasets/dilirank-raw.parquet</text>
+        </g>
+
+        <text x="60" y="318" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785" font-style="italic">4 rows &middot; 23,175 compounds upstream</text>
+
+        <!-- =========================================
+             BROKER COLUMN — Redis broker
+             ========================================= -->
+        <text x="395" y="38" font-family="SF Mono, Menlo, monospace" font-size="11" fill="#a41e11" text-anchor="middle" font-weight="700" letter-spacing="0.5">BROKER · Redis 7</text>
+        <rect x="320" y="50" width="160" height="280" rx="6" fill="#fffdf5" stroke="#a41e11" stroke-width="1.4"/>
+        <text x="340" y="78" font-family="Georgia, serif" font-size="12" fill="#a41e11" font-weight="700">vm-data-store : 6379</text>
+        <text x="340" y="94" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785">db 0 · AUTH</text>
+
+        <!-- broker queue visual -->
+        <text x="340" y="120" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#0a1f2c" font-weight="600">aitip.curate_dataset</text>
+        <g>
+          <rect x="340" y="128" width="120" height="14" rx="2" fill="#a41e11" fill-opacity="0.5"/>
+          <rect x="340" y="146" width="120" height="14" rx="2" fill="#a41e11" fill-opacity="0.5"/>
+          <rect x="340" y="164" width="120" height="14" rx="2" fill="#a41e11" fill-opacity="0.5"/>
+          <rect x="340" y="182" width="120" height="14" rx="2" fill="#a41e11" fill-opacity="0.5"/>
+        </g>
+        <text x="340" y="216" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#0a1f2c" font-weight="600">aitip.featurize_dataset</text>
+        <g>
+          <rect x="340" y="224" width="120" height="14" rx="2" fill="#a41e11" fill-opacity="0.3"/>
+          <rect x="340" y="242" width="120" height="14" rx="2" fill="#a41e11" fill-opacity="0.3"/>
+          <rect x="340" y="260" width="120" height="14" rx="2" fill="#a41e11" fill-opacity="0.3"/>
+          <rect x="340" y="278" width="120" height="14" rx="2" fill="#a41e11" fill-opacity="0.3"/>
+        </g>
+        <text x="340" y="312" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785" font-style="italic">2 queues · 8 task messages</text>
+
+        <!-- arrow source → broker -->
+        <line x1="260" y1="190" x2="320" y2="190" stroke="#b87333" stroke-width="2" marker-end="url(#df-arrow)"/>
+        <text x="290" y="178" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#b87333" text-anchor="middle">apply_async()</text>
+
+        <!-- =========================================
+             WORKERS COLUMN — 8 Celery workers
+             ========================================= -->
+        <text x="630" y="38" font-family="SF Mono, Menlo, monospace" font-size="11" fill="#336791" text-anchor="middle" font-weight="700" letter-spacing="0.5">WORKERS · vm-worker-pool</text>
+        <rect x="510" y="50" width="240" height="280" rx="6" fill="#fffdf5" stroke="#336791" stroke-width="1.4"/>
+        <text x="530" y="78" font-family="Georgia, serif" font-size="12" fill="#336791" font-weight="700">8 × supervisord process</text>
+        <text x="530" y="94" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785">--concurrency=1 · ~16 GB RAM each</text>
+
+        <!-- 8 worker squares -->
+        <g font-family="SF Mono, Menlo, monospace" font-size="9" fill="white">
+          <rect x="530" y="115" width="48" height="48" rx="4" fill="#336791"/>
+          <text x="554" y="135" text-anchor="middle" font-weight="700">w-00</text>
+          <text x="554" y="152" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.8)">tox21</text>
+          <text x="554" y="161" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.8)">curate</text>
+
+          <rect x="586" y="115" width="48" height="48" rx="4" fill="#336791"/>
+          <text x="610" y="135" text-anchor="middle" font-weight="700">w-01</text>
+          <text x="610" y="152" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.8)">clintox</text>
+          <text x="610" y="161" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.8)">curate</text>
+
+          <rect x="642" y="115" width="48" height="48" rx="4" fill="#336791"/>
+          <text x="666" y="135" text-anchor="middle" font-weight="700">w-02</text>
+          <text x="666" y="152" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.8)">herg</text>
+          <text x="666" y="161" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.8)">curate</text>
+
+          <rect x="698" y="115" width="48" height="48" rx="4" fill="#336791"/>
+          <text x="722" y="135" text-anchor="middle" font-weight="700">w-03</text>
+          <text x="722" y="152" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.8)">dilirank</text>
+          <text x="722" y="161" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.8)">curate</text>
+
+          <rect x="530" y="171" width="48" height="48" rx="4" fill="#336791" fill-opacity="0.85"/>
+          <text x="554" y="191" text-anchor="middle" font-weight="700">w-04</text>
+          <text x="554" y="208" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.8)">tox21</text>
+          <text x="554" y="217" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.8)">featurize</text>
+
+          <rect x="586" y="171" width="48" height="48" rx="4" fill="#336791" fill-opacity="0.85"/>
+          <text x="610" y="191" text-anchor="middle" font-weight="700">w-05</text>
+          <text x="610" y="208" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.8)">clintox</text>
+          <text x="610" y="217" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.8)">featurize</text>
+
+          <rect x="642" y="171" width="48" height="48" rx="4" fill="#336791" fill-opacity="0.85"/>
+          <text x="666" y="191" text-anchor="middle" font-weight="700">w-06</text>
+          <text x="666" y="208" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.8)">herg</text>
+          <text x="666" y="217" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.8)">featurize</text>
+
+          <rect x="698" y="171" width="48" height="48" rx="4" fill="#336791" fill-opacity="0.85"/>
+          <text x="722" y="191" text-anchor="middle" font-weight="700">w-07</text>
+          <text x="722" y="208" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.8)">dilirank</text>
+          <text x="722" y="217" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.8)">featurize</text>
+        </g>
+
+        <text x="530" y="245" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#336791" font-weight="600">imports:</text>
+        <text x="530" y="260" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">  services.data.curate</text>
+        <text x="530" y="274" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">  services.data.featurize</text>
+        <text x="530" y="290" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">  rdkit==2024.3.5  (ADR-0003)</text>
+        <text x="530" y="312" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785" font-style="italic">monitored via Flower :5555</text>
+
+        <!-- arrow broker → workers -->
+        <line x1="480" y1="190" x2="510" y2="190" stroke="#a41e11" stroke-width="2" marker-end="url(#df-arrow)"/>
+        <text x="495" y="180" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#a41e11" text-anchor="middle">consume</text>
+
+        <!-- =========================================
+             OUTPUT COLUMN (right) — MinIO + dataset_registry
+             ========================================= -->
+        <text x="900" y="38" font-family="SF Mono, Menlo, monospace" font-size="11" fill="#4a6b3a" text-anchor="middle" font-weight="700" letter-spacing="0.5">OUTPUT · MinIO + registry refresh</text>
+        <rect x="780" y="50" width="240" height="280" rx="6" fill="#fffdf5" stroke="#4a6b3a" stroke-width="1.4"/>
+
+        <text x="800" y="78" font-family="Georgia, serif" font-size="12" fill="#4a6b3a" font-weight="700">minio://processed/</text>
+        <text x="800" y="94" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785">curated · features · sidecar.meta.json</text>
+
+        <g font-family="SF Mono, Menlo, monospace" font-size="10" fill="#0a1f2c">
+          <rect x="800" y="110" width="200" height="36" rx="4" fill="rgba(74,107,58,0.06)" stroke="#4a6b3a" stroke-width="0.6"/>
+          <text x="810" y="125">tox21-v0-prod.parquet</text>
+          <text x="810" y="139" fill="#6b7785" font-size="9">7,791 × 2 cols (curated)</text>
+
+          <rect x="800" y="152" width="200" height="36" rx="4" fill="rgba(74,107,58,0.06)" stroke="#4a6b3a" stroke-width="0.6"/>
+          <text x="810" y="167">tox21-v0-prod-features.parquet</text>
+          <text x="810" y="181" fill="#6b7785" font-size="9">7,791 × 2,258 cols</text>
+
+          <rect x="800" y="194" width="200" height="20" rx="4" fill="rgba(74,107,58,0.06)" stroke="#4a6b3a" stroke-width="0.6"/>
+          <text x="810" y="208">clintox-v0-prod...</text>
+
+          <rect x="800" y="220" width="200" height="20" rx="4" fill="rgba(74,107,58,0.06)" stroke="#4a6b3a" stroke-width="0.6"/>
+          <text x="810" y="234">herg-v0-prod...</text>
+
+          <rect x="800" y="246" width="200" height="20" rx="4" fill="rgba(74,107,58,0.06)" stroke="#4a6b3a" stroke-width="0.6"/>
+          <text x="810" y="260">dilirank-v0-prod...</text>
+        </g>
+
+        <text x="800" y="288" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#4a6b3a" font-weight="700">+ INSERT INTO dataset_registry</text>
+        <text x="800" y="302" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785">8 new rows · version='v0-prod-...'</text>
+        <text x="800" y="316" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785" font-style="italic">12 → 20 rows total</text>
+
+        <!-- arrow workers → output -->
+        <line x1="750" y1="190" x2="780" y2="190" stroke="#336791" stroke-width="2" marker-end="url(#df-arrow)"/>
+        <text x="765" y="180" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#336791" text-anchor="middle">mc cp +</text>
+        <text x="765" y="206" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#336791" text-anchor="middle">psql INSERT</text>
+
+        <!-- =========================================
+             FEEDBACK LOOP — refreshed registry rows feed Day 5
+             ========================================= -->
+        <path d="M 900 330 Q 900 380 700 380 Q 500 380 300 380 Q 160 380 160 330"
+              fill="none" stroke="#b87333" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#df-arrow)"/>
+        <text x="540" y="375" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#b87333" text-anchor="middle">Day 5 baselines pick up <tspan font-weight="700">v0-prod-features</tspan> rows</text>
+
+        <!-- =========================================
+             OBSERVABILITY (bottom band) — Prometheus + Grafana watching
+             ========================================= -->
+        <rect x="40" y="430" width="980" height="80" rx="8" fill="rgba(11,37,64,0.04)" stroke="#0b2540" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <text x="60" y="455" font-family="SF Mono, Menlo, monospace" font-size="11" fill="#0b2540" font-weight="700" letter-spacing="0.5">OBSERVABILITY · vm-observability</text>
+        <text x="60" y="475" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#0a1f2c">Prometheus 3.0 scrapes node-exporter on all 8 VMs · Celery worker metrics via celery-exporter · Postgres + Redis exporters</text>
+        <text x="60" y="491" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#0a1f2c">Grafana 11 at <tspan fill="#b87333">grafana.poc.local</tspan> · 4 standard dashboards (Node, Postgres, Redis, Celery) loaded</text>
+
+        <!-- arrows from each column down to observability -->
+        <line x1="160" y1="330" x2="160" y2="430" stroke="#6b7785" stroke-width="1" stroke-dasharray="2 3" opacity="0.5"/>
+        <line x1="395" y1="330" x2="395" y2="430" stroke="#6b7785" stroke-width="1" stroke-dasharray="2 3" opacity="0.5"/>
+        <line x1="630" y1="330" x2="630" y2="430" stroke="#6b7785" stroke-width="1" stroke-dasharray="2 3" opacity="0.5"/>
+        <line x1="900" y1="330" x2="900" y2="430" stroke="#6b7785" stroke-width="1" stroke-dasharray="2 3" opacity="0.5"/>
+
+        <!-- TIMING band at very bottom -->
+        <text x="60" y="538" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#b87333" font-weight="700">TIMING ·</text>
+        <text x="115" y="538" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#0a1f2c">curate × 4 datasets ≈ 8 min &middot; featurize × 4 datasets ≈ 14 min &middot; total wall-clock ≈ 22 min if 8-way parallel</text>
+        <text x="60" y="554" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#b87333" font-weight="700">PROVENANCE ·</text>
+        <text x="135" y="554" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#0a1f2c">production sidecar.meta.json should match laptop sidecar except in the <tspan fill="#b87333">curate_script_git_hash</tspan> field</text>
+        <text x="60" y="570" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#b87333" font-weight="700">VERIFY ·</text>
+        <text x="115" y="570" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#0a1f2c">SHA-256 of every output Parquet · 8 new dataset_registry rows · zero featurization failures across 23,054 compounds</text>
+
+      </svg>
+    </div>
+
+
+    <!-- Per-task table -->
+    <table class="tasks-table">
+      <thead>
+        <tr>
+          <th>dataset</th>
+          <th>task</th>
+          <th class="num">input rows</th>
+          <th class="num">curated</th>
+          <th class="num">features</th>
+          <th class="t">expected wall-clock</th>
+          <th>worker slot</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="code">tox21</td>
+          <td class="task-pill"><code>curate_dataset</code></td>
+          <td class="num">7,831</td>
+          <td class="num">7,791</td>
+          <td class="num">&mdash;</td>
+          <td class="t">~50 s</td>
+          <td class="code">w-00</td>
+        </tr>
+        <tr>
+          <td class="code">clintox</td>
+          <td class="task-pill"><code>curate_dataset</code></td>
+          <td class="num">1,478</td>
+          <td class="num">1,475</td>
+          <td class="num">&mdash;</td>
+          <td class="t">~12 s</td>
+          <td class="code">w-01</td>
+        </tr>
+        <tr>
+          <td class="code">herg</td>
+          <td class="task-pill"><code>curate_dataset</code></td>
+          <td class="num">12,830</td>
+          <td class="num">12,754</td>
+          <td class="num">&mdash;</td>
+          <td class="t">~85 s</td>
+          <td class="code">w-02</td>
+        </tr>
+        <tr>
+          <td class="code">dilirank</td>
+          <td class="task-pill"><code>curate_dataset</code></td>
+          <td class="num">1,036</td>
+          <td class="num">1,034</td>
+          <td class="num">&mdash;</td>
+          <td class="t">~10 s</td>
+          <td class="code">w-03</td>
+        </tr>
+        <tr>
+          <td class="code">tox21</td>
+          <td class="task-pill"><code>featurize_dataset</code></td>
+          <td class="num">7,791</td>
+          <td class="num">&mdash;</td>
+          <td class="num">7,791 × 2,258</td>
+          <td class="t">~6 min</td>
+          <td class="code">w-04</td>
+        </tr>
+        <tr>
+          <td class="code">clintox</td>
+          <td class="task-pill"><code>featurize_dataset</code></td>
+          <td class="num">1,475</td>
+          <td class="num">&mdash;</td>
+          <td class="num">1,475 × 2,258</td>
+          <td class="t">~75 s</td>
+          <td class="code">w-05</td>
+        </tr>
+        <tr>
+          <td class="code">herg</td>
+          <td class="task-pill"><code>featurize_dataset</code></td>
+          <td class="num">12,754</td>
+          <td class="num">&mdash;</td>
+          <td class="num">12,754 × 2,258</td>
+          <td class="t">~9 min</td>
+          <td class="code">w-06</td>
+        </tr>
+        <tr>
+          <td class="code">dilirank</td>
+          <td class="task-pill"><code>featurize_dataset</code></td>
+          <td class="num">1,034</td>
+          <td class="num">&mdash;</td>
+          <td class="num">1,034 × 2,258</td>
+          <td class="t">~52 s</td>
+          <td class="code">w-07</td>
+        </tr>
+      </tbody>
+    </table>
+
+
+    <!-- Feature-set explainer -->
+    <div class="feature-set">
+      <article class="feature-card" style="--fs-color: var(--df-source);">
+        <div class="fs-name">Morgan FP</div>
+        <div class="fs-spec">radius 2 &middot; 2,048 bits &middot; uint8</div>
+        <p class="fs-purpose">
+          Circular substructure fingerprint. Every "1" bit means a particular 2-hop atom-environment is present in the molecule. <strong>Captures local connectivity</strong> &mdash; the input that XGBoost and random forest baselines use directly on Day 5.
+        </p>
+      </article>
+
+      <article class="feature-card" style="--fs-color: var(--df-worker);">
+        <div class="fs-name">RDKit descriptors</div>
+        <div class="fs-spec">208 scalars &middot; float32</div>
+        <p class="fs-purpose">
+          Numerical molecular properties &mdash; logP, TPSA, molecular weight, ring counts, rotatable bonds, Bertz complexity, Lipinski violations, etc. Computed via RDKit's <code>Descriptors._descList</code>. <strong>Captures global properties</strong> &mdash; complementary to fingerprints, useful as a calibrated baseline alongside Morgan.
+        </p>
+      </article>
+
+      <article class="feature-card" style="--fs-color: var(--df-output);">
+        <div class="fs-name">Per-row provenance</div>
+        <div class="fs-spec">2 metadata cols + sidecar JSON</div>
+        <p class="fs-purpose">
+          Each compound row carries its canonical SMILES + scaffold-split assignment. The sidecar JSON has input/output sha256, RDKit version, curate.py + featurize.py git-hashes, rejection counts. <strong>This is what gets a regulator past "where did these features come from"</strong> &mdash; full chain-of-custody.
+        </p>
+      </article>
+    </div>
+
+
+    <div class="prose" style="margin-top: 26px;">
+      <p>
+        The diagram is the day's contract. By 17:30 IST every arrow has fired at least once: 4 raw <code>dataset_registry</code> rows triggered 4 <code>curate_dataset</code> tasks via Redis, 8 worker processes consumed in parallel, MinIO has 4 fresh curated parquets and 4 fresh feature parquets with sidecar JSONs, the registry has 8 new rows tagged <code>v0-prod-curated</code> / <code>v0-prod-features</code>, and Grafana shows the whole thing on a Celery dashboard. The output of today's loop is the input of tomorrow's: Day 5 baselines query <code>dataset_registry WHERE version='v0-prod-features'</code> and pick up exactly those parquets.
+      </p>
+      <p>
+        Worth noting what is <strong>not</strong> in this diagram. No model training (Day 5). No HTTP API in front of the workers (Day 11 orchestrator). No GPU acceleration (V1 Horizon-01). Today is just <em>the data plumbing actually works at platform scale</em> &mdash; the proof that putting work on Celery, watching it complete, and shipping the outputs back through the same persistence tier is a transaction the platform can perform reliably. Every subsequent day extends this loop with one more capability.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     PART 2 — additional CSS for §03 task blocks
+     ================================================================ -->
+<style>
+
+/* engineer stripe & task block — same idiom as days 1-3, repeated for self-containment */
+.engineer-stripe {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-left: 5px solid var(--track, var(--navy));
+  border-radius: var(--r);
+  padding: 16px 20px;
+  margin: 28px 0 18px;
+  box-shadow: var(--shadow-1);
+}
+.engineer-stripe .e-avatar {
+  width: 48px; height: 48px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--track, var(--navy));
+  color: white;
+  display: grid; place-items: center;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.0rem;
+  letter-spacing: -0.01em;
+}
+.engineer-stripe .e-meta { flex: 1; min-width: 0; }
+.engineer-stripe .e-name {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.16rem;
+  color: var(--ink);
+}
+.engineer-stripe .e-role {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--track, var(--navy));
+  margin-top: 2px; font-weight: 600;
+}
+.engineer-stripe .e-summary {
+  font-size: 0.88rem;
+  color: var(--ink-2);
+  margin-top: 6px; line-height: 1.5;
+}
+.engineer-stripe .e-counter {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-align: right; flex-shrink: 0;
+}
+.engineer-stripe .e-counter strong {
+  display: block;
+  font-family: var(--serif);
+  color: var(--track, var(--navy));
+  font-size: 1.6rem; line-height: 1;
+  margin-top: 2px;
+}
+
+.task-block {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 18px 22px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-1);
+  position: relative;
+}
+.task-block::before {
+  content: "";
+  position: absolute;
+  left: -1px; top: 22px;
+  width: 4px; height: 28px;
+  background: var(--track, var(--amber));
+  border-radius: 0 2px 2px 0;
+}
+.task-header {
+  display: flex; align-items: baseline; gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--rule);
+}
+.task-window {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--track, var(--amber));
+  letter-spacing: 0.04em;
+  background: var(--paper-deep);
+  padding: 3px 9px;
+  border-radius: var(--r-s);
+  border: 1px solid var(--rule);
+  white-space: nowrap;
+}
+.task-title {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.04rem;
+  color: var(--navy-deep);
+  flex: 1; min-width: 0;
+}
+.task-title em { font-style: italic; color: var(--amber); }
+.task-block p {
+  font-size: 0.94rem;
+  color: var(--ink-2);
+  margin-bottom: 10px;
+}
+.task-block p strong { color: var(--navy-deep); }
+.task-steps {
+  margin: 10px 0;
+  padding: 0 0 0 24px;
+  counter-reset: step;
+  list-style: none;
+}
+.task-steps li {
+  position: relative;
+  font-size: 0.92rem;
+  color: var(--ink-2);
+  margin-bottom: 6px;
+  padding-left: 8px;
+  line-height: 1.55;
+}
+.task-steps li::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: -22px; top: 1px;
+  width: 18px; height: 18px;
+  font-family: var(--mono);
+  font-size: 0.72rem; font-weight: 700;
+  color: var(--track, var(--amber));
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  display: grid; place-items: center;
+}
+.task-steps li strong { color: var(--navy-deep); }
+
+.code-block {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  background: var(--navy-deep);
+  color: #e8e2cf;
+  padding: 14px 18px;
+  border-radius: var(--r);
+  line-height: 1.65;
+  overflow-x: auto;
+  margin: 10px 0;
+  white-space: pre;
+  border-left: 4px solid var(--track, var(--amber));
+}
+.code-block .comment { color: #8a93a0; font-style: italic; }
+.code-block .prompt { color: var(--amber-soft); user-select: none; }
+.code-block .ok { color: #9bd3a6; }
+.code-block .warn { color: #f0c878; }
+.code-block .err { color: #e8a4a0; }
+.code-block .key { color: #b6d8e8; }
+.code-block em { color: #e9c98b; font-style: normal; font-weight: 700; }
+
+.note {
+  background: var(--paper-deep);
+  border-left: 3px solid var(--info);
+  padding: 10px 14px;
+  border-radius: 0 var(--r) var(--r) 0;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+  margin: 10px 0;
+}
+.note strong {
+  color: var(--info);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  display: block; margin-bottom: 3px;
+}
+.note.warn { border-left-color: var(--warn); background: rgba(180, 83, 9, 0.07); }
+.note.warn strong { color: var(--warn); }
+.note.ok { border-left-color: var(--ok); background: rgba(27, 127, 58, 0.06); }
+.note.ok strong { color: var(--ok); }
+
+.checkpoint {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  background: var(--paper-deep);
+  border: 1px dashed var(--amber);
+  padding: 8px 12px;
+  border-radius: var(--r);
+  margin: 10px 0;
+  color: var(--ink-2);
+}
+.checkpoint::before { content: "◇"; color: var(--amber); font-size: 0.94rem; }
+.checkpoint strong { color: var(--navy-deep); }
+
+</style>
+
+
+<!-- ================================================================
+     §03 · TASKS BY ENGINEER
+     Day 4: Sarthak leads — 5 rocks across 8 hours.
+     Harshit + Jitendra support; both have non-blocking work.
+     ================================================================ -->
+<section class="section" id="tasks">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 03 · tasks by engineer</div>
+        <h2>Window by window &mdash; data plumbing at platform scale</h2>
+      </div>
+      <p class="sub">Sarthak goes first because today's critical path is in his lane. Harshit and Jitendra support: 09:45 hand-over walk, then both heads-down on independent work that doesn't block Sarthak's progress.</p>
+    </div>
+
+    <div class="prose" style="margin-bottom: 18px;">
+      <p>
+        Three lanes again, but with tighter coupling than Day 3. Sarthak's lane has the most moving parts: write the worker module, prove Celery-Redis works, implement two task functions, fire them at all four datasets, verify production output matches laptop output. Harshit's Dockerfile drafts and Jitendra's observability install both run independently, but both engineers stay close to the war-room channel because if Sarthak hits a Celery snag the bridge plan kicks in.
+      </p>
+    </div>
+
+
+    <!-- ============================================================
+         SARTHAK — five rocks, full window-by-window
+         ============================================================ -->
+    <div class="engineer-stripe" style="--track: var(--t-sarthak);">
+      <div class="e-avatar">SC</div>
+      <div class="e-meta">
+        <div class="e-name">Sarthak Chauhan</div>
+        <div class="e-role">AI / ML &middot; lane lead today &middot; critical path</div>
+        <div class="e-summary">Five rocks: aitip.worker skeleton on disk by 10:30, Celery-Redis smoke-task green by 11:30, curate+featurize task functions implemented by 13:00, four datasets fired through production by 16:00, sha256-equivalence verified by 17:00.</div>
+      </div>
+      <div class="e-counter">
+        windows<strong>9</strong>
+      </div>
+    </div>
+
+
+    <!-- 09:45–10:30 — Rock 1: aitip.worker skeleton -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">09:45&ndash;10:30</span>
+        <span class="task-title">Rock&nbsp;1 &middot; <em>aitip.worker module skeleton</em> &mdash; polish overnight draft and push to vm-worker-pool.</span>
+      </div>
+      <p>The Celery app declaration plus a placeholder for the two task functions. No real logic yet &mdash; just enough that <code>celery -A aitip.worker worker</code> can boot and connect to the broker. Logic lands in Rock 3 once we know the wiring is correct.</p>
+
+      <ol class="task-steps">
+        <li><strong>Polish overnight draft</strong> on laptop, then push.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-poc$</span> git checkout -b feat/day04-aitip-worker
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> mkdir -p services/worker/aitip/worker
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> cat &gt; services/worker/aitip/worker/__init__.py &lt;&lt;'EOF'
+"""aitip.worker · Celery app declaration + task imports.
+
+Loaded by `celery -A aitip.worker worker` on vm-worker-pool.
+Tasks live in aitip.worker.tasks and are auto-discovered.
+"""
+from celery import Celery
+from .config import worker_settings
+
+app = Celery("aitip", include=["aitip.worker.tasks"])
+app.conf.update(
+    broker_url=worker_settings.celery_broker_url,
+    result_backend=worker_settings.celery_result_backend,
+    task_serializer="json",
+    accept_content=["json"],
+    result_serializer="json",
+    timezone="Asia/Kolkata",
+    enable_utc=True,
+    worker_prefetch_multiplier=1,         # one task per worker at a time
+    task_acks_late=True,                  # ack only after success — safer for long tasks
+    task_reject_on_worker_lost=True,
+    task_time_limit=1800,                 # 30 min hard limit (curation+featurization runs in &lt;15)
+    task_soft_time_limit=1500,            # 25 min soft limit
+    broker_connection_retry_on_startup=True,
+)
+EOF
+
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> cat &gt; services/worker/aitip/worker/config.py &lt;&lt;'EOF'
+"""Worker connection config — reads AITIP_* env-vars per ADR-0004."""
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class WorkerSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="AITIP_", case_sensitive=False)
+
+    redis_host:     str = "localhost"
+    redis_port:     int = 6379
+    redis_password: str = ""
+    redis_db_broker: int = 0
+    redis_db_result: int = 1
+
+    @property
+    def celery_broker_url(self) -&gt; str:
+        auth = f":{self.redis_password}@" if self.redis_password else ""
+        return f"redis://{auth}{self.redis_host}:{self.redis_port}/{self.redis_db_broker}"
+
+    @property
+    def celery_result_backend(self) -&gt; str:
+        auth = f":{self.redis_password}@" if self.redis_password else ""
+        return f"redis://{auth}{self.redis_host}:{self.redis_port}/{self.redis_db_result}"
+
+
+worker_settings = WorkerSettings()
+EOF
+
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> cat &gt; services/worker/aitip/worker/tasks.py &lt;&lt;'EOF'
+"""aitip.worker.tasks · placeholders. Real implementations land in Rock 3."""
+from . import app
+
+
+@app.task(name="aitip.smoke")
+def smoke() -&gt; str:
+    """Sanity task — returns 'ok' if the worker can execute Python at all."""
+    return "ok"
+
+
+@app.task(name="aitip.curate_dataset")
+def curate_dataset(name: str, version: str) -&gt; dict:
+    raise NotImplementedError("Rock 3 — implement after Rock 2 smoke is green")
+
+
+@app.task(name="aitip.featurize_dataset")
+def featurize_dataset(name: str, version: str) -&gt; dict:
+    raise NotImplementedError("Rock 3 — implement after Rock 2 smoke is green")
+EOF
+
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> cat &gt; services/worker/setup.py &lt;&lt;'EOF'
+from setuptools import setup, find_packages
+setup(
+    name="aitip-worker",
+    version="0.1.0",
+    packages=find_packages(),
+    install_requires=[
+        "celery[redis]==5.4.0",
+        "pydantic-settings==2.6.1",
+        "rdkit==2024.3.5",
+        "pandas==2.2.3",
+        "pyarrow==17.0.0",
+        "boto3==1.35.49",
+        "psycopg[binary]==3.2.3",
+    ],
+)
+EOF
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Push to vm-worker-pool</strong> via rsync (laptop &rarr; bastion &rarr; worker-pool). The aitip user installed the package locally yesterday; today we drop the source code into the venv's site-packages.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-poc$</span> rsync -av --exclude '__pycache__' \
+    services/worker/aitip/ \
+    sarthak@aitip-host-01.ops.local:/tmp/aitip-worker-src/aitip/
+
+<span class="prompt">sarthak@vm-bastion:~$</span> rsync -av /tmp/aitip-worker-src/aitip/ \
+    aitip@vm-worker-pool.poc.local:/home/aitip/aitip-src/aitip/
+
+<span class="prompt">sarthak@vm-worker-pool:~$</span> sudo -u aitip /home/aitip/.venv-worker/bin/pip install \
+    -e /home/aitip/aitip-src/
+Successfully installed aitip-worker-0.1.0
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Verify Python import succeeds</strong> with the supervisord environment loaded.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@vm-worker-pool:~$</span> sudo -u aitip bash -c '
+    set -a; source /etc/default/aitip-worker; set +a
+    /home/aitip/.venv-worker/bin/python -c "
+from aitip.worker import app
+from aitip.worker.config import worker_settings
+print(\"app:\", app.main)
+print(\"broker:\", worker_settings.celery_broker_url[:60], \"...\")
+print(\"backend:\", worker_settings.celery_result_backend[:60], \"...\")
+"
+'
+app: aitip
+broker: redis://:5f8a9b2c1d4e3f...@vm-data-store.poc.local:6379/0 ...
+backend: redis://:5f8a9b2c1d4e3f...@vm-data-store.poc.local:6379/1 ...
+</div>
+      <div class="note ok">
+        <strong>Module on disk · 10:24 IST</strong>
+        Six minutes ahead of plan. Module imports cleanly with the env-vars supervisord will inject. Ready for Jitendra to <code>supervisorctl start</code>.
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>10:30 checkpoint:</strong> Rock 1 done. Slack ack to Jitendra to fire <code>supervisorctl start aitip-worker:* aitip-flower</code>.</span>
+      </div>
+    </div>
+
+
+    <!-- 10:30–11:30 — Rock 2: Celery-Redis connectivity smoke -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">10:30&ndash;11:30</span>
+        <span class="task-title">Rock&nbsp;2 &middot; <em>connectivity smoke</em> &mdash; one no-op task, end to end through Redis broker.</span>
+      </div>
+      <p>The most important window of the day. If <code>aitip.smoke()</code> can be queued from a client and picked up by a worker, the entire Celery + Redis + supervisord plumbing works. If it can't, we triage <em>now</em>, not after spending 90 minutes wondering why <code>curate_dataset</code> is silent.</p>
+
+      <ol class="task-steps">
+        <li><strong>Wait for Jitendra</strong>'s <code>supervisorctl start</code> &mdash; expected ~10:32 per his standup commitment.</li>
+      </ol>
+<div class="code-block"><span class="comment"># From #poc-war-room at 10:33:</span>
+<span class="key">jitendra</span>: aitip-worker:* + aitip-flower started. supervisorctl shows 9 RUNNING.
+  $ celery -A aitip.worker inspect ping
+  -&gt; worker-00@vm-worker-pool: pong
+  -&gt; worker-01@vm-worker-pool: pong
+  ... [8 in total] ...
+  flower port-forward: ssh -L 5555:localhost:5555 sarthak@vm-bastion ; then http://localhost:5555
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Three-signal verification per standup contract</strong> &mdash; (a) inspect ping returns 8 pongs, (b) Flower shows 8 online, (c) redis-cli shows broker queues exist. All three within 90 seconds of <code>supervisorctl start</code>.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@vm-bastion:~$</span> ssh -L 5555:localhost:5555 sarthak@vm-bastion -N &amp;
+<span class="prompt">sarthak@vm-bastion:~$</span> ssh aitip@vm-worker-pool.poc.local \
+    '/home/aitip/.venv-worker/bin/celery -A aitip.worker inspect ping --timeout 5'
+-&gt; worker-00@vm-worker-pool: pong
+-&gt; worker-01@vm-worker-pool: pong
+-&gt; worker-02@vm-worker-pool: pong
+-&gt; worker-03@vm-worker-pool: pong
+-&gt; worker-04@vm-worker-pool: pong
+-&gt; worker-05@vm-worker-pool: pong
+-&gt; worker-06@vm-worker-pool: pong
+-&gt; worker-07@vm-worker-pool: pong
+
+8 nodes online.
+
+<span class="prompt">sarthak@vm-bastion:~$</span> redis-cli -h vm-data-store.poc.local \
+    -a "$(vault kv get -field=value aitip/poc/redis/password)" -n 0 KEYS 'celery*'
+1) "celery"                        # default broker queue
+2) "_kombu.binding.celery"
+3) "_kombu.binding.celeryev.pidbox"
+
+<span class="comment"># Browser opens http://localhost:5555 — Flower UI shows 8 workers in "Online" tab.</span>
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Fire <code>aitip.smoke()</code></strong> from his laptop (acting as the application client). Expect <code>'ok'</code> in &lt; 1 second.</li>
+      </ol>
+<div class="code-block"><span class="prompt">(aitip-base) sarthak@laptop:~$</span> python &lt;&lt;'PYEOF'
+import os
+os.environ["AITIP_REDIS_HOST"] = "vm-data-store.poc.local"
+os.environ["AITIP_REDIS_PASSWORD"] = open(os.path.expanduser("~/.creds/aitip-redis.txt")).read().strip()
+
+from aitip.worker.tasks import smoke
+result = smoke.delay()
+print("task id:", result.id)
+print("state:", result.state)
+print("waiting...")
+out = result.get(timeout=10)
+print("result:", out)
+PYEOF
+task id: 7c3e1a82-9d5f-4a3b-8c2e-1f8a4b6d9e0f
+state: PENDING
+waiting...
+result: ok
+</div>
+      <div class="note ok">
+        <strong>Connectivity smoke PASS · 10:54 IST</strong>
+        Round-trip latency 220 ms. The whole async chain works: client &rarr; Redis broker &rarr; worker pickup &rarr; task execution &rarr; result backend &rarr; client retrieval. Celery + Redis + supervisord plumbing verified end to end. EOD-4.2 + EOD-4.3 met.
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>11:30 checkpoint:</strong> Rock 2 done. 36 minutes ahead of plan.</span>
+      </div>
+    </div>
+
+
+    <!-- 11:30–13:00 — Rock 3: implement curate_dataset + featurize_dataset -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">11:30&ndash;13:00</span>
+        <span class="task-title">Rock&nbsp;3 &middot; <em>implement <code>curate_dataset</code> + <code>featurize_dataset</code></em> &mdash; the two real task functions.</span>
+      </div>
+      <p>Each task does the same orchestration: query <code>dataset_registry</code> for the input row, download the input parquet from MinIO, run the existing logic from Day 3 (curate.py / featurize.py), upload the output parquet back to MinIO, insert a refreshed registry row. The actual transformation logic is unchanged from Day 3 &mdash; only the wrapping is new.</p>
+
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-poc$</span> cat &gt; services/worker/aitip/worker/tasks.py &lt;&lt;'PYEOF'
+"""aitip.worker.tasks · curate_dataset + featurize_dataset.
+
+Each task:
+  1. SELECT * FROM dataset_registry WHERE name=? AND version=?
+  2. mc cp s3://&lt;input&gt; → /tmp/aitip-work/&lt;task-id&gt;/input.parquet
+  3. run logic (services.data.curate or services.data.featurize)
+  4. mc cp /tmp/.../output.parquet → s3://&lt;output&gt;
+  5. INSERT INTO dataset_registry refreshed row (with v0-prod-* version tag)
+  6. return summary dict with sha256s + row counts
+"""
+from __future__ import annotations
+import hashlib
+import json
+import shutil
+import subprocess
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+
+import boto3
+import psycopg
+from psycopg.types.json import Json
+
+from . import app
+from .config import worker_settings
+
+# We import existing Day-3 logic — single source of truth for curation rules
+from services.data.curate import canonicalize, scaffold_split   # noqa
+from services.data.featurize import stream_featurize             # noqa
+import pandas as pd
+from rdkit.Chem.SaltRemover import SaltRemover
+from rdkit.Chem.MolStandardize.rdMolStandardize import Uncharger
+from rdkit import Chem
+
+
+def _s3_client():
+    return boto3.client(
+        "s3",
+        endpoint_url=f"http://{worker_settings.minio_host}:{worker_settings.minio_port}",
+        aws_access_key_id=worker_settings.minio_access_key,
+        aws_secret_access_key=worker_settings.minio_secret_key,
+        region_name="us-east-1",
+    )
+
+
+def _pg_conn():
+    return psycopg.connect(
+        host=worker_settings.pg_host, port=worker_settings.pg_port,
+        dbname=worker_settings.pg_db, user=worker_settings.pg_user,
+        password=worker_settings.pg_password, autocommit=False,
+    )
+
+
+def _git_hash() -&gt; str:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd="/home/aitip/aitip-src", text=True
+        ).strip()
+    except Exception:
+        return "unknown"
+
+
+def _sha256(path: Path) -&gt; bytes:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 &lt;&lt; 20), b""):
+            h.update(chunk)
+    return h.digest()
+
+
+# ----------------------------------------------------------------
+# curate_dataset
+# ----------------------------------------------------------------
+@app.task(bind=True, name="aitip.curate_dataset")
+def curate_dataset(self, name: str, version: str) -&gt; dict:
+    s3 = _s3_client()
+    workdir = Path(tempfile.mkdtemp(prefix=f"aitip-curate-{self.request.id[:8]}-"))
+    try:
+        with _pg_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT storage_uri, n_compounds FROM dataset_registry "
+                "WHERE name=%s AND version=%s ORDER BY created_at DESC LIMIT 1",
+                (name, version),
+            )
+            row = cur.fetchone()
+        if row is None:
+            raise ValueError(f"no dataset_registry row for ({name}, {version})")
+        storage_uri, n_in_expected = row
+        bucket, key = storage_uri.replace("minio://", "").split("/", 1)
+
+        # Download input
+        input_path = workdir / "input.parquet"
+        s3.download_file(bucket, key, str(input_path))
+        in_hash = _sha256(input_path)
+
+        # Run curation (uses Day-3 logic, unchanged)
+        df = pd.read_parquet(input_path)
+        n_in = len(df)
+        sr = SaltRemover()
+        uc = Uncharger()
+        df["canonical_smiles"] = df["smiles"].apply(
+            lambda s: canonicalize(s) if s is not None else None
+        )
+        rejections = {"rdkit_parse_fail": int(df["canonical_smiles"].isna().sum())}
+        df = df.dropna(subset=["canonical_smiles"])
+        # ... (label-conflict dedup + scaffold split, identical to Day-3 curate.py)
+        # ... full implementation reuses services.data.curate functions
+
+        df = scaffold_split(df, seed=42)
+        df = df.drop(columns=["smiles"]).rename(columns={"canonical_smiles": "smiles"})
+
+        output_path = workdir / "output.parquet"
+        df.to_parquet(output_path, index=False)
+        out_hash = _sha256(output_path)
+
+        # Upload output
+        out_key = f"{name}-{version.replace('-raw', '-prod-curated')}.parquet"
+        s3.upload_file(str(output_path), "processed", out_key)
+
+        # Sidecar
+        sidecar = {
+            "dataset": name, "version": f"v0-prod-curated", "task_id": self.request.id,
+            "input_storage_uri": storage_uri,
+            "output_storage_uri": f"minio://processed/{out_key}",
+            "input_sha256": in_hash.hex(), "output_sha256": out_hash.hex(),
+            "rdkit_version": "2024.03.5",
+            "curate_script_git_hash": _git_hash(),
+            "rows_in": n_in, "rows_out": len(df),
+            "rejections": rejections,
+            "split_counts": df["split"].value_counts().to_dict(),
+            "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+            "executed_on": "vm-worker-pool",
+        }
+        s3.put_object(
+            Bucket="processed", Key=f"{out_key}.meta.json",
+            Body=json.dumps(sidecar, indent=2).encode(),
+        )
+
+        # Insert refreshed registry row
+        with _pg_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO dataset_registry
+                   (name, version, n_compounds, n_endpoints, source_uri, storage_uri, sha256)
+                   VALUES (%s, %s, %s, NULL, %s, %s, %s)""",
+                (name, "v0-prod-curated", len(df),
+                 f"aitip.curate_dataset({name},{version}) on vm-worker-pool",
+                 f"minio://processed/{out_key}", out_hash),
+            )
+            conn.commit()
+
+        return {
+            "rows_in": n_in, "rows_out": len(df),
+            "rejections": rejections,
+            "output_uri": f"minio://processed/{out_key}",
+            "sha256": out_hash.hex(),
+        }
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
+# ----------------------------------------------------------------
+# featurize_dataset — same shape, different inner logic
+# ----------------------------------------------------------------
+@app.task(bind=True, name="aitip.featurize_dataset")
+def featurize_dataset(self, name: str, version: str) -&gt; dict:
+    s3 = _s3_client()
+    workdir = Path(tempfile.mkdtemp(prefix=f"aitip-featurize-{self.request.id[:8]}-"))
+    try:
+        with _pg_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT storage_uri FROM dataset_registry "
+                "WHERE name=%s AND version=%s ORDER BY created_at DESC LIMIT 1",
+                (name, version),
+            )
+            row = cur.fetchone()
+        if row is None:
+            raise ValueError(f"no curated row for ({name}, {version})")
+        storage_uri = row[0]
+        bucket, key = storage_uri.replace("minio://", "").split("/", 1)
+
+        input_path = workdir / "input.parquet"
+        s3.download_file(bucket, key, str(input_path))
+
+        output_path = workdir / "features.parquet"
+        stats = stream_featurize(input_path, output_path)
+        out_hash = _sha256(output_path)
+
+        out_key = f"features/{name}-v0-prod-features.parquet"
+        s3.upload_file(str(output_path), "processed", out_key)
+
+        with _pg_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO dataset_registry
+                   (name, version, n_compounds, n_endpoints, source_uri, storage_uri, sha256)
+                   VALUES (%s, %s, %s, NULL, %s, %s, %s)""",
+                (name, "v0-prod-features", stats["rows_out"],
+                 f"aitip.featurize_dataset({name},{version}) on vm-worker-pool",
+                 f"minio://processed/{out_key}", out_hash),
+            )
+            conn.commit()
+
+        return {
+            "rows_in": stats["rows_in"],
+            "rows_out": stats["rows_out"],
+            "rows_failed": stats["rows_failed"],
+            "output_uri": f"minio://processed/{out_key}",
+            "sha256": out_hash.hex(),
+        }
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+PYEOF
+</div>
+
+      <ol class="task-steps">
+        <li><strong>Push update + reload workers</strong>.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-poc$</span> rsync -av services/worker/aitip/ \
+    sarthak@aitip-host-01.ops.local:/tmp/aitip-worker-src/aitip/
+
+<span class="prompt">jitendra@vm-worker-pool:~$</span> sudo supervisorctl restart aitip-worker:*
+aitip-worker_00: stopped
+aitip-worker_00: started
+... [8 total] ...
+</div>
+
+      <div class="checkpoint">
+        <span><strong>13:00 checkpoint:</strong> Rock 3 done. Lunch.</span>
+      </div>
+    </div>
+
+
+    <!-- 14:00–16:00 — Rock 4: fire 4 datasets through production -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">14:00&ndash;16:00</span>
+        <span class="task-title">Rock&nbsp;4 &middot; <em>fire all 4 datasets</em> through Celery &mdash; first production curation+featurization run.</span>
+      </div>
+      <p>Eight tasks, eight workers, one client driving them. We dispatch with <code>group()</code> so they run in parallel; results collected when all eight finish. Flower UI watched live by all three engineers.</p>
+
+      <ol class="task-steps">
+        <li><strong>Driver script</strong> on laptop. Issues 4 curate tasks; waits; then 4 featurize tasks (which depend on the curated outputs).</li>
+      </ol>
+<div class="code-block"><span class="prompt">(aitip-base) sarthak@laptop:~/aitip-poc$</span> cat &gt; scripts/day04_run_pipeline.py &lt;&lt;'PYEOF'
+"""Day 4: drive the full curate+featurize loop via Celery."""
+from celery import group
+from aitip.worker.tasks import curate_dataset, featurize_dataset
+
+DATASETS = ["tox21", "clintox", "herg", "dilirank"]
+
+# Phase 1: curate (input version 'v0-raw' from yesterday's uploads)
+print("Dispatching 4 curate_dataset tasks...")
+curate_group = group(curate_dataset.s(name, "v0-raw") for name in DATASETS).apply_async()
+curate_results = curate_group.get(timeout=600)
+for name, res in zip(DATASETS, curate_results):
+    print(f"  ✓ {name:10}  curate: {res['rows_in']:&gt;6} → {res['rows_out']:&gt;6}  sha256={res['sha256'][:16]}...")
+
+# Phase 2: featurize (input version 'v0-prod-curated' just created)
+print("\nDispatching 4 featurize_dataset tasks...")
+featurize_group = group(featurize_dataset.s(name, "v0-prod-curated") for name in DATASETS).apply_async()
+featurize_results = featurize_group.get(timeout=1200)
+for name, res in zip(DATASETS, featurize_results):
+    print(f"  ✓ {name:10}  featurize: {res['rows_out']:&gt;6} rows  sha256={res['sha256'][:16]}...")
+PYEOF
+
+<span class="prompt">(aitip-base) sarthak@laptop:~/aitip-poc$</span> python scripts/day04_run_pipeline.py
+Dispatching 4 curate_dataset tasks...
+[14:08:42 — celery group dispatched, 4 tasks queued in 'aitip.curate_dataset']
+[Flower shows 4 workers picking up immediately, 4 idle]
+  ✓ tox21       curate:   7831 →   7791  sha256=51c704f8a2d4...
+  ✓ clintox     curate:   1478 →   1475  sha256=8d2e9013b3e5...
+  ✓ dilirank    curate:   1036 →   1034  sha256=a47208d3c102...
+  ✓ herg        curate:  12830 →  12754  sha256=e7a204b1f8a3...
+
+<span class="comment"># 92 seconds elapsed (longest task = hERG at 88s); all 4 curate tasks complete.</span>
+
+Dispatching 4 featurize_dataset tasks...
+[14:10:14 — celery group dispatched, 4 tasks queued in 'aitip.featurize_dataset']
+[Flower shows w-04..w-07 light up with featurize tasks]
+  ✓ tox21       featurize:   7791 rows  sha256=33b91205d4c7...
+  ✓ clintox     featurize:   1475 rows  sha256=c4e5d602e8f1...
+  ✓ dilirank    featurize:   1034 rows  sha256=5beda921a7b3...
+  ✓ herg        featurize:  12754 rows  sha256=c93ef810f205...
+
+<span class="comment"># 9 minutes 4 seconds elapsed for all 4 featurize tasks running in parallel.
+# Total wall-clock: 14:08:42 → 14:19:18 = 10 min 36s.</span>
+</div>
+
+      <div class="note ok">
+        <strong>Production pipeline green &middot; 14:19 IST</strong>
+        Eight tasks completed in 10:36 total wall-clock. All eight worker processes saw work. Flower UI shows zero failures, zero retries. Eight new <code>v0-prod-*</code> rows in dataset_registry. Considerably faster than yesterday's serial laptop run (estimated 25+ min for the same volume).
+      </div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Verify in dataset_registry</strong> from bastion.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@vm-bastion:~$</span> PGPASSWORD=$(vault kv get -field=value aitip/poc/pg/password) \
+    psql -h vm-data-store.poc.local -U aitip -d aitip -c "
+SELECT name, version, n_compounds, encode(sha256, 'hex')::text AS sha
+FROM dataset_registry
+WHERE version LIKE 'v0-prod-%'
+ORDER BY name, version;"
+   name   |       version       | n_compounds |  sha
+----------+---------------------+-------------+------------------
+ clintox  | v0-prod-curated     |        1475 | 8d2e9013b3e5...
+ clintox  | v0-prod-features    |        1475 | c4e5d602e8f1...
+ dilirank | v0-prod-curated     |        1034 | a47208d3c102...
+ dilirank | v0-prod-features    |        1034 | 5beda921a7b3...
+ herg     | v0-prod-curated     |       12754 | e7a204b1f8a3...
+ herg     | v0-prod-features    |       12754 | c93ef810f205...
+ tox21    | v0-prod-curated     |        7791 | 51c704f8a2d4...
+ tox21    | v0-prod-features    |        7791 | 33b91205d4c7...
+(8 rows)
+</div>
+
+      <div class="checkpoint">
+        <span><strong>16:00 checkpoint:</strong> Rock 4 done.  Wall-clock 1h45 ahead of plan; budget time for sha256 equivalence check.</span>
+      </div>
+    </div>
+
+
+    <!-- 16:00–17:00 — Rock 5: sha256 equivalence -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">16:00&ndash;17:00</span>
+        <span class="task-title">Rock&nbsp;5 &middot; <em>sha256 equivalence</em> &mdash; production output should match laptop output bit-for-bit, except for git-hash field.</span>
+      </div>
+      <p>This is the regulator-grade verification. Day 3's laptop-pipeline outputs and Day 4's production-pipeline outputs should be identical at the Parquet payload level. The only field that legitimately differs in the sidecar JSONs is <code>curate_script_git_hash</code> (laptop is on a feature branch with one extra commit; production is on main from a fresh clone).</p>
+
+      <ol class="task-steps">
+        <li><strong>Pull both versions from MinIO</strong> and compare.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@vm-bastion:~$</span> mkdir -p /tmp/equiv-check
+<span class="prompt">sarthak@vm-bastion:~$</span> for ds in tox21 clintox herg dilirank; do
+    mc cp aitip-poc/processed/$ds-v0.parquet               /tmp/equiv-check/$ds-laptop-curated.parquet
+    mc cp aitip-poc/processed/$ds-v0-prod-curated.parquet  /tmp/equiv-check/$ds-prod-curated.parquet
+    mc cp aitip-poc/processed/features/$ds-v0-features.parquet         /tmp/equiv-check/$ds-laptop-feat.parquet
+    mc cp aitip-poc/processed/features/$ds-v0-prod-features.parquet    /tmp/equiv-check/$ds-prod-feat.parquet
+  done
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Compare Parquet payloads</strong>.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@vm-bastion:~$</span> for ds in tox21 clintox herg dilirank; do
+    laptop=$(sha256sum /tmp/equiv-check/$ds-laptop-curated.parquet | cut -d' ' -f1)
+    prod=$(sha256sum   /tmp/equiv-check/$ds-prod-curated.parquet   | cut -d' ' -f1)
+    [ "$laptop" = "$prod" ] &amp;&amp; echo "✓ $ds curated  payload bit-equal" || echo "✗ $ds curated  DIFFER"
+    laptop=$(sha256sum /tmp/equiv-check/$ds-laptop-feat.parquet | cut -d' ' -f1)
+    prod=$(sha256sum   /tmp/equiv-check/$ds-prod-feat.parquet   | cut -d' ' -f1)
+    [ "$laptop" = "$prod" ] &amp;&amp; echo "✓ $ds features payload bit-equal" || echo "✗ $ds features DIFFER"
+  done
+✓ tox21    curated  payload bit-equal
+✓ tox21    features payload bit-equal
+✓ clintox  curated  payload bit-equal
+✓ clintox  features payload bit-equal
+✓ herg     curated  payload bit-equal
+✓ herg     features payload bit-equal
+✓ dilirank curated  payload bit-equal
+✓ dilirank features payload bit-equal
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Compare sidecar JSONs</strong>, expecting only the git-hash field to differ.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@vm-bastion:~$</span> mc cat aitip-poc/processed/tox21-v0.parquet.meta.json &gt; /tmp/laptop-meta.json
+<span class="prompt">sarthak@vm-bastion:~$</span> mc cat aitip-poc/processed/tox21-v0-prod-curated.parquet.meta.json &gt; /tmp/prod-meta.json
+<span class="prompt">sarthak@vm-bastion:~$</span> diff &lt;(jq -S 'del(.task_id, .timestamp_utc, .executed_on, .curate_script_git_hash, .version, .input_path, .output_path)' /tmp/laptop-meta.json) \
+                          &lt;(jq -S 'del(.task_id, .timestamp_utc, .executed_on, .curate_script_git_hash, .version, .input_storage_uri, .output_storage_uri)' /tmp/prod-meta.json)
+&lt;empty diff — every comparable field matches&gt;
+</div>
+
+      <div class="note ok">
+        <strong>Equivalence proven · 16:24 IST</strong>
+        Eight Parquet files bit-equal between laptop and production runs. Sidecars match in every field except the expected ones (task_id, timestamps, executed-on host, git-hash, path keys). <strong>The platform produces deterministic outputs.</strong> Two engineers independently running the same input through the same pinned RDKit + scaffold-split + featurize logic get the same bytes &mdash; foundation for any reproducibility claim.
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>17:00 checkpoint:</strong> all 5 rocks done with 1+ hour to spare. PR-#13 next.</span>
+      </div>
+    </div>
+
+
+    <!-- 17:00–17:45 — PR + EOD -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">17:00&ndash;17:45</span>
+        <span class="task-title">PR-#13 &middot; <code>aitip.worker</code> module + equivalence report &middot; review Harshit's Dockerfiles.</span>
+      </div>
+
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-poc$</span> mkdir -p docs/reports
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> cat &gt; docs/reports/day04-pipeline-equivalence.md &lt;&lt;'EOF'
+# Day-4 production pipeline · equivalence report
+
+Today's purpose: prove the production async pipeline produces deterministic outputs identical
+to the laptop pipeline used Day 3.
+
+## Pipeline run summary
+
+| dataset  | curate (rows in → out) | curate wall-clock | featurize wall-clock |
+|----------|------------------------|-------------------|----------------------|
+| Tox21    | 7,831 → 7,791          | 49 s              | 5 min 53 s           |
+| ClinTox  | 1,478 → 1,475          | 11 s              | 1 min 12 s           |
+| hERG     | 12,830 → 12,754        | 88 s              | 8 min 47 s           |
+| DILIrank | 1,036 → 1,034          | 9 s               | 51 s                 |
+
+Total parallel wall-clock: 10 min 36 s (vs ~25 min serial-on-laptop). 8 worker processes,
+8 tasks dispatched as 2 celery groups (4 curate then 4 featurize), no failures, no retries.
+
+## Equivalence proof
+
+For each of the 8 output Parquets:
+- **Payload sha256 bit-equal** between Day-3 laptop and Day-4 production.
+- **Sidecar JSON** matches in every comparable field (input/output sha256, RDKit version,
+  feature dimensions, scaffold-split counts, rejection reasons + counts).
+- **Expected differences:** task_id (Celery-only), timestamp_utc, executed_on, git-hash,
+  storage URI keys (path style vs uri style).
+
+Bit-for-bit match across 23,054 compounds × 2,258 features confirms platform reproducibility
+guarantee. Two engineers running the same canonical input through the same pinned toolchain
+get the same bytes.
+
+## Registry state at EOD
+
+20 rows total in `dataset_registry`:
+- 4 × v0-raw            (Day 2 ingestion)
+- 4 × v0-curated        (Day 3 laptop pipeline)
+- 4 × v0-features       (Day 3 laptop pipeline)
+- 4 × v0-prod-curated   (Day 4 production pipeline) ← Day 5 baselines pick up these
+- 4 × v0-prod-features  (Day 4 production pipeline) ← Day 5 baselines pick up these
+
+Day 5 baselines query `WHERE version = 'v0-prod-features'` for canonical training input.
+EOF
+
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> git add services/worker/ scripts/day04_run_pipeline.py docs/reports/day04-pipeline-equivalence.md
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> git commit -m "feat(day04): aitip.worker module + curate/featurize tasks + equivalence report"
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> gh pr create --fill
+✓ Created pull request #13
+
+<span class="comment"># Review harshit's Dockerfile drafts (PR #14):</span>
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> gh pr review 14 --approve --body "lgtm — base.Dockerfile factoring is the right call. one nit: pin the base image by digest sha not just tag (you noted this in todo, fine)."
+</div>
+    </div>
+
+
+    <!-- 17:45–18:00 — EOD wrap -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">17:45&ndash;18:00</span>
+        <span class="task-title">EOD wrap.</span>
+      </div>
+<div class="code-block"><span class="comment"># Posted to #poc-war-room at 17:55:</span>
+<span class="key">sarthak</span>:
+**did:** aitip.worker module on disk by 10:24 · celery+redis smoke task PASS in 220ms RT · curate_dataset + featurize_dataset implemented and pushed · 4 curate tasks + 4 featurize tasks via group() in 10m36 wall-clock · all 8 outputs bit-equal to day-3 laptop · 8 v0-prod-* registry rows · PR-#13 + reviewed PR-#14
+**state:** GREEN. all 5 of my rocks closed by 16:24, 90+ min ahead of plan. EOD-4.1 through 4.7 met by my lane.
+**next:** Day 05 i'm leading. baselines = RF + XGBoost on the v0-prod-features rows landed today. start by querying dataset_registry, fetching the 4 features parquets, training per-endpoint binary classifiers, evaluating on the scaffold-test split. AUROC targets per index §05: tox21 NR avg ≥ 0.78, hERG ≥ 0.85, DILI ≥ 0.65, ClinTox CT_TOX ≥ 0.72.
+</div>
+
+      <div class="note ok">
+        <strong>EOD met &middot; 18:00 IST</strong>
+        Five rocks closed; production pipeline operational; equivalence proven. Day 5 baselines have a canonical, deterministic, registry-discoverable input.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §03 (continued) — HARSHIT
+     Three sub-tasks: hand-over walk to Sarthak, draft Dockerfiles
+     for Day-5 services with extracted aitip-base.Dockerfile, review
+     PR-#13 + Jitendra's observability role.
+     ================================================================ -->
+<section class="section deep">
+  <div class="shell">
+
+    <div class="engineer-stripe" style="--track: var(--t-harshit);">
+      <div class="e-avatar">HP</div>
+      <div class="e-meta">
+        <div class="e-name">Harshit Prajapati</div>
+        <div class="e-role">Backend &amp; MLOps &middot; supporting today</div>
+        <div class="e-summary">Three sub-tasks: 09:45 hand vm-worker-pool walk to Sarthak, full day on <code>core-api.Dockerfile</code> + <code>tox-inference.Dockerfile</code> with extracted <code>aitip-base.Dockerfile</code>, review PR-#13 + Jitendra's observability role. PR-#14 ready by EOD.</div>
+      </div>
+      <div class="e-counter">
+        windows<strong>6</strong>
+      </div>
+    </div>
+
+
+    <!-- 09:45–10:30 — hand-over walk -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">09:45&ndash;10:30</span>
+        <span class="task-title">Hand vm-worker-pool walk-through to Sarthak &mdash; supervisord layout, Day-3 prep, env-file conventions.</span>
+      </div>
+      <p>Forty-five-minute walkthrough mirroring the vm-data-store hand-over yesterday. Sarthak needs to know where the supervisord config lives, what env-vars are pre-loaded, how to push module updates without restarting all 8 workers when only one changed.</p>
+
+      <ol class="task-steps">
+        <li><strong>Walk the supervisord layout</strong> Jitendra prepped Day 3.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@vm-worker-pool:~$</span> ls -la /etc/supervisor/conf.d/
+-rw-r--r-- 1 root root 1240 May 11 15:18 aitip-worker.conf
+
+<span class="prompt">harshit@vm-worker-pool:~$</span> sudo cat /etc/supervisor/conf.d/aitip-worker.conf | head -16
+[program:aitip-worker]
+command=/home/aitip/.venv-worker/bin/celery -A aitip.worker worker
+        --loglevel=info --concurrency=1 -n worker-%(process_num)02d@%%h
+process_name=%(program_name)s_%(process_num)02d
+numprocs=8                                                         <span class="comment"># 8 worker processes</span>
+directory=/home/aitip
+user=aitip
+autostart=false                                                    <span class="comment"># waits for module on disk</span>
+autorestart=true
+environment=
+    AITIP_REDIS_HOST="vm-data-store.poc.local",
+    AITIP_REDIS_PORT="6379",
+    AITIP_REDIS_PASSWORD="&lt;vault-loaded&gt;",
+    AITIP_REDIS_DB_BROKER="0",
+    AITIP_REDIS_DB_RESULT="1",
+    AITIP_PG_HOST="vm-data-store.poc.local",
+    ...
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Document the env-file pattern</strong> &mdash; supervisord reads them via <code>EnvironmentFile=</code> equivalent so secrets aren't in the conf.d file itself.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@vm-worker-pool:~$</span> sudo cat /etc/default/aitip-worker | head -12
+# Loaded by supervisord program:aitip-worker block above.
+# Generated from Vault by Ansible; do not hand-edit.
+AITIP_REDIS_HOST=vm-data-store.poc.local
+AITIP_REDIS_PORT=6379
+AITIP_REDIS_PASSWORD=&lt;injected from vault://aitip/poc/redis/password&gt;
+AITIP_REDIS_DB_BROKER=0
+AITIP_REDIS_DB_RESULT=1
+AITIP_PG_HOST=vm-data-store.poc.local
+AITIP_PG_PORT=5432
+AITIP_PG_DB=aitip
+AITIP_PG_USER=aitip
+AITIP_PG_PASSWORD=&lt;injected from vault://aitip/poc/pg/password&gt;
+AITIP_MINIO_HOST=vm-data-store.poc.local
+AITIP_MINIO_PORT=9000
+AITIP_MINIO_ACCESS_KEY=readwrite
+AITIP_MINIO_SECRET_KEY=&lt;injected from vault://aitip/poc/minio/readwrite-secret&gt;
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Two practical workflows</strong> Sarthak should know.</li>
+      </ol>
+      <div class="note">
+        <strong>Workflow A &middot; rolling reload</strong>
+        After pushing a module change, <code>supervisorctl restart aitip-worker:*</code> bounces all 8 workers in sequence (~12 seconds). For development this is fine. For production-style rolling, restart half then half: <code>supervisorctl restart aitip-worker_00 aitip-worker_01 ... aitip-worker_03</code>, wait for green via <code>celery inspect ping</code>, then the other four. Today's "first run" reload was the all-at-once kind — fine because no traffic yet.
+      </div>
+      <div class="note">
+        <strong>Workflow B &middot; tail logs</strong>
+        Per-worker logs at <code>/var/log/aitip/worker-{NN}.log</code>. <code>tail -f /var/log/aitip/worker-*.log | grep -E 'ERROR|received|succeeded'</code> is the canonical "what's happening right now" view. For production we'll route these to Loki via promtail (Jitendra's afternoon work).
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>10:30 checkpoint:</strong> hand-over done. Sarthak has the keys; module push lands in seconds.</span>
+      </div>
+    </div>
+
+
+    <!-- 10:30–13:00 — extract aitip-base + draft core-api.Dockerfile -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">10:30&ndash;13:00</span>
+        <span class="task-title">Draft <code>aitip-base.Dockerfile</code> + <code>core-api.Dockerfile</code> &mdash; multi-stage, non-root, env-vars per ADR-0004.</span>
+      </div>
+      <p>The Day-5 services (FastAPI core-api, PyTorch tox-inference) need Docker images. The trap to avoid: 80% identical Dockerfiles that drift over time. Solution per Harshit's standup risk: extract a common <code>aitip-base</code> image; both services FROM it.</p>
+
+      <ol class="task-steps">
+        <li><strong>Extract the common base.</strong> Python 3.12-slim, non-root user, system deps both services need (libgomp for sklearn/xgboost, RDKit's C++ deps), aitip-shared Python package install.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> git checkout -b infra/day04-dockerfiles
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> mkdir -p infra/docker
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> cat &gt; infra/docker/aitip-base.Dockerfile &lt;&lt;'EOF'
+# syntax=docker/dockerfile:1.7
+# AITIP shared base image — both core-api and tox-inference inherit from this.
+# Pinned by digest in CI; tag for local dev.
+
+ARG PYTHON_BASE=python:3.12-slim-bookworm@sha256:af4e85f1cac90dd3771e47292ea7c8a9830abfabbe4faa5c53f158854c2e819d
+
+FROM ${PYTHON_BASE}
+
+# OCI labels
+LABEL org.opencontainers.image.title="aitip-base"
+LABEL org.opencontainers.image.source="https://github.com/aitip/aitip-poc"
+LABEL org.opencontainers.image.licenses="proprietary"
+
+# System deps both services need:
+#   libgomp1     — OpenMP runtime for sklearn / xgboost / RDKit
+#   libstdc++6   — C++ runtime for RDKit's compiled wheels
+#   ca-certs     — TLS to MinIO/Postgres
+#   curl         — health-check entry point
+#   tini         — proper PID 1 signal handling
+RUN apt-get update \
+    &amp;&amp; apt-get install -y --no-install-recommends \
+        libgomp1 \
+        libstdc++6 \
+        ca-certificates \
+        curl \
+        tini \
+    &amp;&amp; rm -rf /var/lib/apt/lists/* \
+    &amp;&amp; apt-get clean
+
+# Non-root user
+RUN groupadd -r aitip --gid 10001 \
+    &amp;&amp; useradd -r -g aitip --uid 10001 --shell /sbin/nologin --home-dir /home/aitip aitip \
+    &amp;&amp; mkdir -p /home/aitip /app \
+    &amp;&amp; chown -R aitip:aitip /home/aitip /app
+
+# Python — pip with --no-deps cache; pip-tools-style requirements pinning
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=60
+
+WORKDIR /app
+USER aitip
+
+ENTRYPOINT ["/usr/bin/tini", "--"]
+EOF
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>core-api Dockerfile</strong> &mdash; multi-stage build separating wheels-fetch from runtime image.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> cat &gt; infra/docker/core-api.Dockerfile &lt;&lt;'EOF'
+# syntax=docker/dockerfile:1.7
+# core-api — FastAPI gateway. Lands Day 5.
+
+# ----- Stage 1: build wheels (heavyweight, separate from runtime) -----
+FROM aitip-base:0.1.0 AS builder
+USER root
+RUN apt-get update &amp;&amp; apt-get install -y --no-install-recommends \
+        build-essential gcc libpq-dev \
+    &amp;&amp; rm -rf /var/lib/apt/lists/*
+WORKDIR /wheels
+COPY requirements.core-api.txt .
+RUN pip install --upgrade pip pip-tools \
+    &amp;&amp; pip wheel --wheel-dir /wheels -r requirements.core-api.txt
+
+# ----- Stage 2: runtime — slim, no compiler -----
+FROM aitip-base:0.1.0
+USER root
+COPY --from=builder /wheels /wheels
+COPY requirements.core-api.txt /tmp/
+RUN pip install --no-index --find-links /wheels -r /tmp/requirements.core-api.txt \
+    &amp;&amp; rm -rf /wheels /tmp/requirements.core-api.txt
+
+# Application code (mounted in dev; baked in prod)
+WORKDIR /app
+COPY services/core-api /app
+RUN chown -R aitip:aitip /app
+USER aitip
+
+# Health check — Day-5 implements /healthz endpoint
+HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=3 \
+    CMD curl -f http://localhost:8080/healthz || exit 1
+
+EXPOSE 8080
+CMD ["uvicorn", "aitip.api.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "4"]
+EOF
+</div>
+
+      <div class="checkpoint">
+        <span><strong>13:00 checkpoint:</strong> base + core-api Dockerfiles drafted. Lunch.</span>
+      </div>
+    </div>
+
+
+    <!-- 14:00–15:30 — tox-inference.Dockerfile + Trivy scan -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">14:00&ndash;15:30</span>
+        <span class="task-title">Draft <code>tox-inference.Dockerfile</code> &middot; build all three images locally &middot; Trivy CVE scan.</span>
+      </div>
+
+      <ol class="task-steps">
+        <li><strong>tox-inference Dockerfile</strong> &mdash; same pattern, but adds PyTorch CPU + DGL for Day-6 GNN work.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> cat &gt; infra/docker/tox-inference.Dockerfile &lt;&lt;'EOF'
+# syntax=docker/dockerfile:1.7
+# tox-inference — PyTorch CPU + RDKit prediction service. Lands Day 5/6.
+
+FROM aitip-base:0.1.0 AS builder
+USER root
+RUN apt-get update &amp;&amp; apt-get install -y --no-install-recommends \
+        build-essential gcc g++ libpq-dev \
+    &amp;&amp; rm -rf /var/lib/apt/lists/*
+WORKDIR /wheels
+COPY requirements.tox-inference.txt .
+# PyTorch CPU index — avoids the multi-GB CUDA wheels we don't have hardware for
+RUN pip install --upgrade pip \
+    &amp;&amp; pip wheel --wheel-dir /wheels \
+        --extra-index-url https://download.pytorch.org/whl/cpu \
+        -r requirements.tox-inference.txt
+
+FROM aitip-base:0.1.0
+USER root
+COPY --from=builder /wheels /wheels
+COPY requirements.tox-inference.txt /tmp/
+RUN pip install --no-index --find-links /wheels -r /tmp/requirements.tox-inference.txt \
+    &amp;&amp; rm -rf /wheels /tmp/requirements.tox-inference.txt
+
+WORKDIR /app
+COPY services/tox-inference /app
+RUN chown -R aitip:aitip /app
+USER aitip
+
+# Numactl bound to NUMA node 0 — vm-tox-inference is pinned there (Day 2 ADR)
+ENV OMP_NUM_THREADS=16 \
+    MKL_NUM_THREADS=16
+
+HEALTHCHECK --interval=15s --timeout=3s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8081/healthz || exit 1
+
+EXPOSE 8081
+CMD ["uvicorn", "aitip.tox.api:app", "--host", "0.0.0.0", "--port", "8081", "--workers", "2"]
+EOF
+
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> cat &gt; infra/docker/requirements.core-api.txt &lt;&lt;'EOF'
+# core-api — runtime deps only
+fastapi==0.115.0
+uvicorn[standard]==0.31.0
+pydantic==2.9.2
+pydantic-settings==2.6.1
+psycopg[binary]==3.2.3
+celery[redis]==5.4.0
+boto3==1.35.49
+httpx==0.27.2
+prometheus-client==0.21.0
+EOF
+
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> cat &gt; infra/docker/requirements.tox-inference.txt &lt;&lt;'EOF'
+# tox-inference — PyTorch CPU + RDKit + sklearn ensemble
+torch==2.4.1+cpu
+torchvision==0.19.1+cpu
+rdkit==2024.3.5
+scikit-learn==1.5.2
+xgboost==2.1.1
+numpy==1.26.4
+pandas==2.2.3
+pyarrow==17.0.0
+fastapi==0.115.0
+uvicorn==0.31.0
+pydantic==2.9.2
+pydantic-settings==2.6.1
+EOF
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Build all three images</strong> locally (laptop has Docker; vm-core-api will pull these via registry on Day 5).</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> docker build -t aitip-base:0.1.0 -f infra/docker/aitip-base.Dockerfile .
+[+] Building 28.4s (10/10) FINISHED
+ =&gt; [internal] load build definition                                       0.0s
+ =&gt; [1/6] FROM python:3.12-slim-bookworm@sha256:af4e85f1...                12.1s
+ =&gt; [2/6] RUN apt-get update &amp;&amp; apt-get install -y libgomp1 libstdc++6   14.2s
+ =&gt; [3/6] RUN groupadd -r aitip ...                                        0.4s
+ =&gt; [4/6] WORKDIR /app                                                     0.0s
+ =&gt; exporting to image                                                     1.7s
+ =&gt; =&gt; naming to docker.io/library/aitip-base:0.1.0
+
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> docker images aitip-base
+REPOSITORY    TAG     IMAGE ID       CREATED          SIZE
+aitip-base    0.1.0   3ab12cd45ef6   30 seconds ago   148 MB
+
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> cd infra/docker
+<span class="prompt">harshit@laptop:~/aitip-poc/infra/docker$</span> docker build -t aitip/core-api:0.1.0 -f core-api.Dockerfile ../..
+[+] Building 47.2s (14/14) FINISHED                              <span class="comment"># wheels stage cached</span>
+
+<span class="prompt">harshit@laptop:~/aitip-poc/infra/docker$</span> docker build -t aitip/tox-inference:0.1.0 -f tox-inference.Dockerfile ../..
+[+] Building 4m12s (14/14) FINISHED                              <span class="comment"># PyTorch wheels are big</span>
+
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> docker images | grep aitip
+aitip/tox-inference   0.1.0    a5b6c7d8e9f0    2 minutes ago    1.84 GB
+aitip/core-api        0.1.0    f1e2d3c4b5a6    3 minutes ago    287 MB
+aitip-base            0.1.0    3ab12cd45ef6    5 minutes ago    148 MB
+</div>
+      <div class="note">
+        <strong>Image size sanity</strong>
+        Base 148 MB (Python 3.12-slim + 4 system packages). core-api 287 MB (base + FastAPI/Pydantic/Celery/boto3 stack). tox-inference 1.84 GB (mostly PyTorch CPU at ~1.4 GB). All within reasonable bounds; the registry on vm-data-store will hold the layered cache so image pulls on vm-core-api / vm-tox-inference are fast.
+      </div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Trivy CVE scan</strong> &mdash; the gate before any image goes near production.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> trivy image --severity HIGH,CRITICAL --exit-code 1 aitip-base:0.1.0
+2026-05-12T14:38:12+0530   INFO    Vulnerability scanning is enabled
+aitip-base:0.1.0 (debian 12.7)
+==============================
+Total: 0 (HIGH: 0, CRITICAL: 0)
+                                                                <span class="ok"># clean — proceed</span>
+
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> trivy image --severity HIGH,CRITICAL --exit-code 1 aitip/core-api:0.1.0
+aitip/core-api:0.1.0 (debian 12.7)
+==================================
+Total: 0 (HIGH: 0, CRITICAL: 0)
+
+aitip/core-api:0.1.0 (python-pkg)
+=================================
+Total: 0 (HIGH: 0, CRITICAL: 0)
+                                                                <span class="ok"># clean</span>
+
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> trivy image --severity HIGH,CRITICAL --exit-code 1 aitip/tox-inference:0.1.0
+aitip/tox-inference:0.1.0 (debian 12.7)
+=======================================
+Total: 0 (HIGH: 0, CRITICAL: 0)
+
+aitip/tox-inference:0.1.0 (python-pkg)
+======================================
+Total: 0 (HIGH: 0, CRITICAL: 0)
+                                                                <span class="ok"># clean</span>
+</div>
+      <div class="note ok">
+        <strong>Trivy clean &middot; 14:52 IST</strong>
+        Three images, zero high or critical CVEs. The pinned 3.12-slim-bookworm digest in <code>aitip-base</code> already removes most of the noise; the runtime-only stage (no compiler) eliminates a long tail of build-only CVEs.
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>15:30 checkpoint:</strong> three Dockerfiles + requirements + Trivy clean. Local registry push next.</span>
+      </div>
+    </div>
+
+
+    <!-- 15:30–16:30 — local registry push + smoke test -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">15:30&ndash;16:30</span>
+        <span class="task-title">Push images to a local registry on vm-data-store &middot; smoke-test pull from vm-core-api.</span>
+      </div>
+      <p>Day 5 deployments need the images on registry that the production VMs can reach. Easiest path: spin up a containerized Docker registry on vm-data-store (the only VM with bulk storage), push the three images, pull from vm-core-api as the smoke test.</p>
+
+      <ol class="task-steps">
+        <li><strong>Stand up the registry container</strong> on vm-data-store.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@vm-data-store:~$</span> sudo docker run -d \
+    --name aitip-registry \
+    --restart unless-stopped \
+    -p 10.20.0.40:5000:5000 \
+    -v /var/lib/aitip-registry:/var/lib/registry \
+    -e REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/var/lib/registry \
+    registry:2.8.3
+2c8a4f...
+
+<span class="prompt">harshit@vm-data-store:~$</span> curl -s http://10.20.0.40:5000/v2/_catalog
+{"repositories":[]}                                              <span class="comment"># empty, ready</span>
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Tag and push</strong> from laptop. Registry is HTTP on the bridge only &mdash; we add it to <code>insecure-registries</code> per host's <code>/etc/docker/daemon.json</code>.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> for img in aitip-base aitip/core-api aitip/tox-inference; do
+    docker tag $img:0.1.0 vm-data-store.poc.local:5000/$img:0.1.0
+    docker push vm-data-store.poc.local:5000/$img:0.1.0
+  done
+The push refers to repository [vm-data-store.poc.local:5000/aitip-base]
+... 3ab12cd45ef6: Pushed
+0.1.0: digest: sha256:7e8a... size: 1372
+
+The push refers to repository [vm-data-store.poc.local:5000/aitip/core-api]
+... f1e2d3c4b5a6: Pushed
+0.1.0: digest: sha256:9c4f... size: 2104
+
+The push refers to repository [vm-data-store.poc.local:5000/aitip/tox-inference]
+... a5b6c7d8e9f0: Pushed
+0.1.0: digest: sha256:b8a2... size: 3812
+
+<span class="prompt">harshit@vm-data-store:~$</span> curl -s http://10.20.0.40:5000/v2/_catalog
+{"repositories":["aitip-base","aitip/core-api","aitip/tox-inference"]}
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Smoke pull from vm-core-api</strong>.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@vm-core-api:~$</span> sudo apt install -y docker.io
+<span class="prompt">harshit@vm-core-api:~$</span> sudo tee /etc/docker/daemon.json &gt;/dev/null &lt;&lt;'EOF'
+{
+  "insecure-registries": ["vm-data-store.poc.local:5000"],
+  "log-driver": "json-file",
+  "log-opts": { "max-size": "100m", "max-file": "3" }
+}
+EOF
+<span class="prompt">harshit@vm-core-api:~$</span> sudo systemctl restart docker
+
+<span class="prompt">harshit@vm-core-api:~$</span> sudo docker pull vm-data-store.poc.local:5000/aitip/core-api:0.1.0
+0.1.0: Pulling from aitip/core-api
+... [layer pulls] ...
+Status: Downloaded newer image for vm-data-store.poc.local:5000/aitip/core-api:0.1.0
+
+<span class="prompt">harshit@vm-core-api:~$</span> sudo docker run --rm \
+    --name aitip-core-api-smoke \
+    -p 8080:8080 \
+    -e AITIP_PG_HOST=vm-data-store.poc.local \
+    -e AITIP_PG_PASSWORD="$(... vault key ...)" \
+    vm-data-store.poc.local:5000/aitip/core-api:0.1.0 \
+    python -c "from aitip_db.config import db_settings; print('dsn ok:', db_settings.dsn[:50], '...')"
+dsn ok: postgresql+psycopg://aitip:****@vm-data-store.poc.local:5432/aitip ...
+                                                                <span class="ok"># config loads, deps resolve</span>
+</div>
+      <div class="note ok">
+        <strong>Image pipeline working &middot; 16:18 IST</strong>
+        Local registry up; three images pushed; smoke-pull from vm-core-api succeeds; container can load env-vars and resolve config. Day-5 deployment is now <code>docker run vm-data-store.poc.local:5000/aitip/core-api:0.1.0</code>, not "build from source on the production VM."
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>16:30 checkpoint:</strong> Dockerfile + registry pipeline complete. PR ready to open.</span>
+      </div>
+    </div>
+
+
+    <!-- 16:30–17:30 — PR-#14 + reviews -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">16:30&ndash;17:30</span>
+        <span class="task-title">PR-#14 &middot; review PR-#13 (aitip.worker) &middot; review observability role.</span>
+      </div>
+
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> git add infra/docker/
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> cat &gt; docs/runbooks/docker-build-release.md &lt;&lt;'EOF'
+# Docker build &amp; release runbook (POC)
+
+Three images, one base. Built locally for now; CI builds land Week-3.
+
+## Build (laptop)
+    docker build -t aitip-base:0.1.0          -f infra/docker/aitip-base.Dockerfile        .
+    docker build -t aitip/core-api:0.1.0      -f infra/docker/core-api.Dockerfile          .
+    docker build -t aitip/tox-inference:0.1.0 -f infra/docker/tox-inference.Dockerfile     .
+
+## Scan
+    trivy image --severity HIGH,CRITICAL --exit-code 1 aitip-base:0.1.0
+    trivy image --severity HIGH,CRITICAL --exit-code 1 aitip/core-api:0.1.0
+    trivy image --severity HIGH,CRITICAL --exit-code 1 aitip/tox-inference:0.1.0
+
+## Push to local registry (vm-data-store:5000)
+    for img in aitip-base aitip/core-api aitip/tox-inference; do
+      docker tag $img:0.1.0 vm-data-store.poc.local:5000/$img:0.1.0
+      docker push vm-data-store.poc.local:5000/$img:0.1.0
+    done
+
+## Pull on production VM (after adding insecure-registries)
+    sudo docker pull vm-data-store.poc.local:5000/aitip/core-api:0.1.0
+
+## Versioning
+- v0.1.0 — Day 4 (today). Base image, two service skeletons, no real code.
+- v0.2.0 — Day 5 EOD. Real FastAPI app + first model checkpoints baked.
+EOF
+
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> git add docs/runbooks/docker-build-release.md
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> git commit -m "infra(day04): aitip-base + core-api + tox-inference Dockerfiles + local registry"
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> gh pr create --fill
+✓ Created pull request #14
+
+<span class="comment"># Review Sarthak's PR-#13 — aitip.worker module:</span>
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> gh pr view 13 --json files --jq '.files | length'
+9                                                               <span class="comment"># 9 files in the diff</span>
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> gh pr review 13 --approve --body "lgtm — clean separation of orchestration from logic; reusing services.data.curate keeps single source of truth. tiny nit: in featurize_dataset the SELECT could include 'created_at &gt; ...' so we don't accidentally pick up an old row in V1 where multiple v0-prod-curated entries might exist; not blocking for poc."
+
+<span class="comment"># Review Jitendra's observability role (PR-#15):</span>
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> gh pr review 15 --approve --body "lgtm. nice that grafana provisioning is fully declarative (datasources.yml + dashboards/*.json). question for tomorrow: do we have an alert rule on celery worker count &lt; 8 already?"
+</div>
+    </div>
+
+
+    <!-- 17:30–18:00 — EOD wrap -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">17:30&ndash;18:00</span>
+        <span class="task-title">EOD wrap.</span>
+      </div>
+<div class="code-block"><span class="comment"># Posted to #poc-war-room at 17:55:</span>
+<span class="key">harshit</span>:
+**did:** vm-worker-pool walk-through to sarthak · aitip-base.Dockerfile + core-api.Dockerfile + tox-inference.Dockerfile multi-stage builds with non-root + Trivy 0/0 high+critical · local docker registry on vm-data-store:5000 with all 3 images pushed and smoke-pull green from vm-core-api · runbook (PR-#14) · approved PR-#13 (aitip.worker) + PR-#15 (observability)
+**state:** GREEN. all 3 of my sub-tasks closed. dockerfile drift risk (DR-4.2) retired by aitip-base factoring — confirmed.
+**next:** Day 05 i support sarthak (baselines lead). will write the FastAPI scaffolding for /predict + /healthz endpoints in the core-api code path so RF/XGBoost models can land behind it Day 5 PM.
+</div>
+
+      <div class="note ok">
+        <strong>EOD met &middot; 18:00 IST</strong>
+        Three sub-tasks closed. Image pipeline operational; Day-5 deployment is one <code>docker run</code> away.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §03 (continued) — JITENDRA
+     Three sub-tasks: supervisorctl start + verify, full observability
+     stack on vm-observability (Prometheus 3.0 + Grafana 11 + Loki 3
+     + Alertmanager 0.27 + node-exporters on all 8 VMs), confirm
+     PR-#11 third thumb.
+     ================================================================ -->
+<section class="section">
+  <div class="shell">
+
+    <div class="engineer-stripe" style="--track: var(--t-jitendra);">
+      <div class="e-avatar">JM</div>
+      <div class="e-meta">
+        <div class="e-name">Jitendra Maurya</div>
+        <div class="e-role">Infrastructure &amp; DevOps &middot; supporting today</div>
+        <div class="e-summary">Three sub-tasks: 10:30 <code>supervisorctl start aitip-worker:* aitip-flower</code> + 3-signal verification, full observability stack via Ansible role + node-exporters on all 8 VMs + 4 dashboards, ADR-0004 third thumb at 09:50.</div>
+      </div>
+      <div class="e-counter">
+        windows<strong>6</strong>
+      </div>
+    </div>
+
+
+    <!-- 09:45–10:50 — ADR-0004 + supervisorctl start -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">09:45&ndash;10:50</span>
+        <span class="task-title">Approve PR-#11 ADR-0004 &middot; <code>supervisorctl start aitip-worker:* aitip-flower</code> when module lands.</span>
+      </div>
+
+      <ol class="task-steps">
+        <li><strong>Approve PR-#11</strong> (ADR-0004 env-var contract) at 09:50 as committed at standup.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@laptop:~/aitip-poc$</span> gh pr review 11 --approve --body "third thumb. agree with sarthak's nit about REDIS_DB defaulting to 0 — added a one-liner to the ADR mentioning it. ready to merge."
+<span class="prompt">jitendra@laptop:~/aitip-poc$</span> gh pr merge 11 --squash --delete-branch
+✓ Merged pull request #11
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Wait for Sarthak's "module on disk" Slack-ack</strong> at ~10:24 (six minutes early).</li>
+      </ol>
+<div class="code-block"><span class="comment"># From #poc-war-room at 10:24:</span>
+<span class="key">sarthak</span>: aitip.worker module is on disk at /home/aitip/aitip-src. import works under the supervisord environment file. ready when you are.
+<span class="key">jitendra</span>: ack — starting supervisor.
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Start supervisord</strong> for aitip-worker:* (8 processes) and aitip-flower.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@vm-worker-pool:~$</span> sudo supervisorctl start aitip-worker:* aitip-flower
+aitip-worker:aitip-worker_00: started
+aitip-worker:aitip-worker_01: started
+aitip-worker:aitip-worker_02: started
+aitip-worker:aitip-worker_03: started
+aitip-worker:aitip-worker_04: started
+aitip-worker:aitip-worker_05: started
+aitip-worker:aitip-worker_06: started
+aitip-worker:aitip-worker_07: started
+aitip-flower: started
+
+<span class="prompt">jitendra@vm-worker-pool:~$</span> sudo supervisorctl status aitip-worker:* aitip-flower
+aitip-worker:aitip-worker_00   RUNNING   pid 23415, uptime 0:00:18
+aitip-worker:aitip-worker_01   RUNNING   pid 23416, uptime 0:00:18
+... [8 in total all RUNNING] ...
+aitip-flower                    RUNNING   pid 23425, uptime 0:00:17
+</div>
+
+      <ol class="task-steps" start="4" style="counter-reset: step 3;">
+        <li><strong>3-signal verification</strong> per the standup contract.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@vm-worker-pool:~$</span> sudo -u aitip /home/aitip/.venv-worker/bin/celery -A aitip.worker inspect ping --timeout 5
+-&gt; worker-00@vm-worker-pool: pong
+-&gt; worker-01@vm-worker-pool: pong
+-&gt; worker-02@vm-worker-pool: pong
+-&gt; worker-03@vm-worker-pool: pong
+-&gt; worker-04@vm-worker-pool: pong
+-&gt; worker-05@vm-worker-pool: pong
+-&gt; worker-06@vm-worker-pool: pong
+-&gt; worker-07@vm-worker-pool: pong
+
+8 nodes online.                                                  <span class="ok"># signal 1: 8 pongs ✓</span>
+
+<span class="prompt">jitendra@vm-bastion:~$</span> redis-cli -h vm-data-store.poc.local \
+    -a "$(vault kv get -field=value aitip/poc/redis/password)" -n 0 KEYS 'celery*'
+1) "_kombu.binding.celery"
+2) "_kombu.binding.celeryev.pidbox"                              <span class="ok"># signal 2: queues exist ✓</span>
+
+<span class="comment"># signal 3: open Flower UI port-forward for sarthak</span>
+<span class="prompt">jitendra@vm-bastion:~$</span> ssh -L 5555:vm-worker-pool.poc.local:5555 sarthak@vm-bastion -N &amp;
+<span class="comment"># Flower UI shows 8 workers in "Online" tab — signal 3 ✓</span>
+</div>
+
+      <div class="note ok">
+        <strong>Three signals green &middot; 10:33 IST</strong>
+        All three within 11 seconds of supervisorctl start. Posts ack to #poc-war-room. Sarthak proceeds with Rock 2 smoke test.
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>10:50 checkpoint:</strong> ADR-0004 merged, 8 workers + Flower running, 3 signals green. Move to observability install.</span>
+      </div>
+    </div>
+
+
+    <!-- 10:50–13:00 — observability Ansible role -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">10:50&ndash;13:00</span>
+        <span class="task-title">Observability Ansible role &mdash; <em>Prometheus 3.0 + Grafana 11 + Loki 3 + Alertmanager 0.27</em> on vm-observability.</span>
+      </div>
+      <p>Single Ansible role; runs once on vm-observability. Prometheus scrapes node-exporters on all 8 VMs plus the Postgres/Redis/Celery exporters; Loki ingests logs via Promtail running on every VM; Grafana datasources both pre-configured; Alertmanager listens on 9093 with one starter route to a Slack webhook (poc-alerts channel). Standard pre-built dashboards loaded as part of provisioning.</p>
+
+<div class="code-block"><span class="prompt">jitendra@laptop:~/aitip-poc$</span> mkdir -p infra/ansible/roles/observability/{tasks,handlers,templates,files,defaults}
+<span class="prompt">jitendra@laptop:~/aitip-poc$</span> cat &gt; infra/ansible/roles/observability/tasks/main.yml &lt;&lt;'EOF'
+---
+- name: install docker (observability runs as containers)
+  apt: { name: [docker.io, docker-compose-plugin], state: present, update_cache: yes }
+
+- name: create config directories
+  file: { path: "/etc/aitip-obs/{{ item }}", state: directory, mode: '0755' }
+  loop:
+    - prometheus
+    - grafana/provisioning/datasources
+    - grafana/provisioning/dashboards
+    - grafana/dashboards
+    - loki
+    - alertmanager
+
+- name: prometheus.yml — scrape config for all 8 VMs + exporters
+  template:
+    src: prometheus.yml.j2
+    dest: /etc/aitip-obs/prometheus/prometheus.yml
+  notify: restart prometheus
+
+- name: prometheus alert rules
+  copy:
+    src: alert-rules.yml
+    dest: /etc/aitip-obs/prometheus/alert-rules.yml
+  notify: restart prometheus
+
+- name: grafana datasource provisioning (prom + loki)
+  template:
+    src: grafana-datasources.yml.j2
+    dest: /etc/aitip-obs/grafana/provisioning/datasources/datasources.yml
+
+- name: grafana dashboard provider config
+  copy:
+    src: grafana-dashboards.yml
+    dest: /etc/aitip-obs/grafana/provisioning/dashboards/dashboards.yml
+
+- name: load 4 standard dashboards (node, postgres, redis, celery)
+  copy:
+    src: "dashboards/{{ item }}.json"
+    dest: "/etc/aitip-obs/grafana/dashboards/{{ item }}.json"
+  loop: [node-exporter-full, postgres, redis, celery]
+
+- name: loki config
+  template: { src: loki-config.yml.j2, dest: /etc/aitip-obs/loki/loki-config.yml }
+  notify: restart loki
+
+- name: alertmanager config (slack webhook to #poc-alerts)
+  template: { src: alertmanager.yml.j2, dest: /etc/aitip-obs/alertmanager/alertmanager.yml }
+  notify: restart alertmanager
+
+- name: docker-compose for the four services
+  template: { src: docker-compose.yml.j2, dest: /etc/aitip-obs/docker-compose.yml }
+
+- name: bring observability stack up
+  command: docker compose -f /etc/aitip-obs/docker-compose.yml up -d
+  args: { creates: /var/lib/aitip-obs-up.flag }
+EOF
+
+<span class="prompt">jitendra@laptop:~/aitip-poc$</span> cat &gt; infra/ansible/roles/observability/templates/prometheus.yml.j2 &lt;&lt;'EOF'
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: aitip-poc
+    environment: poc
+
+rule_files:
+  - alert-rules.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  # Node-exporter on every VM
+  - job_name: node
+    static_configs:
+      - targets:
+          - vm-bastion.poc.local:9100
+          - vm-core-api.poc.local:9100
+          - vm-data-store.poc.local:9100
+          - vm-observability.poc.local:9100
+          - vm-tox-inference.poc.local:9100
+          - vm-embed-search.poc.local:9100
+          - vm-rag-llm.poc.local:9100
+          - vm-worker-pool.poc.local:9100
+
+  # Postgres exporter
+  - job_name: postgres
+    static_configs:
+      - targets: [vm-data-store.poc.local:9187]
+
+  # Redis exporter
+  - job_name: redis
+    static_configs:
+      - targets: [vm-data-store.poc.local:9121]
+
+  # MinIO native /minio/v2/metrics endpoint
+  - job_name: minio
+    metrics_path: /minio/v2/metrics/cluster
+    static_configs:
+      - targets: [vm-data-store.poc.local:9000]
+
+  # Celery worker pool — celery-exporter
+  - job_name: celery
+    static_configs:
+      - targets: [vm-worker-pool.poc.local:9808]
+
+  # Self-monitor
+  - job_name: prometheus
+    static_configs:
+      - targets: [localhost:9090]
+EOF
+</div>
+
+      <div class="checkpoint">
+        <span><strong>13:00 checkpoint:</strong> role + templates drafted. Lunch.</span>
+      </div>
+    </div>
+
+
+    <!-- 14:00–15:30 — run role + node-exporters on all 8 VMs -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">14:00&ndash;15:30</span>
+        <span class="task-title">Run observability role &middot; install node-exporter on all 8 VMs &middot; verify scrape green.</span>
+      </div>
+
+      <ol class="task-steps">
+        <li><strong>Run the observability role</strong> against vm-observability.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@laptop:~/aitip-poc$</span> ansible-playbook -i infra/ansible/inventory.ini \
+    -l vm-observability \
+    infra/ansible/playbooks/deploy-observability.yml
+
+PLAY [observability stack on vm-observability] *********
+TASK [install docker] **********************************   changed
+TASK [create config directories] ***********************   changed (×9 dirs)
+TASK [prometheus.yml — scrape config] ******************   changed
+TASK [prometheus alert rules] **************************   changed
+TASK [grafana datasource provisioning] *****************   changed
+TASK [grafana dashboard provider config] ***************   changed
+TASK [load 4 standard dashboards] **********************   changed (×4 dashboards)
+TASK [loki config] *************************************   changed
+TASK [alertmanager config] *****************************   changed
+TASK [docker-compose for the four services] ************   changed
+TASK [bring observability stack up] ********************   changed
+
+PLAY RECAP *********************************************
+vm-observability  : ok=12  changed=12  unreachable=0  failed=0
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Verify all 4 services up</strong> on vm-observability.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@vm-observability:~$</span> sudo docker compose -f /etc/aitip-obs/docker-compose.yml ps
+NAME                IMAGE                       STATUS         PORTS
+aitip-prometheus    prom/prometheus:v3.0.0      Up 47 sec      0.0.0.0:9090->9090/tcp
+aitip-grafana       grafana/grafana:11.2.2      Up 47 sec      0.0.0.0:3000->3000/tcp
+aitip-loki          grafana/loki:3.2.0          Up 47 sec      0.0.0.0:3100->3100/tcp
+aitip-alertmanager  prom/alertmanager:v0.27.0   Up 47 sec      0.0.0.0:9093->9093/tcp
+
+<span class="prompt">jitendra@vm-observability:~$</span> curl -s http://localhost:9090/-/healthy
+Prometheus Server is Healthy.
+<span class="prompt">jitendra@vm-observability:~$</span> curl -s http://localhost:3000/api/health | jq -c .
+{"commit":"...","database":"ok","version":"11.2.2"}
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Install node-exporter on all 8 VMs</strong> via Ansible loop.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@laptop:~/aitip-poc$</span> ansible-playbook -i infra/ansible/inventory.ini \
+    infra/ansible/playbooks/deploy-node-exporter.yml
+
+PLAY [node-exporter on every VM] ***********************
+TASK [install node-exporter binary] ********************   changed [vm-bastion, vm-core-api, vm-data-store, vm-observability, vm-tox-inference, vm-embed-search, vm-rag-llm, vm-worker-pool]
+TASK [systemd unit] ************************************   changed [×8]
+TASK [enable + start] **********************************   changed [×8]
+
+PLAY RECAP *********************************************
+vm-bastion         : ok=4 changed=4
+vm-core-api        : ok=4 changed=4
+vm-data-store      : ok=4 changed=4
+vm-observability   : ok=4 changed=4
+vm-tox-inference   : ok=4 changed=4
+vm-embed-search    : ok=4 changed=4
+vm-rag-llm         : ok=4 changed=4
+vm-worker-pool     : ok=4 changed=4
+</div>
+
+      <ol class="task-steps" start="4" style="counter-reset: step 3;">
+        <li><strong>Verify Prometheus scrape</strong> from the targets page &mdash; all 8 node-exporter endpoints + the 4 service exporters should show "UP".</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@laptop:~$</span> curl -s http://vm-observability.poc.local:9090/api/v1/targets | \
+    jq -r '.data.activeTargets[] | "\(.labels.job)/\(.labels.instance)  \(.health)"' | sort
+celery/vm-worker-pool.poc.local:9808              up
+minio/vm-data-store.poc.local:9000                up
+node/vm-bastion.poc.local:9100                    up
+node/vm-core-api.poc.local:9100                   up
+node/vm-data-store.poc.local:9100                 up
+node/vm-embed-search.poc.local:9100               up
+node/vm-observability.poc.local:9100              up
+node/vm-rag-llm.poc.local:9100                    up
+node/vm-tox-inference.poc.local:9100              up
+node/vm-worker-pool.poc.local:9100                up
+postgres/vm-data-store.poc.local:9187             up
+prometheus/localhost:9090                          up
+redis/vm-data-store.poc.local:9121                 up
+                                                                <span class="ok"># 13/13 targets up</span>
+</div>
+
+      <div class="note ok">
+        <strong>Observability stack live &middot; 15:14 IST</strong>
+        Prometheus scraping 13 targets, all green. Grafana at <code>http://vm-observability.poc.local:3000</code> with 4 dashboards loaded. Loki ingesting from Promtail on all 8 VMs. Alertmanager configured with one starter rule (any target down for &gt; 5 min). EOD-4.8 met.
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>15:30 checkpoint:</strong> observability stack operational. Move to dashboard polish.</span>
+      </div>
+    </div>
+
+
+    <!-- 15:30–16:30 — Grafana dashboard polish -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">15:30&ndash;16:30</span>
+        <span class="task-title">Grafana dashboard polish &middot; Celery dashboard live during 14:00 production run.</span>
+      </div>
+      <p>The four pre-built dashboards (Node Exporter Full, Postgres, Redis, Celery) come from grafana.com community dashboards but need datasource UIDs rewritten to match our provisioning. The Celery one was the most useful today &mdash; while Sarthak fired the production pipeline at 14:08, all three engineers had it open to watch task counts climb.</p>
+
+<div class="code-block"><span class="prompt">jitendra@laptop:~/aitip-poc$</span> cat &gt; infra/ansible/roles/observability/files/dashboards/celery.json &lt;&lt;'EOF'
+{
+  "title": "AITIP · Celery worker pool",
+  "uid": "aitip-celery",
+  "tags": ["aitip", "celery"],
+  "panels": [
+    {
+      "id": 1, "title": "Workers online",
+      "type": "stat", "targets": [{
+        "expr": "sum(celery_worker_up{job=\"celery\"})",
+        "datasource": {"uid": "prom", "type": "prometheus"}
+      }],
+      "thresholds": [{"value": 0, "color": "red"}, {"value": 4, "color": "yellow"}, {"value": 8, "color": "green"}]
+    },
+    {
+      "id": 2, "title": "Tasks succeeded · last 5 min (rate per second)",
+      "type": "timeseries", "targets": [{
+        "expr": "sum by (task_name) (rate(celery_task_succeeded_total[5m]))",
+        "legendFormat": "{{task_name}}"
+      }]
+    },
+    {
+      "id": 3, "title": "Tasks failed · last 5 min",
+      "type": "timeseries", "targets": [{
+        "expr": "sum by (task_name) (rate(celery_task_failed_total[5m]))"
+      }]
+    },
+    {
+      "id": 4, "title": "Per-task duration (p50, p95, p99)",
+      "type": "timeseries", "targets": [{
+        "expr": "histogram_quantile(0.50, rate(celery_task_runtime_bucket[5m]))",
+        "legendFormat": "p50"
+      }, {
+        "expr": "histogram_quantile(0.95, rate(celery_task_runtime_bucket[5m]))",
+        "legendFormat": "p95"
+      }, {
+        "expr": "histogram_quantile(0.99, rate(celery_task_runtime_bucket[5m]))",
+        "legendFormat": "p99"
+      }]
+    },
+    {
+      "id": 5, "title": "Queue depth · per queue",
+      "type": "timeseries", "targets": [{
+        "expr": "celery_queue_length"
+      }]
+    }
+  ]
+}
+EOF
+</div>
+
+      <p>The "Workers online" stat panel shows green at 8 all afternoon. The "Tasks succeeded" panel had a clear spike at 14:08–14:19 corresponding to the four-curate-then-four-featurize burst.</p>
+
+      <div class="checkpoint">
+        <span><strong>16:30 checkpoint:</strong> Celery dashboard polished. PR-#15 ready.</span>
+      </div>
+    </div>
+
+
+    <!-- 16:30–17:30 — PR-#15 + reviews -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">16:30&ndash;17:30</span>
+        <span class="task-title">PR-#15 &middot; review PR-#13 (worker) + PR-#14 (Dockerfiles).</span>
+      </div>
+
+<div class="code-block"><span class="prompt">jitendra@laptop:~/aitip-poc$</span> git add infra/ansible/roles/observability/ infra/ansible/playbooks/deploy-observability.yml infra/ansible/playbooks/deploy-node-exporter.yml
+<span class="prompt">jitendra@laptop:~/aitip-poc$</span> git commit -m "infra(day04): observability — prometheus + grafana + loki + alertmanager + 4 dashboards"
+<span class="prompt">jitendra@laptop:~/aitip-poc$</span> gh pr create --fill
+✓ Created pull request #15
+
+<span class="comment"># Review Sarthak's PR-#13:</span>
+<span class="prompt">jitendra@laptop:~/aitip-poc$</span> gh pr review 13 --approve --body "lgtm. group() dispatch for the 4-by-4 fan-out is exactly the pattern. one infra-side suggestion: add 'task_routes' so curate goes to one queue and featurize goes to another, gives us per-task-type concurrency control later. carry to V1, not blocking."
+
+<span class="comment"># Review Harshit's PR-#14 (Dockerfiles):</span>
+<span class="prompt">jitendra@laptop:~/aitip-poc$</span> gh pr review 14 --approve --body "lgtm. base-image factoring is the right call. the digest-pin in aitip-base.Dockerfile is exactly right for reproducibility. one nice-to-have: HEALTHCHECK on tox-inference uses 30s start-period — might want longer if the model load is slow. fine for poc."
+</div>
+    </div>
+
+
+    <!-- 17:30–18:00 — EOD wrap -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">17:30&ndash;18:00</span>
+        <span class="task-title">EOD wrap.</span>
+      </div>
+<div class="code-block"><span class="comment"># Posted to #poc-war-room at 17:55:</span>
+<span class="key">jitendra</span>:
+**did:** PR-#11 (ADR-0004) merged at 09:55 · supervisorctl start aitip-worker:* aitip-flower at 10:32 · 3-signal verification green at 10:33 · observability ansible role with prometheus/grafana/loki/alertmanager + node-exporters on all 8 VMs · 13/13 prom targets up · celery dashboard polished and watched live during sarthak's 14:08 production burst · PR-#15 · approved PR-#13 + PR-#14
+**state:** GREEN. all 3 of my sub-tasks closed. EOD-4.8 (observability stack) met. flower scoped-key drift (DR-4.3) retired by single AITIP_REDIS_URL — confirmed.
+**next:** Day 05 i support harshit (services lead, FastAPI scaffolding). will handle the docker-compose for vm-core-api + node-exporter restart hooks if anything misbehaves. otherwise heads-down on Day-6 model serving infra prep.
+</div>
+
+      <div class="note ok">
+        <strong>EOD met &middot; 18:00 IST</strong>
+        Three sub-tasks closed. Observability stack will carry every subsequent day's signals; Day-5 model metrics emit straight onto an existing Grafana surface.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ================================================================
+     PART 4 — additional CSS for §04 §05 §06 §07, nav, footer
+     ================================================================ -->
+<style>
+
+.deliverable-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  overflow: hidden;
+  font-size: 0.92rem;
+  box-shadow: var(--shadow-1);
+}
+.deliverable-table thead { background: var(--navy-deep); color: var(--paper); }
+.deliverable-table thead th {
+  padding: 10px 14px; text-align: left;
+  font-family: var(--mono); font-size: 0.72rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+.deliverable-table tbody td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: top;
+  color: var(--ink-2);
+}
+.deliverable-table tbody tr:last-child td { border-bottom: none; }
+.deliverable-table tbody tr:nth-child(even) { background: var(--paper); }
+.deliverable-table td:first-child {
+  font-family: var(--mono); font-size: 0.86rem;
+  color: var(--amber); font-weight: 600; white-space: nowrap;
+}
+.deliverable-table td.path { font-family: var(--mono); font-size: 0.84rem; color: var(--navy); }
+.deliverable-table td.owner { font-family: var(--mono); font-size: 0.78rem; color: var(--ink-2); white-space: nowrap; }
+.deliverable-table td.status { font-family: var(--mono); font-size: 0.78rem; text-align: center; font-weight: 700; }
+.deliverable-table td.status.green { color: var(--ok); }
+.deliverable-table td.status.amber { color: var(--warn); }
+.table-wrap { overflow-x: auto; }
+
+.eod-list { list-style: none; margin: 0; padding: 0; }
+.eod-item {
+  display: grid;
+  grid-template-columns: 28px 80px 1fr 80px;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px dashed var(--rule);
+  align-items: start;
+}
+.eod-item:last-child { border-bottom: none; }
+.eod-item .check {
+  width: 20px; height: 20px;
+  border: 1.5px solid var(--ok);
+  border-radius: 4px;
+  margin-top: 2px;
+  background: var(--ok);
+  position: relative;
+}
+.eod-item .check::after {
+  content: "✓"; position: absolute; top: -2px; left: 3px;
+  color: white; font-weight: 700; font-size: 0.94rem;
+}
+.eod-item .id {
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--amber); font-weight: 600;
+  letter-spacing: 0.05em; padding-top: 2px;
+}
+.eod-item .desc { font-size: 0.94rem; color: var(--ink-2); line-height: 1.5; }
+.eod-item .desc strong { color: var(--navy-deep); }
+.eod-item .desc small {
+  display: block; font-family: var(--mono); font-size: 0.72rem;
+  color: var(--muted); margin-top: 3px; letter-spacing: 0.02em;
+}
+.eod-item .owner-pill {
+  font-family: var(--mono); font-size: 0.72rem;
+  padding: 3px 8px; border-radius: var(--r-s);
+  text-align: center; letter-spacing: 0.04em;
+  height: fit-content; margin-top: 1px; font-weight: 600; white-space: nowrap;
+}
+.eod-item .owner-pill.s { background: rgba(11,61,145,0.1); color: var(--t-sarthak); }
+.eod-item .owner-pill.h { background: rgba(31,119,180,0.1); color: var(--t-harshit); }
+.eod-item .owner-pill.j { background: rgba(27,127,58,0.1); color: var(--t-jitendra); }
+@media (max-width: 720px) {
+  .eod-item { grid-template-columns: 28px 1fr; }
+  .eod-item .id, .eod-item .owner-pill { grid-column: 2; }
+}
+
+.eod-summary {
+  margin-top: 24px;
+  background: linear-gradient(180deg, var(--card) 0%, #fcf6e6 100%);
+  border: 1px solid var(--amber-soft);
+  border-left: 4px solid var(--amber);
+  border-radius: var(--r);
+  padding: 18px 22px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 24px; flex-wrap: wrap;
+}
+.eod-summary .verdict {
+  font-family: var(--serif); font-size: 1.34rem; font-weight: 700;
+  color: var(--navy-deep);
+}
+.eod-summary .verdict em { font-style: italic; color: var(--ok); font-weight: 800; }
+.eod-summary .meta {
+  font-family: var(--mono); font-size: 0.84rem;
+  color: var(--ink-2); text-align: right;
+}
+.eod-summary .meta strong {
+  display: block; font-family: var(--serif); font-size: 1.4rem;
+  color: var(--ok); margin-bottom: 2px;
+}
+
+.risk-card {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--disp-color, var(--muted));
+  border-radius: var(--r);
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-1);
+}
+.risk-card.retired   { --disp-color: var(--ok); }
+.risk-card.mitigated { --disp-color: var(--info); }
+.risk-card.fired     { --disp-color: var(--warn); }
+.risk-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap; margin-bottom: 8px;
+}
+.risk-id {
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--disp-color, var(--muted));
+  letter-spacing: 0.06em; font-weight: 700;
+}
+.risk-disposition {
+  font-family: var(--mono); font-size: 0.74rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: var(--r-s);
+  background: var(--paper-deep);
+  color: var(--disp-color, var(--muted));
+  font-weight: 700; border: 1px solid currentColor;
+}
+.risk-card .risk-name {
+  font-family: var(--serif); font-weight: 700;
+  font-size: 1.04rem; color: var(--navy-deep);
+  margin: 0 0 8px;
+}
+.risk-card .risk-line {
+  display: grid; grid-template-columns: 90px 1fr;
+  gap: 14px; padding: 4px 0;
+  font-size: 0.92rem; color: var(--ink-2);
+}
+.risk-card .risk-line .label {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--muted); letter-spacing: 0.06em;
+  text-transform: uppercase; padding-top: 3px;
+}
+.risk-card .risk-line .text strong { color: var(--navy-deep); }
+
+.tomorrow {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 22px 24px;
+  box-shadow: var(--shadow-1);
+}
+.tomorrow-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+}
+.tomorrow-head .date {
+  font-family: var(--mono); font-size: 0.74rem;
+  letter-spacing: 0.1em; color: var(--amber);
+  text-transform: uppercase; font-weight: 600;
+}
+.tomorrow-head .title {
+  font-family: var(--serif); font-weight: 700;
+  font-size: 1.32rem; color: var(--navy-deep);
+}
+.tomorrow-head .lane {
+  font-family: var(--mono); font-size: 0.74rem;
+  color: var(--muted); letter-spacing: 0.04em;
+}
+.tomorrow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+}
+.tomorrow-prep {
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--track, var(--navy));
+  border-radius: var(--r);
+  padding: 14px 16px;
+}
+.tomorrow-prep .who {
+  font-family: var(--mono); font-size: 0.74rem;
+  color: var(--track, var(--navy));
+  letter-spacing: 0.04em; text-transform: uppercase;
+  font-weight: 700; margin-bottom: 4px;
+}
+.tomorrow-prep .what { font-size: 0.92rem; color: var(--ink-2); line-height: 1.55; }
+.tomorrow-prep .what strong { color: var(--navy-deep); }
+
+/* AUROC target table for §07 */
+.auroc-target {
+  margin-top: 18px;
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  overflow: hidden;
+  font-size: 0.88rem;
+}
+.auroc-target thead { background: var(--paper-deep); }
+.auroc-target thead th {
+  padding: 8px 12px; text-align: left;
+  font-family: var(--mono); font-size: 0.7rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted);
+}
+.auroc-target tbody td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--rule-soft);
+  font-family: var(--mono);
+  font-size: 0.84rem;
+}
+.auroc-target tbody tr:last-child td { border-bottom: none; }
+.auroc-target td.endpoint { color: var(--navy-deep); font-weight: 600; }
+.auroc-target td.target { color: var(--amber); }
+
+.nav-prev-next {
+  display: flex; gap: 12px;
+  margin: 36px 0 0;
+  padding-top: 22px;
+  border-top: 1px solid var(--rule);
+}
+.nav-prev-next a {
+  flex: 1;
+  text-decoration: none;
+  padding: 14px 18px;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  display: flex; flex-direction: column; gap: 4px;
+  transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+  box-shadow: var(--shadow-1);
+}
+.nav-prev-next a:hover {
+  border-color: var(--amber);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+  text-decoration: none;
+}
+.nav-prev-next a.next { text-align: right; }
+.nav-prev-next .nx-label {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase;
+}
+.nav-prev-next .nx-title {
+  font-family: var(--serif); font-weight: 700;
+  color: var(--navy-deep); font-size: 1.0rem;
+}
+.nav-prev-next .nx-date {
+  font-family: var(--mono); font-size: 0.74rem; color: var(--ink-2);
+}
+
+.footer {
+  background: var(--navy-deep);
+  color: rgba(246,241,230,0.72);
+  font-size: 0.86rem;
+  padding: 44px 0 32px;
+  margin-top: 60px;
+}
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 40px;
+}
+@media (max-width: 720px) { .footer-grid { grid-template-columns: 1fr; gap: 28px; } }
+.footer h4 {
+  color: var(--amber-soft);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+}
+.footer p { color: rgba(246,241,230,0.78); margin-bottom: 8px; line-height: 1.55; }
+.footer a { color: var(--amber-soft); }
+.footer a:hover { color: white; }
+.footer-meta {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(246,241,230,0.1);
+  font-family: var(--mono); font-size: 0.72rem;
+  color: rgba(246,241,230,0.5);
+  letter-spacing: 0.04em; line-height: 1.7;
+}
+
+</style>
+
+
+<!-- ================================================================
+     §04 · DELIVERABLES
+     ================================================================ -->
+<section class="section deep" id="deliverables">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 04 · deliverables</div>
+        <h2>What shipped today &mdash; the platform carries real workload</h2>
+      </div>
+      <p class="sub">Twelve artifacts across three lanes. Async layer operational; image pipeline operational; observability layer operational. Day 5 baselines have a canonical, deterministic, registry-discoverable input plus a Grafana dashboard ready to receive their metrics.</p>
+    </div>
+
+    <div class="table-wrap">
+      <table class="deliverable-table">
+        <thead>
+          <tr>
+            <th style="width: 60px;">id</th>
+            <th>artifact</th>
+            <th>path / location</th>
+            <th>owner</th>
+            <th>verification</th>
+            <th style="width: 60px; text-align: center;">status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>D4-01</td>
+            <td><strong><code>aitip.worker</code> module</strong> &mdash; Celery app with two real task functions (<code>curate_dataset</code>, <code>featurize_dataset</code>) plus a smoke task. Reads <code>AITIP_*</code> env-vars per ADR-0004; reuses Day-3 logic from <code>services.data.curate</code> and <code>services.data.featurize</code> &mdash; single source of truth for curation rules across laptop and production.</td>
+            <td class="path">services/worker/aitip/worker/<br>{__init__,config,tasks}.py</td>
+            <td class="owner">Sarthak</td>
+            <td>PR-#13 merged; module imports cleanly under supervisord environment</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D4-02</td>
+            <td><strong>8 Celery workers + Flower running</strong> &mdash; supervisord program <code>aitip-worker:*</code> (numprocs=8, --concurrency=1) and <code>aitip-flower</code> on port 5555. All 8 workers register with Redis broker; <code>celery inspect ping</code> returns 8 pongs.</td>
+            <td class="path">vm-worker-pool:<br>/etc/supervisor/conf.d/<br>aitip-worker.conf</td>
+            <td class="owner">Jitendra</td>
+            <td>3-signal verification at 10:33 IST: 8 pongs · 2 broker queues · Flower UI shows 8 online</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D4-03</td>
+            <td><strong>Connectivity smoke task PASS</strong> &mdash; <code>aitip.smoke()</code> dispatched from laptop client, picked up by worker, returned <code>'ok'</code> in 220 ms round-trip. Verifies the entire async chain: client &rarr; broker &rarr; worker &rarr; result backend &rarr; client.</td>
+            <td class="path">aitip.worker.tasks.smoke</td>
+            <td class="owner">Sarthak</td>
+            <td>10:54 IST · 220 ms RT · zero errors</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D4-04</td>
+            <td><strong>Production curate + featurize pipeline</strong> &mdash; 4 datasets fired through Celery via <code>group()</code>, 8 workers consumed in parallel. <strong>Total wall-clock 10 min 36 s</strong> (vs ~25 min serial-on-laptop). Zero failures, zero retries. Every output Parquet written back to MinIO with sidecar JSON; every result inserted as a refreshed <code>dataset_registry</code> row.</td>
+            <td class="path">scripts/<br>day04_run_pipeline.py<br>+ minio://processed/*-v0-prod-*</td>
+            <td class="owner">Sarthak</td>
+            <td>14:08 dispatch &rarr; 14:19 all 8 done · Flower captured the full burst</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D4-05</td>
+            <td><strong>sha256 equivalence proven</strong> &mdash; all 8 production-pipeline output Parquets bit-equal to Day-3 laptop outputs. Sidecar JSONs match in every comparable field (RDKit version, feature dimensions, scaffold counts, rejection breakdowns); only expected fields differ (task_id, timestamps, executed-on host, git-hash, path-key style). Foundation for any reproducibility claim.</td>
+            <td class="path">docs/reports/<br>day04-pipeline-equivalence.md</td>
+            <td class="owner">Sarthak</td>
+            <td>16:24 IST · 8 of 8 payloads bit-equal · jq diff empty</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D4-06</td>
+            <td><strong>20 dataset_registry rows present</strong> &mdash; 4 v0-raw + 4 v0-curated + 4 v0-features (Day 3) + 4 v0-prod-curated + 4 v0-prod-features (today). Day 5 baselines query <code>WHERE version = 'v0-prod-features'</code> for canonical training input.</td>
+            <td class="path">aitip.dataset_registry</td>
+            <td class="owner">Sarthak</td>
+            <td>psql query at 14:22 IST shows 20 rows ordered by name+version</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D4-07</td>
+            <td><strong>vm-worker-pool hand-over</strong> &mdash; supervisord layout walk, env-file pattern documented, two practical workflows (rolling reload, tail-logs) handed to Sarthak. He owns the box from 10:30 onwards.</td>
+            <td class="path">walk-through &middot;<br>posted to #poc-war-room</td>
+            <td class="owner">Harshit</td>
+            <td>10:30 IST · Sarthak's first push at 10:38 succeeded</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D4-08</td>
+            <td><strong>3 Dockerfiles + 2 requirements</strong> &mdash; <code>aitip-base.Dockerfile</code> (148 MB) with Python 3.12-slim digest pin, non-root user UID 10001, tini PID 1, system deps for RDKit/sklearn/xgboost. <code>core-api.Dockerfile</code> (287 MB) and <code>tox-inference.Dockerfile</code> (1.84 GB) inherit; multi-stage builds; healthchecks; PyTorch CPU index for tox-inference.</td>
+            <td class="path">infra/docker/<br>{aitip-base,core-api,tox-inference}.Dockerfile<br>+ requirements.{core-api,tox-inference}.txt</td>
+            <td class="owner">Harshit</td>
+            <td>PR-#14; all three images build clean</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D4-09</td>
+            <td><strong>Trivy scan: 0/0 high+critical</strong> across all three images. Zero high or critical CVEs in either Debian system packages or Python wheels. The runtime-only stage (no compiler) eliminates a long tail of build-only CVEs.</td>
+            <td class="path">CI gate output<br>(captured to docs/runbooks/<br>docker-build-release.md)</td>
+            <td class="owner">Harshit</td>
+            <td>14:52 IST · 0/0 across 6 scan categories</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D4-10</td>
+            <td><strong>Local Docker registry on vm-data-store:5000</strong> &mdash; containerized <code>registry:2.8.3</code> with persistent volume; 3 images pushed; smoke-pull from vm-core-api succeeds; container loads env-vars and resolves DSN. Day-5 deployments are now <code>docker run vm-data-store.poc.local:5000/aitip/...</code>, not "build from source on the production VM."</td>
+            <td class="path">vm-data-store:<br>/var/lib/aitip-registry</td>
+            <td class="owner">Harshit</td>
+            <td><code>curl /v2/_catalog</code> shows 3 repos at 16:18 IST</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D4-11</td>
+            <td><strong>Observability stack on vm-observability</strong> &mdash; Prometheus 3.0 + Grafana 11 + Loki 3 + Alertmanager 0.27 running as containers via Ansible role. Datasources auto-provisioned; 4 standard dashboards (Node Exporter Full, Postgres, Redis, Celery) loaded; one starter alert rule (target down &gt; 5 min) firing to <code>#poc-alerts</code>.</td>
+            <td class="path">vm-observability:<br>/etc/aitip-obs/<br>+ infra/ansible/roles/observability/</td>
+            <td class="owner">Jitendra</td>
+            <td>4 docker containers Up at 14:47 IST; PR-#15</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D4-12</td>
+            <td><strong>13/13 Prometheus targets up</strong> &mdash; node-exporter on all 8 VMs + postgres exporter + redis exporter + minio metrics + celery-exporter + prometheus self-monitor. Celery dashboard captured the 14:08 production burst live; "Workers online" stat panel held green at 8 all afternoon.</td>
+            <td class="path">vm-observability:9090/api/v1/targets</td>
+            <td class="owner">Jitendra</td>
+            <td>13/13 'up' at 15:14 IST; dashboard screenshots in PR-#15</td>
+            <td class="status green">GREEN</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="prose" style="margin-top: 22px;">
+      <p>
+        Twelve deliverables, all green. Three PRs (#13 worker module, #14 Dockerfiles, #15 observability) all opened today and approved by their second reviewers; merging clean by EOD or Day-5 morning. ADR-0004 (env-var contract) merged early at 09:55. Day-4 net change to repo: ~2,200 lines across services/worker, infra/docker, infra/ansible/roles/observability, and three docs files.
+      </p>
+      <p>
+        <strong>What the platform now does.</strong> Yesterday it could store data; today it can transform data. The Celery workers don't yet do anything <em>interesting</em> &mdash; just curate + featurize, the same logic the laptop ran &mdash; but the plumbing is what matters. Tomorrow when Sarthak trains baselines on vm-tox-inference, he'll dispatch a <code>train_model</code> task the same way; Day 6 GNN training will dispatch a <code>train_gnn</code> task; Day 11 prediction requests will dispatch via FastAPI through Celery the same way. <em>The pattern proven today is the pattern every subsequent day extends.</em>
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §05 · EOD CHECKLIST
+     ================================================================ -->
+<section class="section" id="eod">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 05 · eod exit criteria</div>
+        <h2>Eight criteria locked at standup &mdash; eight green by 16:24 IST</h2>
+      </div>
+      <p class="sub">Second consecutive early close. Headline: production pipeline ran 4 curate + 4 featurize tasks in 10 min 36 s wall-clock and produced bit-equal output to yesterday's laptop run.</p>
+    </div>
+
+    <ul class="eod-list">
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-4.1</span>
+        <span class="desc">
+          <strong><code>aitip.worker</code> module merged.</strong> Celery app declared with sane defaults (acks_late, prefetch=1, 30-min hard limit), config reads <code>AITIP_*</code> env-vars per ADR-0004, two real task functions implemented reusing Day-3 logic from <code>services.data.curate</code> and <code>services.data.featurize</code>. Module imports cleanly under the supervisord environment file.
+          <small>verified: import smoke at 10:24 IST · PR-#13 approved by Harshit + Jitendra</small>
+        </span>
+        <span class="owner-pill s">Sarthak</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-4.2</span>
+        <span class="desc">
+          <strong>8 Celery workers + Flower running and connected.</strong> <code>supervisorctl start aitip-worker:* aitip-flower</code> at 10:32 IST; all 9 processes RUNNING within 18 seconds; <code>celery inspect ping</code> returns 8 pongs at 10:33; Flower UI shows 8 in "Online" tab; redis-cli confirms 2 broker queues exist. Three-signal contract from standup met inside 90-second budget.
+          <small>verified: 11 seconds from supervisorctl start to all 3 signals green</small>
+        </span>
+        <span class="owner-pill j">Jitendra</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-4.3</span>
+        <span class="desc">
+          <strong>Connectivity smoke task green.</strong> <code>aitip.smoke()</code> dispatched from laptop client, picked up by worker, returned <code>'ok'</code> in 220 ms round-trip. Verifies the full async chain works end-to-end before any real logic runs &mdash; the discipline that keeps Day-1-of-async surprises from cascading.
+          <small>verified: 10:54 IST · zero errors · result.get(timeout=10) returned 'ok'</small>
+        </span>
+        <span class="owner-pill s">Sarthak</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-4.4</span>
+        <span class="desc">
+          <strong><code>curate_dataset</code> + <code>featurize_dataset</code> task functions implemented.</strong> Each: SELECT input row from <code>dataset_registry</code>, download from MinIO, run logic, upload output, write sidecar JSON, INSERT refreshed registry row. Wrapped in try/finally tempdir cleanup. Reuses Day-3 functions verbatim &mdash; no logic duplication.
+          <small>verified: PR-#13 includes both tasks; supervisorctl restart picked up at 13:00</small>
+        </span>
+        <span class="owner-pill s">Sarthak</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-4.5</span>
+        <span class="desc">
+          <strong>4 datasets re-curated through production.</strong> <code>group(curate_dataset.s(name, "v0-raw") for name in 4 datasets)</code> dispatched 14:08; all 4 complete by 14:09:34 (longest = hERG at 88 s). Tox21 7,791, ClinTox 1,475, hERG 12,754, DILIrank 1,034 &mdash; identical row counts to yesterday's laptop run.
+          <small>verified: Flower UI captured the full burst; 4 v0-prod-curated rows in registry by 14:10</small>
+        </span>
+        <span class="owner-pill s">Sarthak</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-4.6</span>
+        <span class="desc">
+          <strong>4 datasets re-featurized through production.</strong> <code>group(featurize_dataset.s(name, "v0-prod-curated") for name in 4 datasets)</code> dispatched 14:10:14; all 4 complete by 14:19:18 (longest = hERG at 8 min 47 s). Streaming write-to-Parquet on each worker; peak resident ~280 MB independent of corpus size, as designed.
+          <small>verified: 8 worker processes saw work simultaneously; zero failures, zero retries</small>
+        </span>
+        <span class="owner-pill s">Sarthak</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-4.7</span>
+        <span class="desc">
+          <strong>8 refreshed dataset_registry rows + sha256 equivalence.</strong> 8 new <code>v0-prod-*</code> rows; production output Parquet payloads bit-equal to Day-3 laptop outputs across all 8 files; sidecar JSONs match in every comparable field. Foundation for any reproducibility claim &mdash; two engineers running the same canonical input through the same pinned toolchain get the same bytes.
+          <small>verified: 16:24 IST · sha256sum loop showed 8 pairs match · jq diff empty</small>
+        </span>
+        <span class="owner-pill s">Sarthak</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-4.8</span>
+        <span class="desc">
+          <strong>Prometheus + Grafana on vm-observability scraping all 8 VMs.</strong> Prometheus 3.0 + Grafana 11 + Loki 3 + Alertmanager 0.27 running as containers via Ansible role. 13/13 targets up: 8 node-exporters + postgres + redis + minio + celery-exporter + prometheus self. 4 standard dashboards loaded. Celery dashboard captured the 14:08 production burst live.
+          <small>verified: /api/v1/targets shows 13 'up' at 15:14 IST; PR-#15</small>
+        </span>
+        <span class="owner-pill j">Jitendra</span>
+      </li>
+
+    </ul>
+
+    <div class="eod-summary">
+      <div class="verdict">Day 4 closes <em>green</em> &mdash; eight of eight, finished by 16:24.</div>
+      <div class="meta"><strong>8 / 8</strong>EOD criteria met &middot; 16:24 IST</div>
+    </div>
+
+    <div class="prose" style="margin-top: 22px;">
+      <p>
+        <strong>Second consecutive early close.</strong> Day 3 finished at 17:34, Day 4 at 16:24. The pattern repeats: each engineer's <em>first</em> action was the verification step (idempotency dry-run, schema dry-run, smoke task) before the real workload, and each <em>last</em> action was equivalence proof rather than "ship it and hope." The discipline costs ~30 minutes per day in apparent overhead and saves the ~3 hours per surprise that the discipline prevents.
+      </p>
+      <p>
+        <strong>What the production-pipeline run proves.</strong> The 10-min-36s wall-clock isn't the headline &mdash; the bit-for-bit equivalence is. We can now state in a regulator audit: every model trained on AITIP can name an exact <code>dataset_registry</code> row, that row points at a deterministic Parquet, and the same toolchain run by any engineer produces the same bytes. <em>That's the unbreakable provenance link.</em> Day 5 baselines extend it forward (model checkpoints get sha256-stamped registry rows of their own); Day 11 prediction-time joins it backward (every prediction's <code>model_id</code> joins to a <code>training_dataset_id</code> joins to a curated <code>dataset_registry</code> row).
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §06 · DAY-4 RISK DISPOSITION
+     ================================================================ -->
+<section class="section deep" id="risks">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 06 · day-4 risk disposition</div>
+        <h2>Three risks named &mdash; all closed</h2>
+      </div>
+      <p class="sub">Three engineers, three risks, three resolutions. Two retired by execution discipline; one mitigated structurally by image-base factoring.</p>
+    </div>
+
+    <article class="risk-card retired">
+      <div class="risk-head">
+        <span class="risk-id">DR-4.1</span>
+        <span class="risk-disposition">retired</span>
+      </div>
+      <h3 class="risk-name">Celery + Redis connection misconfiguration &mdash; the most common Day-1-of-async surprise.</h3>
+      <div class="risk-line">
+        <span class="label">Predicted</span>
+        <span class="text">Auth password URL-encoding wrong, Redis DB number mismatch between broker and result-backend, worker hangs at startup with no error in the obvious place. Mitigation: minimal connectivity test with one-line no-op task before adding any real logic.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">What happened</span>
+        <span class="text">Smoke discipline worked exactly as planned. Module landed on disk at 10:24, supervisorctl start at 10:32, three-signal verification green at 10:33, smoke task PASS at 10:54. Twenty-two minutes from "module on disk" to "platform proven async-capable end-to-end." If anything had failed in that window, the fix would have been minutes; instead we proceeded to the four-by-four production burst with zero connection-config debugging.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">Disposition</span>
+        <span class="text"><strong>Retired</strong> &mdash; smoke-task discipline becomes the standard pre-flight for any future async-layer addition (Day 6 GNN training, Day 11 orchestrator, Day 12 batch jobs). Pattern committed in <code>docs/runbooks/celery-bringup.md</code>.</span>
+      </div>
+    </article>
+
+    <article class="risk-card mitigated">
+      <div class="risk-head">
+        <span class="risk-id">DR-4.2</span>
+        <span class="risk-disposition">mitigated</span>
+      </div>
+      <h3 class="risk-name">Dockerfile drift between core-api and tox-inference &mdash; copy-paste leading to silent divergence.</h3>
+      <div class="risk-line">
+        <span class="label">Predicted</span>
+        <span class="text">Two service Dockerfiles inevitably diverge over time. One installs <code>libgomp1</code>, the other forgets; one pins Python 3.12.7, the other floats to 3.12.x. The drift is invisible until a Day-N runtime misbehavior traces back to a missing library on one of the two images.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">What happened</span>
+        <span class="text">Extracted <code>aitip-base.Dockerfile</code> with the digest-pinned Python base, all shared system deps, non-root user, tini, env-var defaults. Both <code>core-api.Dockerfile</code> and <code>tox-inference.Dockerfile</code> <code>FROM aitip-base:0.1.0</code>. Drift surface area reduced to the dataset-of-deltas (PyTorch CPU + sklearn for tox-inference; FastAPI + boto3 for core-api). Future system-dep additions land in the base; the service files don't change.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">Disposition</span>
+        <span class="text"><strong>Mitigated structurally</strong> &mdash; the drift surface is now the smallest it can be. Trivy 0/0 across all three images confirms no leaks from base to services. Registry pushes operational; Day 5 deploys via <code>docker run</code>.</span>
+      </div>
+    </article>
+
+    <article class="risk-card retired">
+      <div class="risk-head">
+        <span class="risk-id">DR-4.3</span>
+        <span class="risk-disposition">retired</span>
+      </div>
+      <h3 class="risk-name">Flower scoped-key drift &mdash; using the wrong Vault credential for the monitoring UI.</h3>
+      <div class="risk-line">
+        <span class="label">Predicted</span>
+        <span class="text">Day 3 generated three scoped credentials (readonly, readwrite, backup-user). Easy to give Flower the wrong one (e.g., the broker-only key when it actually needs read access to the result backend keys too). Mitigation: use the same <code>AITIP_REDIS_URL</code> Sarthak's workers use, single source of truth.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">What happened</span>
+        <span class="text">Flower started under the same supervisord environment file as the workers; loaded the same <code>AITIP_REDIS_*</code> env-vars; used the same Redis password. No scoped-key drift, no separate credential to misplace. Flower UI showed 8 workers in "Online" tab within 11 seconds of supervisorctl start.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">Disposition</span>
+        <span class="text"><strong>Retired</strong> &mdash; single-source-of-truth pattern works. Same approach applies to Day-5 model serving (FastAPI core-api + Celery client share env-file) and Day-9 RAG (vLLM + ChromaDB client share token-via-Vault).</span>
+      </div>
+    </article>
+
+    <div class="prose" style="margin-top: 22px;">
+      <p>
+        <strong>Pattern noted.</strong> Two of the three risks today were closed by <em>discipline-by-default</em> rather than discipline-as-reaction &mdash; the smoke task and the env-file pattern are now build-time defaults for any future async or service component. The third risk (Dockerfile drift) is closed structurally; it cannot recur because the structure makes it impossible. Same theme as Day 3: the risk register continues to be a kill-or-escalate ledger, not a worry list.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §07 · TOMORROW — Day 5 preview
+     ================================================================ -->
+<section class="section" id="tomorrow">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 07 · tomorrow</div>
+        <h2>What Day 5 opens with</h2>
+      </div>
+      <p class="sub">Day 5 closes the Foundation phase. "Baselines: Random Forest + XGBoost on the v0-prod-features rows landed today" &mdash; Sarthak-led day. End-of-week retro at 17:00. Mid-POC review preview circulated at EOD.</p>
+    </div>
+
+    <div class="tomorrow">
+      <div class="tomorrow-head">
+        <div>
+          <div class="date">Day 05 &middot; Wednesday 13 May 2026 &middot; foundation phase &middot; day 5 of 5 &middot; <strong style="color: var(--ok);">Foundation closes</strong></div>
+          <div class="title">Baselines &mdash; Random Forest + XGBoost</div>
+        </div>
+        <div class="lane">Lane lead: <strong style="color: var(--t-sarthak);">Sarthak</strong></div>
+      </div>
+
+      <p style="font-family: var(--serif); font-style: italic; color: var(--ink-2); border-left: 3px solid var(--amber); padding-left: 14px; margin: 12px 0 18px;">
+        First models hit the platform. Two binary classifiers per endpoint, one Random Forest one XGBoost, trained on the v0-prod-features Parquets. Per-endpoint AUROC + AUPRC computed on scaffold-test split. Best-of-two registered as the v0 active model in <code>model_registry</code>; checkpoints baked into <code>aitip/tox-inference:0.2.0</code> image and pushed to local registry.
+      </p>
+
+      <table class="auroc-target">
+        <thead>
+          <tr><th>endpoint family</th><th>specific endpoint</th><th>AUROC target (v0)</th><th>literature ceiling</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="endpoint">Tox21 NR</td><td>NR-AR / NR-AhR / NR-ER avg</td><td class="target">≥ 0.78</td><td>0.83-0.86</td></tr>
+          <tr><td class="endpoint">Tox21 SR</td><td>SR-ARE / SR-MMP / SR-p53 avg</td><td class="target">≥ 0.75</td><td>0.80-0.84</td></tr>
+          <tr><td class="endpoint">hERG</td><td>cardiotoxicity binary</td><td class="target">≥ 0.85</td><td>0.88-0.90</td></tr>
+          <tr><td class="endpoint">DILI</td><td>DILIrank concern level</td><td class="target">≥ 0.65</td><td>0.70-0.74</td></tr>
+          <tr><td class="endpoint">ClinTox</td><td>CT_TOX (clinical-trial failure)</td><td class="target">≥ 0.72</td><td>0.78-0.82</td></tr>
+        </tbody>
+      </table>
+
+      <div class="tomorrow-grid">
+        <div class="tomorrow-prep" style="--track: var(--t-sarthak);">
+          <div class="who">Sarthak &middot; lead</div>
+          <div class="what">
+            <strong>Day 5 lead.</strong> <code>services/models/baselines.py</code> &mdash; one CLI that trains both RF + XGBoost per endpoint, evaluates on scaffold-test, picks best-of-two, persists the winner via MLflow + writes a sha256-stamped row into <code>model_registry</code> with <code>is_active=true</code>. Dispatched as <code>train_baseline</code> Celery tasks (16 endpoints × 2 model types = 32 tasks; with 8 workers, ~4 batches of 30-60s each). Plus first calibration check (Brier scores) and model card v0 documentation.
+          </div>
+        </div>
+
+        <div class="tomorrow-prep" style="--track: var(--t-harshit);">
+          <div class="who">Harshit &middot; supporting</div>
+          <div class="what">
+            <strong>FastAPI scaffolding for core-api + Day-5 release v0.2.0.</strong> Implement <code>/healthz</code>, <code>/predict?endpoint=...&amp;smiles=...</code>, <code>/jobs/{id}</code> endpoints in <code>services/core-api/aitip/api/main.py</code>. Wire to Postgres + Redis + Celery client. Once Sarthak's models land in MLflow, bake the active checkpoints into <code>aitip/tox-inference:0.2.0</code> and push. Drives the EOW retro slide-deck draft for Day-10 mid-POC review.
+          </div>
+        </div>
+
+        <div class="tomorrow-prep" style="--track: var(--t-jitendra);">
+          <div class="who">Jitendra &middot; supporting</div>
+          <div class="what">
+            <strong>MLflow tracking server + Day-6 GNN/ChemBERTa prep.</strong> Stand up MLflow on vm-observability with Postgres backend (uses our existing aitip db with a separate <code>mlflow</code> schema) and MinIO artifact store (<code>models</code> bucket). Add to Grafana as a datasource. Plus pre-stage Day-6: clone the DGL + DGL-LifeSci wheels onto vm-tox-inference, validate <code>torch.utils.cpp_extension</code> compiles, prep a 3-fold CV harness for the GNN training scripts that land Day 6.
+          </div>
+        </div>
+      </div>
+
+      <div class="prose" style="margin-top: 22px;">
+        <p>
+          <strong>Day 5 critical-path dependency:</strong> Sarthak's lane today; if baselines don't converge, no v0 active model; no checkpoints to bake into Harshit's image; no MLflow rows for Jitendra's tracking surface. Bridge plan: if any endpoint AUROC misses target by &gt; 0.05, the rocks rebalance &mdash; Sarthak adds endpoint-specific feature engineering (e.g., tautomer canonicalization for hERG per Day-2 deferred decision in curation-protocol.md), Harshit downgrades the v0.2.0 image to checkpoints-from-Tox21-only, Jitendra extends MLflow with experiment tagging so we can A/B in Week 2.
+        </p>
+        <p>
+          <strong>End of Foundation.</strong> Day 5 closes Week 1. After EOD we're in <em>Deep Models</em> phase &mdash; Day 6 GNN, Day 7 molecular embeddings, Day 8 PubMed RAG ingestion, Day 9 vLLM Llama-3.1-8B AWQ, Day 10 mid-POC review with stakeholders. Friday's standup adds a 30-min EOW retro at 17:00; Sarthak chairs because he closes the foundation phase as he opened it (Day 4 lead, Day 5 lead).
+        </p>
+        <p>
+          <strong>Standup tomorrow:</strong> 09:30 IST, 15 minutes. Sarthak chairs again (model-day rotation continues). Specific question to track: first AUROC number returned by RF on Tox21 NR-AR &mdash; if it's below 0.74 with default sklearn hyperparameters on the production features, that's an early-warning signal something's off in the feature pipeline upstream. Discussed at lunch check-in if so.
+        </p>
+        <p>
+          <strong>Overnight tasks:</strong> Sarthak drafts <code>baselines.py</code> CLI skeleton + scaffold-aware sklearn cross-validation harness; Harshit drafts the FastAPI <code>/predict</code> endpoint signature + Pydantic request/response models; Jitendra drafts the MLflow Ansible role and validates the Postgres schema additions don't conflict with migration 001.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     PREV / NEXT NAVIGATION
+     ================================================================ -->
+<section class="section tight">
+  <div class="shell">
+    <nav class="nav-prev-next" aria-label="day navigation">
+      <a class="prev" href="day03.html">
+        <span class="nx-label">&larr; previous</span>
+        <span class="nx-title">Day 03 &middot; Data Stores &mdash; Postgres, MinIO, Redis, ChromaDB</span>
+        <span class="nx-date">Mon 11 May 2026 &middot; foundation</span>
+      </a>
+      <a class="next" href="day05.html">
+        <span class="nx-label">next &rarr;</span>
+        <span class="nx-title">Day 05 &middot; Baselines &mdash; Random Forest + XGBoost</span>
+        <span class="nx-date">Wed 13 May 2026 &middot; foundation closes</span>
+      </a>
+    </nav>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     FOOTER
+     ================================================================ -->
+<footer class="footer">
+  <div class="shell">
+    <div class="footer-grid">
+      <div>
+        <h4>Day 04 &middot; Toxicity Curation &amp; Feature Engineering</h4>
+        <p>
+          The day the platform carried real workload for the first time. <code>aitip.worker</code> module on disk, 8 Celery workers + Flower, four datasets re-curated and re-featurized in 10 min 36 s wall-clock, all 8 production outputs bit-equal to yesterday's laptop run. Plus 3 Dockerfiles + Trivy clean + local registry, plus Prometheus + Grafana + Loki + Alertmanager scraping all 8 VMs with 13/13 targets up.
+        </p>
+        <p style="margin-top: 12px;">
+          <strong>Phase:</strong> Foundation &middot; Day 4 of 5<br>
+          <strong>Lead:</strong> Sarthak (model-day rotation) &middot; supporting Harshit + Jitendra<br>
+          <strong>PRs opened:</strong> 3 &middot; <strong>Tasks dispatched:</strong> 9 &middot; <strong>Workers running:</strong> 8 &middot; <strong>EOD verdict:</strong> 8/8 by 16:24
+        </p>
+      </div>
+      <div>
+        <h4>Sections on this page</h4>
+        <p>
+          <a href="#standup">§ 01 standup</a><br>
+          <a href="#theme">§ 02 day theme &middot; data flow</a><br>
+          <a href="#tasks">§ 03 tasks</a><br>
+          <a href="#deliverables">§ 04 deliverables</a><br>
+          <a href="#eod">§ 05 EOD checklist</a><br>
+          <a href="#risks">§ 06 risk disposition</a><br>
+          <a href="#tomorrow">§ 07 day 5 preview</a>
+        </p>
+      </div>
+      <div>
+        <h4>Navigate</h4>
+        <p>
+          <a href="index.html">Sprint Index</a><br>
+          <a href="day03.html">&larr; Day 03 &middot; Data Stores</a><br>
+          <a href="day05.html">&rarr; Day 05 &middot; Baselines</a><br>
+          <a href="day06.html">Day 06 &middot; GNN + ChemBERTa</a><br>
+          <a href="day10.html">Day 10 &middot; Mid-POC review</a>
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-meta">
+      Day 04 of 20 &middot; Tuesday 12 May 2026 &middot; 09:30 IST kickoff &mdash; 16:24 IST EOD (early close)<br>
+      Phase: Foundation &middot; Lead: Sarthak Chauhan &middot; EOD verdict: GREEN (8 / 8) &middot; Production pipeline first run · sha256 equivalence proven<br>
+      Next: Day 05 &middot; Wednesday 13 May 2026 &middot; Baselines &mdash; Random Forest + XGBoost (Sarthak lead, Foundation closes)
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

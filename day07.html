@@ -1,0 +1,3447 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 07 · Molecular Embeddings &amp; Similarity · AITIP POC</title>
+<style>
+/* ================================================================
+   AITIP · Day 07 · Friday 15 May 2026
+   Molecular Embeddings & Similarity Service
+   Self-contained styles. No external CSS. No external fonts.
+   ================================================================ */
+
+:root {
+  /* paper / surface */
+  --paper:        #f6f1e6;
+  --paper-deep:   #ece4d0;
+  --card:         #fffdf5;
+  --rule:         #d6cdb6;
+  --rule-soft:    #e3dcc6;
+
+  /* ink */
+  --ink:          #0a1f2c;
+  --ink-2:        #2a3845;
+  --ink-3:        #4a5663;
+  --muted:        #6b7785;
+  --muted-2:      #8a93a0;
+
+  /* primary palette */
+  --navy:         #0b2540;
+  --navy-deep:    #061626;
+  --teal:         #0e6b6b;
+  --teal-soft:    #6fb8a8;
+  --amber:        #b87333;
+  --amber-soft:   #e9c98b;
+  --gold:         #c79338;
+  --crimson:      #a8322d;
+  --crimson-soft: #e8a4a0;
+  --moss:         #4a6b3a;
+  --plum:         #6b3a52;
+  --plum-soft:    #b58aa1;
+
+  /* status */
+  --ok:           #1b7f3a;
+  --ok-soft:      #c9e4d2;
+  --warn:         #b45309;
+  --warn-soft:    #f0d8a8;
+  --info:         #1f5d8c;
+  --info-soft:    #c8dcec;
+
+  /* engineer tracks */
+  --t-sarthak:    #0b3d91;
+  --t-harshit:    #1f77b4;
+  --t-jitendra:   #1b7f3a;
+
+  /* phase color — Deep Models phase is plum */
+  --p-foundation: #0e6b6b;
+  --p-deep:       #6b3a52;
+
+  /* day-07 specific palette — similarity pipeline */
+  --s-source:     #b87333;       /* SMILES input · amber */
+  --s-embed:      #6b3a52;       /* ChemBERTa embed · plum */
+  --s-vector:     #1f5d8c;       /* 768-dim vectors · info-blue */
+  --s-index:      #4a6b3a;       /* HNSW index · moss */
+  --s-query:      #a8322d;       /* query flow · crimson */
+
+  /* shadows */
+  --shadow-1: 0 1px 0 rgba(11,37,64,.04), 0 1px 2px rgba(11,37,64,.06);
+  --shadow-2: 0 2px 4px rgba(11,37,64,.06), 0 8px 24px rgba(11,37,64,.08);
+  --shadow-3: 0 8px 16px rgba(11,37,64,.08), 0 24px 48px rgba(11,37,64,.10);
+
+  --r-s:  3px;
+  --r:    6px;
+  --r-l:  10px;
+
+  --serif:  Georgia, 'Iowan Old Style', 'Apple Garamond', Cambria, 'Times New Roman', serif;
+  --sans:   -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono:   'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --maxw:   1180px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.62;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-image:
+    radial-gradient(circle at 18% 8%, rgba(184,115,51,0.04) 0%, transparent 45%),
+    radial-gradient(circle at 82% 92%, rgba(107,58,82,0.05) 0%, transparent 50%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='64' viewBox='0 0 56 64'><g fill='none' stroke='%230b2540' stroke-opacity='0.05' stroke-width='1'><polygon points='28,2 54,16 54,46 28,60 2,46 2,16'/></g></svg>");
+  background-attachment: fixed;
+  background-size: auto, auto, 56px 64px;
+}
+
+a { color: var(--navy); text-decoration: underline; text-decoration-color: var(--amber-soft); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+a:hover { color: var(--amber); }
+
+h1, h2, h3, h4, h5 { font-family: var(--serif); font-weight: 700; color: var(--navy-deep); margin: 0 0 0.5em; line-height: 1.18; letter-spacing: -0.005em; }
+h1 { font-size: clamp(2.0rem, 4.2vw, 3.0rem); font-weight: 800; letter-spacing: -0.015em; }
+h2 { font-size: clamp(1.4rem, 2.4vw, 1.85rem); }
+h3 { font-size: 1.18rem; }
+h4 { font-size: 1.0rem; }
+
+p { margin: 0 0 0.85em; }
+strong { color: var(--navy-deep); font-weight: 600; }
+em { font-style: italic; color: var(--ink-2); }
+small { font-size: 0.86em; color: var(--muted); }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+code { background: rgba(11,37,64,0.06); padding: 0.06em 0.32em; border-radius: var(--r-s); color: var(--ink); }
+ul, ol { margin: 0 0 0.85em; padding-left: 1.4em; }
+li { margin-bottom: 0.3em; }
+::selection { background: var(--amber-soft); color: var(--navy-deep); }
+
+/* ================================================================
+   SHELL
+   ================================================================ */
+.shell { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
+.section { padding: 48px 0; border-top: 1px solid var(--rule-soft); }
+.section:first-of-type { border-top: none; }
+.section.deep { background: var(--paper-deep); }
+
+/* ================================================================
+   TOPBAR
+   ================================================================ */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(246,241,230,0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--rule);
+}
+.topbar-inner {
+  max-width: var(--maxw); margin: 0 auto;
+  padding: 12px 28px;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  flex-wrap: wrap;
+}
+.brand {
+  display: flex; align-items: center; gap: 12px;
+  font-family: var(--serif); font-weight: 700;
+  color: var(--navy-deep); text-decoration: none;
+  font-size: 1.0rem;
+}
+.brand:hover { color: var(--amber); text-decoration: none; }
+.brand small {
+  display: block;
+  font-family: var(--mono); font-weight: 400;
+  font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); margin-top: 1px;
+}
+.topnav { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.topnav a {
+  text-decoration: none; color: var(--ink-2);
+  font-size: 0.84rem; font-weight: 500;
+  padding: 6px 10px; border-radius: var(--r-s);
+}
+.topnav a:hover { background: var(--paper-deep); color: var(--navy); }
+.topnav .pill {
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.06em;
+  background: var(--p-deep); color: var(--paper);
+  padding: 6px 10px; border-radius: var(--r-s);
+  text-transform: uppercase; margin-left: 6px;
+}
+
+/* ================================================================
+   DAY HERO
+   ================================================================ */
+.day-hero {
+  position: relative;
+  padding: 48px 0 36px;
+  border-bottom: 1px solid var(--rule);
+  overflow: hidden;
+}
+.day-hero::before {
+  content: ""; position: absolute;
+  right: -60px; top: 30px; width: 320px; height: 320px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%236b3a52' stroke-width='1.2' stroke-opacity='0.3'><circle cx='100' cy='100' r='8' fill='%23b87333' fill-opacity='0.6'/><circle cx='60' cy='50' r='5' fill='%236b3a52' fill-opacity='0.4'/><circle cx='150' cy='60' r='5' fill='%236b3a52' fill-opacity='0.4'/><circle cx='40' cy='130' r='5' fill='%236b3a52' fill-opacity='0.4'/><circle cx='160' cy='140' r='5' fill='%236b3a52' fill-opacity='0.4'/><circle cx='90' cy='170' r='5' fill='%236b3a52' fill-opacity='0.4'/><line x1='100' y1='100' x2='60' y2='50' stroke-width='1.4'/><line x1='100' y1='100' x2='150' y2='60' stroke-width='1.4'/><line x1='100' y1='100' x2='40' y2='130' stroke-width='1.4'/><line x1='100' y1='100' x2='160' y2='140' stroke-width='1.4'/><line x1='100' y1='100' x2='90' y2='170' stroke-width='1.4'/></g></svg>");
+  background-size: contain; background-repeat: no-repeat;
+  opacity: 0.7; pointer-events: none;
+}
+.day-stamp {
+  display: flex; align-items: flex-end; gap: 18px; margin-bottom: 16px;
+}
+.day-stamp .num {
+  font-family: var(--serif);
+  font-size: 4.4rem; font-weight: 800;
+  line-height: 0.9; color: var(--amber);
+  letter-spacing: -0.03em;
+}
+.day-stamp .of {
+  font-family: var(--mono);
+  font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--muted);
+  padding-bottom: 8px;
+}
+.day-stamp .of strong {
+  color: var(--ink-2); display: block; margin-top: 2px;
+  font-family: var(--sans); font-size: 0.92rem;
+  letter-spacing: 0; text-transform: none; font-weight: 500;
+}
+.day-stamp .phase {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: white; background: var(--p-deep);
+  padding: 5px 11px; border-radius: var(--r-s);
+  font-weight: 600;
+  margin-bottom: 8px;
+  margin-right: 8px;
+}
+.day-hero h1 { max-width: 22ch; margin-bottom: 12px; }
+.day-theme {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.12rem;
+  color: var(--ink-2);
+  max-width: 65ch;
+  border-left: 3px solid var(--amber);
+  padding: 4px 0 4px 16px;
+  margin-bottom: 22px;
+}
+.hero-meta {
+  margin-top: 26px;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  overflow: hidden;
+  max-width: 940px;
+  box-shadow: var(--shadow-1);
+}
+.hero-meta > div { background: var(--card); padding: 14px 16px; }
+.hero-meta dt {
+  font-family: var(--mono);
+  font-size: 0.66rem; letter-spacing: 0.11em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 6px;
+}
+.hero-meta dd {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.18rem; font-weight: 700;
+  color: var(--navy-deep);
+  line-height: 1.1;
+}
+.hero-meta dd small {
+  display: block;
+  font-family: var(--sans); font-weight: 400;
+  font-size: 0.74rem; color: var(--muted);
+  margin-top: 4px; letter-spacing: 0; text-transform: none;
+}
+@media (max-width: 760px) { .hero-meta { grid-template-columns: repeat(2, 1fr); } }
+
+/* ================================================================
+   SECTION HEAD
+   ================================================================ */
+.section-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 24px; margin-bottom: 24px;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 12px;
+  flex-wrap: wrap;
+}
+.section-tag {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 4px;
+}
+.section-head h2 { margin: 0; }
+.section-head .sub {
+  color: var(--muted);
+  max-width: 50ch;
+  font-size: 0.94rem; margin: 0;
+}
+.prose { max-width: 70ch; }
+.prose p { font-size: 0.98rem; color: var(--ink-2); }
+
+/* ================================================================
+   STANDUP
+   ================================================================ */
+.standup-meta {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-2);
+  margin: 8px 0 22px;
+  padding: 10px 14px;
+  background: var(--paper-deep);
+  border-radius: var(--r);
+  border: 1px solid var(--rule);
+}
+.standup-meta span strong { color: var(--navy-deep); margin-right: 6px; }
+.standup-meta span:not(:last-child)::after {
+  content: "·"; color: var(--amber); margin-left: 16px;
+}
+
+.report {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--track, var(--navy));
+  border-radius: var(--r);
+  padding: 18px 22px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-1);
+}
+.report-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 10px; flex-wrap: wrap; gap: 12px;
+}
+.report-name {
+  font-family: var(--serif);
+  font-weight: 700; font-size: 1.1rem;
+  color: var(--ink);
+}
+.report-role {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--track, var(--navy));
+  font-weight: 600; margin-left: 8px;
+}
+.report-window {
+  font-family: var(--mono);
+  font-size: 0.74rem; color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.report-line {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 16px;
+  padding: 6px 0;
+  border-top: 1px dashed var(--rule);
+}
+.report-line:first-of-type { border-top: none; padding-top: 2px; }
+.report-line .label {
+  font-family: var(--mono);
+  font-size: 0.74rem; color: var(--muted);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding-top: 2px;
+}
+.report-line .text {
+  font-size: 0.94rem; color: var(--ink-2);
+  line-height: 1.55;
+}
+.report-line .text strong { color: var(--navy-deep); }
+.report-line.risk .label { color: var(--crimson); }
+.report-line.risk .text strong { color: var(--crimson); }
+
+/* ================================================================
+   THEME VIZ — Day 7: similarity pipeline diagram
+   23K SMILES → ChemBERTa [CLS] → 768-dim vectors → HNSW index
+   query SMILES → cosine top-k → /similar response
+   ================================================================ */
+.pipeline {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 26px 24px;
+  box-shadow: var(--shadow-1);
+  margin: 8px 0 18px;
+  overflow-x: auto;
+}
+.pipeline-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+}
+.pipeline-head .tag {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--amber);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.pipeline-head .title {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.18rem;
+  color: var(--navy-deep);
+}
+.pipeline-head .meta {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+.pipeline svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* index-size breakdown card grid */
+.index-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+.index-card {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-top: 4px solid var(--ic-color, var(--navy));
+  border-radius: var(--r);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-1);
+  text-align: center;
+}
+.index-card .ic-label {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.index-card .ic-value {
+  font-family: var(--serif);
+  font-weight: 800;
+  font-size: 1.5rem;
+  color: var(--ic-color, var(--navy-deep));
+  line-height: 1.0;
+  margin-bottom: 4px;
+}
+.index-card .ic-note {
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  color: var(--ink-2);
+  line-height: 1.4;
+}
+
+/* applicability-domain feature box */
+.ad-box {
+  margin-top: 24px;
+  background: linear-gradient(180deg, var(--card) 0%, #f4ede0 100%);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--info);
+  border-radius: var(--r);
+  padding: 18px 22px;
+  box-shadow: var(--shadow-1);
+}
+.ad-box .ad-tag {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--info);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.ad-box .ad-title {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.24rem;
+  color: var(--navy-deep);
+  margin-bottom: 10px;
+}
+.ad-box p {
+  font-size: 0.94rem;
+  color: var(--ink-2);
+  margin-bottom: 10px;
+}
+.ad-box .ad-formula {
+  font-family: var(--mono);
+  font-size: 0.92rem;
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  padding: 10px 14px;
+  border-radius: var(--r);
+  color: var(--ink);
+  margin: 10px 0;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+.ad-box .ad-formula strong { color: var(--info); }
+
+</style>
+</head>
+<body>
+
+
+<!-- ================================================================
+     TOPBAR
+     ================================================================ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html">
+      <svg viewBox="0 0 60 60" width="32" height="32" xmlns="http://www.w3.org/2000/svg" fill="none" aria-hidden="true">
+        <polygon points="30,4 52,17 52,43 30,56 8,43 8,17" stroke="#0b2540" stroke-width="2"/>
+        <circle cx="30" cy="22" r="3.2" fill="#b87333"/>
+        <circle cx="20" cy="34" r="3.2" fill="#6b3a52"/>
+        <circle cx="40" cy="34" r="3.2" fill="#6b3a52"/>
+        <circle cx="30" cy="44" r="3.2" fill="#b87333"/>
+        <line x1="30" y1="22" x2="20" y2="34" stroke="#0b2540" stroke-width="1.4"/>
+        <line x1="30" y1="22" x2="40" y2="34" stroke="#0b2540" stroke-width="1.4"/>
+        <line x1="20" y1="34" x2="30" y2="44" stroke="#0b2540" stroke-width="1.4"/>
+        <line x1="40" y1="34" x2="30" y2="44" stroke="#0b2540" stroke-width="1.4"/>
+      </svg>
+      <span>
+        AITIP &middot; Day 07
+        <small>Molecular Embeddings &amp; Similarity &middot; vm-embed-search online</small>
+      </span>
+    </a>
+    <nav class="topnav">
+      <a href="index.html">Index</a>
+      <a href="day06.html">&larr; Day 06</a>
+      <a href="#standup">§01 Standup</a>
+      <a href="#theme">§02 Theme</a>
+      <a href="#tasks">§03 Tasks</a>
+      <a href="#deliverables">§04 Deliverables</a>
+      <a href="#eod">§05 EOD</a>
+      <a href="day08.html">Day 08 &rarr;</a>
+      <span class="pill">Deep Models · 7 / 20</span>
+    </nav>
+  </div>
+</header>
+
+
+<!-- ================================================================
+     DAY HERO
+     ================================================================ -->
+<section class="day-hero">
+  <div class="shell">
+    <div class="day-stamp">
+      <span class="num">07</span>
+      <span class="of">
+        Day 07 of 20
+        <strong>Friday · 15 May 2026</strong>
+      </span>
+    </div>
+    <span class="phase">Deep Models · Day 2 of 5</span>
+    <h1>Molecular Embeddings &amp; Similarity</h1>
+    <p class="day-theme">
+      vm-embed-search comes online. ChemBERTa's [CLS]-vector pipeline industrializes into a similarity service: 23,054 curated compounds embedded into 768-dim vectors, HNSW index built for cosine top-k retrieval, <code>GET /similar?smiles=...&top_k=10</code> exposed on a new container. By 16:00 the platform can answer "which compounds in our training corpus are most similar to this novel SMILES" in <strong>&lt; 50 ms</strong> &mdash; the structural input that Day 17 turns into honest applicability-domain flags on every prediction.
+    </p>
+
+    <dl class="hero-meta">
+      <div>
+        <dt>09:30 IST</dt>
+        <dd>Standup<small>15 min &middot; Sarthak chairs (day 4)</small></dd>
+      </div>
+      <div>
+        <dt>11:30 target</dt>
+        <dd>23K embedded<small>aitip.embed_dataset via 8 workers</small></dd>
+      </div>
+      <div>
+        <dt>13:30 target</dt>
+        <dd>HNSW index built<small>80 MB on disk · cosine M=32</small></dd>
+      </div>
+      <div>
+        <dt>16:00 target</dt>
+        <dd>/similar live<small>p95 &lt; 50 ms · aspirin top-10 smoke</small></dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §01 · STANDUP — model-day rotation, Sarthak chairs (day 4)
+     ================================================================ -->
+<section class="section" id="standup">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 01 · standup</div>
+        <h2>09:30 IST &middot; daily standup &mdash; 15 minutes flat</h2>
+      </div>
+      <p class="sub">Friday of week 2. Sarthak chairs his fourth consecutive day &mdash; the model-day rotation continues for the embedding work that depends on yesterday's ChemBERTa fine-tune. No EOW retro today (that's Day 9 Friday next week); regular EOD ritual.</p>
+    </div>
+
+    <div class="prose" style="margin-bottom: 20px;">
+      <p>
+        Yesterday's deep-models work landed ChemBERTa as active on NR-AhR and gave 15 endpoints their XGBoost defenders a reaffirmed seat. Today turns the ChemBERTa pipeline into a different product: instead of training a classifier head on top of [CLS], we extract [CLS] vectors directly for all 23K curated compounds and build a similarity index over them. Three lanes; three engineers; one vm-embed-search going from "validated toolchain" to "production-serving" in eight hours.
+      </p>
+    </div>
+
+    <div class="standup-meta">
+      <span><strong>Time:</strong>09:30&ndash;09:45 IST</span>
+      <span><strong>Format:</strong>video, cameras on</span>
+      <span><strong>Chair:</strong>Sarthak (model-day rotation, day 4)</span>
+      <span><strong>Notes:</strong>Harshit, into <code>#poc-war-room</code></span>
+    </div>
+
+
+    <!-- Sarthak report -->
+    <article class="report" style="--track: var(--t-sarthak);">
+      <div class="report-head">
+        <div>
+          <span class="report-name">Sarthak Chauhan</span>
+          <span class="report-role">AI / ML &middot; lane lead today &middot; critical path</span>
+        </div>
+        <div class="report-window">2 min &middot; 09:30&ndash;09:32</div>
+      </div>
+
+      <div class="report-line">
+        <span class="label">Yesterday</span>
+        <span class="text">
+          train_gat + train_chemberta Celery tasks &middot; 32 deep models trained in 75m6s wall-clock &middot; 1 ChemBERTa swap on NR-AhR (delta=0.034) &middot; 15 XGB holds &middot; 16-active invariant preserved &middot; model card v0.1 &middot; PR-#20. ChemBERTa beats XGB raw on 13/16 endpoints but only 1 clears the 0.02 noise gate.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Today</span>
+        <span class="text">
+          <strong>Three rocks.</strong> (1) <code>aitip.embed_dataset</code> Celery task &mdash; reads <code>dataset_registry</code> rows version='v0-prod-curated', loads ChemBERTa once per worker (cached after first call), computes [CLS] embedding for each canonical SMILES, writes <code>embeddings.parquet</code> (compound_id, smiles, embedding[768], original_dataset) to MinIO bucket <code>processed/embeddings/</code>. Dispatched across 8 workers; ~30 ms per molecule on CPU &asymp; 11.5 min wall-clock if 8-way parallel. (2) <code>build_hnsw_index.py</code> CLI run on vm-embed-search &mdash; reads embeddings.parquet, builds hnswlib index (cosine, M=32, ef_construction=200), saves to <code>/var/lib/aitip-similarity/v0-index.bin</code>. ~90s wall-clock. (3) New <code>aitip/similarity:0.1.0</code> container &mdash; FastAPI service exposing <code>GET /similar?smiles=...&amp;top_k=10</code>; tokenize-and-embed the query, search the index, return JSON list of {smiles, similarity, original_dataset, model_id_train_source}. Smoke against aspirin should return chemically sensible neighbors.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Blockers</span>
+        <span class="text">None. Hard dependency on Harshit's morning v0.3.0 image bake landing &mdash; my <code>embed_dataset</code> task imports the ChemBERTa loader from the new Router (PR-#21). Soft dependency on Jitendra to deploy the similarity container container after lunch.</span>
+      </div>
+      <div class="report-line risk">
+        <span class="label">Today's risk</span>
+        <span class="text">
+          <strong>ChemBERTa OOM on the 23K-compound batch loop.</strong> Per-call ChemBERTa CPU forward is ~30 ms and ~150 MB working set; if I naively loop through all 23K in a single worker process the resident memory climbs as tokenizer + cache + intermediates accumulate. Risk: OOM kill mid-batch, partial embeddings.parquet, restart from scratch. Mitigation: chunk into 8 sub-tasks (one per worker), 2,882 compounds each; each sub-task creates a fresh tokenizer+model, runs through its chunk, writes a partial parquet to MinIO; final step concatenates the 8 partials into the canonical embeddings.parquet. <strong>Side effect bonus:</strong> 8-way parallel finishes in &asymp;1m26s instead of 11m26s serial.
+        </span>
+      </div>
+    </article>
+
+
+    <!-- Harshit report -->
+    <article class="report" style="--track: var(--t-harshit);">
+      <div class="report-head">
+        <div>
+          <span class="report-name">Harshit Prajapati</span>
+          <span class="report-role">Backend &amp; MLOps &middot; supporting</span>
+        </div>
+        <div class="report-window">2 min &middot; 09:32&ndash;09:34</div>
+      </div>
+
+      <div class="report-line">
+        <span class="label">Yesterday</span>
+        <span class="text">
+          Prediction-router pattern with 3 framework loader paths &middot; /v1/predict/batch endpoint signature (501 today, body Day 12) &middot; v0.3.0 Dockerfile bake runbook &middot; PR-#21 merged.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Today</span>
+        <span class="text">
+          <strong>Four sub-tasks.</strong> (1) <em>v0.3.0 image bake first thing</em>. Per yesterday's runbook: <code>docker build aitip/tox-inference:0.3.0</code> with DGL + transformers added (~6 min), Trivy scan (expect 0/0 high+critical), push to local registry, deploy on vm-tox-inference with rollback to v0.2.0 ready. <strong>ChemBERTa NR-AhR /predict must serve through the production path by 11:00</strong> &mdash; that's the smoke test that validates DR-6.2 (cold-start latency) in production. (2) Smoke /predict against aspirin/NR-AhR; measure cold-start vs warm latency; if cold &gt; 12 sec, Day-11 pre-warm hook becomes higher-priority. (3) Sarthak's similarity container Dockerfile review + thin proxy <code>GET /v1/similar</code> on core-api &mdash; same proxy idiom as <code>/predict</code>. (4) Mid-POC review slide draft: Week-2 outcome slide content (Days 6-7 numbers landed today; Days 8-9 still ahead).
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Blockers</span>
+        <span class="text">None for v0.3.0 bake. Soft: similarity container can be drafted in parallel with Sarthak's index build; merge gate is "index exists" which lands ~13:30.</span>
+      </div>
+      <div class="report-line risk">
+        <span class="label">Today's risk</span>
+        <span class="text">
+          <strong>ChemBERTa cold-start on v0.3.0 may exceed user-tolerable latency.</strong> v0.2.0 ships only joblib XGBoost (10-50 MB, cold-load &lt; 200 ms); v0.3.0 adds transformers + DGL paths where ChemBERTa cold-load involves downloading from MinIO (~330 MB checkpoint + tokenizer dir) and instantiating a 12-layer transformer. Worst-case cold-start ~12 sec; warm cache hit milliseconds. Mitigation: Day-11 startup pre-warm hook (DR-6.2 carry) loads all 16 active models at container boot, eliminating user-visible cold-start. Today's measurement is data for whether to expedite Day-11 work; not blocking.
+        </span>
+      </div>
+    </article>
+
+
+    <!-- Jitendra report -->
+    <article class="report" style="--track: var(--t-jitendra);">
+      <div class="report-head">
+        <div>
+          <span class="report-name">Jitendra Maurya</span>
+          <span class="report-role">Infrastructure &amp; DevOps &middot; supporting</span>
+        </div>
+        <div class="report-window">2 min &middot; 09:34&ndash;09:36</div>
+      </div>
+
+      <div class="report-line">
+        <span class="label">Yesterday</span>
+        <span class="text">
+          WorkerMemoryHigh alert live before any ChemBERTa task started · numastat verification during the 75-min burst (node-1 stayed under 3 MB, DR-6.3 retired) · Day-7 similarity prep on vm-embed-search (80 MB index estimate validated) · Day-9 backup-drill pre-flight green · PR-#22 merged.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Today</span>
+        <span class="text">
+          <strong>Four sub-tasks.</strong> (1) <em>Deploy <code>aitip/similarity:0.1.0</code> container</em> on vm-embed-search after Sarthak's index lands. Container running with --network host on port 8082; <code>/healthz</code> + <code>/similar</code> + <code>/metrics</code> wired. (2) Prometheus scrape config update: add vm-embed-search:8082 as new scrape target; Grafana panel for similarity p50/p95/p99 latency. (3) Day-9 retro logistics + Day-10 mid-POC review prep slides &mdash; aggregate Days 6-9 metrics into one slide pair, week-2 outcome + Day-10 preview. Markdown today; PowerPoint Tuesday evening. (4) Confirm new <code>aitip_similarity_requests_total</code> + <code>aitip_similarity_latency_seconds</code> Prometheus metrics emit from the new container so the Grafana panel actually has data.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Blockers</span>
+        <span class="text">None. Container deploy waits on Sarthak's container image (built ~14:30 expected); prep work runs in parallel.</span>
+      </div>
+      <div class="report-line risk">
+        <span class="label">Today's risk</span>
+        <span class="text">
+          <strong>vm-embed-search has been idle since Day 2.</strong> Provisioned + configured Day 2, validated Day 6 with the venv install, but no real workload has touched it. Realistic risks: stale apt packages (unlikely; auto-updates), disk-format issues if the partition was never written to (mitigated by Day-2's first-boot smoke), kernel parameter drift if any sysctl tuning got applied to peer VMs but not this one. Mitigation: 09:45 fast-track sanity check (uptime, disk usage, packet round-trip to vm-data-store) before declaring it deployment-ready.
+        </span>
+      </div>
+    </article>
+
+
+    <!-- Risks consolidated -->
+    <article class="report" style="--track: var(--amber); border-left-color: var(--amber);">
+      <div class="report-head">
+        <div>
+          <span class="report-name">Today's risks &mdash; consolidated</span>
+          <span class="report-role" style="color: var(--amber);">3 min &middot; chair leads</span>
+        </div>
+        <div class="report-window">09:36&ndash;09:39</div>
+      </div>
+
+      <div class="report-line">
+        <span class="label">Critical path</span>
+        <span class="text">
+          <strong>Sequential within Sarthak's lane.</strong> Embeddings &rarr; index &rarr; container; each blocks the next. Less daunting than yesterday because (a) the 8-way chunked embedding mitigation pre-empts the only realistic ChemBERTa OOM scenario, (b) the index build is &lt;90 sec, (c) the similarity container is one new FastAPI endpoint over an in-memory hnswlib instance.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">Specific watchpoint</span>
+        <span class="text">
+          ChemBERTa cold-start latency on the v0.3.0 image. Harshit's 11:00 smoke after the image bake gives the first data point; if cold-start exceeds 12 sec it doesn't block today but accelerates Day-11 pre-warm work. Discussed at 14:00 lightweight check-in if cold-start data warrants.
+        </span>
+      </div>
+      <div class="report-line">
+        <span class="label">EOD criteria</span>
+        <span class="text">
+          <strong>Eight criteria for Day 7:</strong> (1) v0.3.0 image bake complete, deployed, /predict serves ChemBERTa NR-AhR &middot; (2) <code>aitip.embed_dataset</code> Celery task implemented and dispatched as 8 chunks &middot; (3) 23,054 compounds embedded into 768-dim vectors, written to MinIO, sha256-stamped registry row &middot; (4) HNSW index built (~80 MB on-disk, cosine, M=32, ef_construction=200) &middot; (5) <code>aitip/similarity:0.1.0</code> container built + Trivy clean + pushed &middot; (6) Container deployed on vm-embed-search; <code>/healthz</code> green; <code>/similar</code> live &middot; (7) Aspirin top-10 smoke returns chemically sensible neighbors with cosine similarity scores &middot; (8) Prometheus scraping vm-embed-search:8082; Grafana similarity panel showing p50/p95/p99 latency.
+        </span>
+      </div>
+    </article>
+
+    <p style="margin-top: 22px; font-family: var(--mono); font-size: 0.88rem; color: var(--ink-2); padding: 10px 14px; background: var(--paper-deep); border-radius: var(--r); border: 1px solid var(--rule);">
+      <strong style="color: var(--ok);">09:38 standup ends.</strong> Seven minutes under budget, sixth day in a row. Engineers break to workstations.
+    </p>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §02 · DAY THEME — similarity pipeline viz
+     ================================================================ -->
+<section class="section deep" id="theme">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 02 · day theme</div>
+        <h2>Pipeline &mdash; 23,054 SMILES to a 50-ms <code>/similar</code> response</h2>
+      </div>
+      <p class="sub">The diagram shows the full path from raw curated SMILES to a production similarity query. Two flows: a one-time <em>build-time</em> flow (top, embed all corpus compounds + build HNSW index) and a continuous <em>query-time</em> flow (bottom, embed the user's SMILES + cosine-search the index + return top-k).</p>
+    </div>
+
+    <div class="pipeline">
+      <div class="pipeline-head">
+        <div>
+          <div class="tag">similarity pipeline &middot; build-time + query-time</div>
+          <div class="title">23K compounds &rarr; HNSW index &rarr; <code>GET /similar</code></div>
+        </div>
+        <div class="meta">cosine · M=32 · ef_construction=200 · ~80 MB on disk · p95 target &lt; 50 ms</div>
+      </div>
+
+      <svg viewBox="0 0 1100 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="pipe-title">
+        <title id="pipe-title">Day-7 similarity pipeline — embed 23K compounds, build HNSW index, query path through cosine top-k retrieval</title>
+
+        <defs>
+          <marker id="pp-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#0b2540"/>
+          </marker>
+          <marker id="pp-arrow-soft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#a8322d"/>
+          </marker>
+          <pattern id="pp-hex" x="0" y="0" width="22" height="25" patternUnits="userSpaceOnUse">
+            <polygon points="11,1 21,7 21,18 11,24 1,18 1,7" fill="none" stroke="#0b2540" stroke-opacity="0.05" stroke-width="0.6"/>
+          </pattern>
+        </defs>
+
+        <rect width="1100" height="720" fill="url(#pp-hex)"/>
+
+        <!-- ================================================================
+             TOP HALF · BUILD-TIME FLOW
+             ================================================================ -->
+        <text x="40" y="32" font-family="SF Mono, Menlo, monospace" font-size="12" fill="#b87333" font-weight="700" letter-spacing="0.5">BUILD-TIME · runs once today, rebuilt nightly per V1 plan</text>
+        <line x1="40" y1="42" x2="1060" y2="42" stroke="#b87333" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>
+
+        <!-- Step 1: 23K SMILES from dataset_registry -->
+        <rect x="40" y="60" width="200" height="78" rx="6" fill="#fffdf5" stroke="#b87333" stroke-width="1.4"/>
+        <text x="140" y="80" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#b87333" font-weight="700">SOURCE</text>
+        <text x="140" y="96" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">dataset_registry rows</text>
+        <text x="140" y="110" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">version='v0-prod-curated'</text>
+        <text x="140" y="126" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#b87333" font-weight="700">23,054 SMILES</text>
+
+        <line x1="240" y1="99" x2="280" y2="99" stroke="#0b2540" stroke-width="1.4" marker-end="url(#pp-arrow)"/>
+
+        <!-- Step 2: aitip.embed_dataset (8-chunk Celery group) -->
+        <rect x="280" y="60" width="240" height="78" rx="6" fill="#fffdf5" stroke="#6b3a52" stroke-width="1.4"/>
+        <text x="400" y="80" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#6b3a52" font-weight="700">aitip.embed_dataset</text>
+        <text x="400" y="96" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">Celery group · 8 chunks · 2,882 each</text>
+        <text x="400" y="110" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">ChemBERTa [CLS] · ~30 ms/mol</text>
+        <text x="400" y="126" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#6b3a52" font-weight="700">~ 1m26s wall-clock</text>
+
+        <line x1="520" y1="99" x2="560" y2="99" stroke="#0b2540" stroke-width="1.4" marker-end="url(#pp-arrow)"/>
+
+        <!-- Step 3: 768-dim vectors in MinIO -->
+        <rect x="560" y="60" width="220" height="78" rx="6" fill="#fffdf5" stroke="#1f5d8c" stroke-width="1.4"/>
+        <text x="670" y="80" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#1f5d8c" font-weight="700">embeddings.parquet</text>
+        <text x="670" y="96" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">minio://processed/embeddings/</text>
+        <text x="670" y="110" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">23,054 &times; 768 float32</text>
+        <text x="670" y="126" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#1f5d8c" font-weight="700">70.8 MB on disk</text>
+
+        <line x1="780" y1="99" x2="820" y2="99" stroke="#0b2540" stroke-width="1.4" marker-end="url(#pp-arrow)"/>
+
+        <!-- Step 4: HNSW index on vm-embed-search -->
+        <rect x="820" y="60" width="220" height="78" rx="6" fill="#fffdf5" stroke="#4a6b3a" stroke-width="1.4"/>
+        <text x="930" y="80" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#4a6b3a" font-weight="700">HNSW index</text>
+        <text x="930" y="96" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">cosine · M=32 · ef_c=200</text>
+        <text x="930" y="110" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">/var/lib/aitip-similarity/v0-index.bin</text>
+        <text x="930" y="126" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#4a6b3a" font-weight="700">81 MB on disk</text>
+
+        <!-- Annotation: registry row insert at the end -->
+        <text x="560" y="170" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785" font-style="italic">+ INSERT dataset_registry row (name='embeddings', version='v0-chemberta-cls')</text>
+
+
+        <!-- ================================================================
+             VECTOR REPRESENTATION (visual middle band)
+             ================================================================ -->
+        <text x="40" y="208" font-family="SF Mono, Menlo, monospace" font-size="12" fill="#1f5d8c" font-weight="700" letter-spacing="0.5">VECTOR REPRESENTATION · what 768-dim means in practice</text>
+        <line x1="40" y1="218" x2="1060" y2="218" stroke="#1f5d8c" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>
+
+        <!-- Aspirin example -->
+        <text x="40" y="248" font-family="Georgia, serif" font-size="11" fill="#0a1f2c" font-weight="700">aspirin example:</text>
+        <text x="40" y="266" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#0a1f2c">CC(=O)Oc1ccccc1C(=O)O</text>
+        <text x="40" y="282" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785">→ tokenized → ChemBERTa forward → take [CLS] hidden:</text>
+
+        <!-- 16 vector cells representing the 768 dims compressed -->
+        <g font-family="SF Mono, Menlo, monospace" font-size="7" fill="#0a1f2c">
+          <rect x="40"  y="295" width="40" height="22" rx="2" fill="rgba(31,93,140,0.70)"/>
+          <text x="60"  y="310" text-anchor="middle" fill="white">+0.42</text>
+          <rect x="84"  y="295" width="40" height="22" rx="2" fill="rgba(31,93,140,0.45)"/>
+          <text x="104" y="310" text-anchor="middle">+0.18</text>
+          <rect x="128" y="295" width="40" height="22" rx="2" fill="rgba(31,93,140,0.20)"/>
+          <text x="148" y="310" text-anchor="middle">-0.07</text>
+          <rect x="172" y="295" width="40" height="22" rx="2" fill="rgba(31,93,140,0.65)"/>
+          <text x="192" y="310" text-anchor="middle" fill="white">+0.38</text>
+          <rect x="216" y="295" width="40" height="22" rx="2" fill="rgba(31,93,140,0.30)"/>
+          <text x="236" y="310" text-anchor="middle">+0.11</text>
+          <rect x="260" y="295" width="40" height="22" rx="2" fill="rgba(168,50,45,0.45)"/>
+          <text x="280" y="310" text-anchor="middle">-0.21</text>
+          <rect x="304" y="295" width="40" height="22" rx="2" fill="rgba(31,93,140,0.55)"/>
+          <text x="324" y="310" text-anchor="middle" fill="white">+0.28</text>
+          <rect x="348" y="295" width="40" height="22" rx="2" fill="rgba(168,50,45,0.30)"/>
+          <text x="368" y="310" text-anchor="middle">-0.14</text>
+          <rect x="392" y="295" width="40" height="22" rx="2" fill="rgba(31,93,140,0.20)"/>
+          <text x="412" y="310" text-anchor="middle">+0.05</text>
+          <rect x="436" y="295" width="40" height="22" rx="2" fill="rgba(31,93,140,0.40)"/>
+          <text x="456" y="310" text-anchor="middle">+0.17</text>
+          <rect x="480" y="295" width="40" height="22" rx="2" fill="rgba(168,50,45,0.55)"/>
+          <text x="500" y="310" text-anchor="middle" fill="white">-0.31</text>
+          <rect x="524" y="295" width="40" height="22" rx="2" fill="rgba(31,93,140,0.35)"/>
+          <text x="544" y="310" text-anchor="middle">+0.14</text>
+          <text x="588" y="310" text-anchor="start" font-style="italic" fill="#6b7785">... 756 more dims ...</text>
+        </g>
+
+        <text x="40" y="338" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b7785" font-style="italic">structurally-similar compounds end up near each other in this 768-dim space; cosine similarity measures the angle</text>
+
+
+        <!-- ================================================================
+             BOTTOM HALF · QUERY-TIME FLOW
+             ================================================================ -->
+        <text x="40" y="380" font-family="SF Mono, Menlo, monospace" font-size="12" fill="#a8322d" font-weight="700" letter-spacing="0.5">QUERY-TIME · runs per /similar request &middot; target p95 &lt; 50 ms</text>
+        <line x1="40" y1="390" x2="1060" y2="390" stroke="#a8322d" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>
+
+        <!-- Step Q1: user SMILES request -->
+        <rect x="40" y="410" width="180" height="78" rx="6" fill="#fffdf5" stroke="#a8322d" stroke-width="1.4"/>
+        <text x="130" y="430" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#a8322d" font-weight="700">USER REQUEST</text>
+        <text x="130" y="448" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">GET /v1/similar?</text>
+        <text x="130" y="462" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">  smiles=&lt;novel SMILES&gt;</text>
+        <text x="130" y="476" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">  &amp; top_k=10</text>
+
+        <line x1="220" y1="449" x2="260" y2="449" stroke="#a8322d" stroke-width="1.4" marker-end="url(#pp-arrow-soft)"/>
+
+        <!-- Step Q2: core-api proxy -->
+        <rect x="260" y="410" width="180" height="78" rx="6" fill="#fffdf5" stroke="#1f77b4" stroke-width="1.4"/>
+        <text x="350" y="430" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#1f77b4" font-weight="700">core-api proxy</text>
+        <text x="350" y="446" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">canonicalize SMILES</text>
+        <text x="350" y="460" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">httpx forward to</text>
+        <text x="350" y="474" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#1f77b4">vm-embed-search:8082</text>
+
+        <line x1="440" y1="449" x2="480" y2="449" stroke="#a8322d" stroke-width="1.4" marker-end="url(#pp-arrow-soft)"/>
+
+        <!-- Step Q3: embed query SMILES -->
+        <rect x="480" y="410" width="180" height="78" rx="6" fill="#fffdf5" stroke="#6b3a52" stroke-width="1.4"/>
+        <text x="570" y="430" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#6b3a52" font-weight="700">embed query</text>
+        <text x="570" y="446" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">ChemBERTa cached</text>
+        <text x="570" y="460" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">[CLS] hidden → 768 vec</text>
+        <text x="570" y="474" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6b3a52">~ 32 ms</text>
+
+        <line x1="660" y1="449" x2="700" y2="449" stroke="#a8322d" stroke-width="1.4" marker-end="url(#pp-arrow-soft)"/>
+
+        <!-- Step Q4: HNSW top-k search -->
+        <rect x="700" y="410" width="180" height="78" rx="6" fill="#fffdf5" stroke="#4a6b3a" stroke-width="1.4"/>
+        <text x="790" y="430" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#4a6b3a" font-weight="700">HNSW top-k</text>
+        <text x="790" y="446" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">cosine search · ef=50</text>
+        <text x="790" y="460" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">in-memory index</text>
+        <text x="790" y="474" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#4a6b3a">~ 2 ms</text>
+
+        <line x1="880" y1="449" x2="920" y2="449" stroke="#a8322d" stroke-width="1.4" marker-end="url(#pp-arrow-soft)"/>
+
+        <!-- Step Q5: enrich + return -->
+        <rect x="920" y="410" width="140" height="78" rx="6" fill="#fffdf5" stroke="#0b2540" stroke-width="1.4"/>
+        <text x="990" y="430" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#0b2540" font-weight="700">return</text>
+        <text x="990" y="446" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">top-10 list</text>
+        <text x="990" y="460" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">+ original_dataset</text>
+        <text x="990" y="474" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0b2540">+ similarity scores</text>
+
+        <!-- Timing breakdown line below the query flow -->
+        <text x="40" y="512" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#0a1f2c" font-weight="700">end-to-end p95 budget:</text>
+        <text x="200" y="512" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#0a1f2c">RTT ~3ms · canon ~2ms · embed ~32ms · search ~2ms · serialize ~3ms · RTT ~3ms = <tspan font-weight="700" fill="#a8322d">~45 ms</tspan></text>
+
+
+        <!-- ================================================================
+             AD CONNECTION BAND
+             ================================================================ -->
+        <text x="40" y="558" font-family="SF Mono, Menlo, monospace" font-size="12" fill="#1f5d8c" font-weight="700" letter-spacing="0.5">DOWNSTREAM USE · what /similar enables on Day 17</text>
+        <line x1="40" y1="568" x2="1060" y2="568" stroke="#1f5d8c" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>
+
+        <rect x="40" y="582" width="500" height="118" rx="8" fill="rgba(31,93,140,0.06)" stroke="#1f5d8c" stroke-width="1"/>
+        <text x="60" y="602" font-family="Georgia, serif" font-size="11" fill="#1f5d8c" font-weight="700">applicability-domain flag for /predict</text>
+        <text x="60" y="620" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">When /predict is called on a novel SMILES, the active model</text>
+        <text x="60" y="634" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">also queries /similar(top_k=10) to find structural neighbors</text>
+        <text x="60" y="648" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">in the training corpus.</text>
+        <text x="60" y="668" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#1f5d8c" font-weight="700">in_domain := mean(top_k cosine similarities) ≥ 0.45</text>
+        <text x="60" y="686" font-family="SF Mono, Menlo, monospace" font-size="8" fill="#6b7785" font-style="italic">threshold tuned Day 17 against held-out chemotype-novel test set</text>
+
+        <rect x="560" y="582" width="500" height="118" rx="8" fill="rgba(74,107,58,0.06)" stroke="#4a6b3a" stroke-width="1"/>
+        <text x="580" y="602" font-family="Georgia, serif" font-size="11" fill="#4a6b3a" font-weight="700">batch enrichment for /v1/predict/batch (Day 12)</text>
+        <text x="580" y="620" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">Day 12's batch pipeline auto-runs /similar for each input</text>
+        <text x="580" y="634" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">and attaches "5 nearest known compounds + their training</text>
+        <text x="580" y="648" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#0a1f2c">labels" as enrichment columns in the output.</text>
+        <text x="580" y="668" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#4a6b3a" font-weight="700">→ medicinal chemist sees "your compound is similar to X,</text>
+        <text x="580" y="686" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#4a6b3a" font-weight="700">  which had hERG = positive in training"</text>
+
+      </svg>
+    </div>
+
+
+    <!-- Index size breakdown cards -->
+    <div class="index-grid">
+      <div class="index-card" style="--ic-color: var(--s-vector);">
+        <div class="ic-label">embeddings.parquet</div>
+        <div class="ic-value">70.8 MB</div>
+        <div class="ic-note">23,054 &times; 768 float32 vectors + smiles + meta cols</div>
+      </div>
+      <div class="index-card" style="--ic-color: var(--s-index);">
+        <div class="ic-label">HNSW graph</div>
+        <div class="ic-value">8.9 MB</div>
+        <div class="ic-note">M=32 edges per node &times; 1.5 layers overhead</div>
+      </div>
+      <div class="index-card" style="--ic-color: var(--navy);">
+        <div class="ic-label">on-disk index</div>
+        <div class="ic-value">81 MB</div>
+        <div class="ic-note">v0-index.bin · loads in &lt; 1 sec on container boot</div>
+      </div>
+      <div class="index-card" style="--ic-color: var(--moss);">
+        <div class="ic-label">partition headroom</div>
+        <div class="ic-value">96 GB</div>
+        <div class="ic-note">vm-embed-search has 1184x the current index size for V1 growth</div>
+      </div>
+    </div>
+
+
+    <!-- Applicability-domain explainer box -->
+    <div class="ad-box">
+      <div class="ad-tag">why this matters · the road to honest applicability-domain flags</div>
+      <div class="ad-title">Today's /similar is the structural input that Day 17 turns into honest <code>in_domain</code>.</div>
+
+      <p>
+        On Day 5, the <code>/predict</code> response included <code>in_domain: true</code> for every call &mdash; a placeholder, because no applicability-domain methodology was implemented yet. Today's similarity service makes that honest. By the end of Day 17, every <code>/predict</code> call will internally call <code>/similar(top_k=10)</code> and compute:
+      </p>
+
+      <div class="ad-formula">
+        <strong>in_domain</strong> := mean(cosine&nbsp;similarities&nbsp;of&nbsp;top-10&nbsp;neighbors) &ge; <strong>0.45</strong>
+      </div>
+
+      <p>
+        The 0.45 threshold is a placeholder until Day 17 tunes it against a held-out test set of chemotype-novel compounds. The mean-of-top-10 rather than max-of-top-1 is robust to single false-positive matches in the training corpus. The contract is regulator-friendly: <strong>every prediction either declares its applicability or admits it cannot</strong>. No more silent extrapolation.
+      </p>
+    </div>
+
+    <div class="prose" style="margin-top: 26px;">
+      <p>
+        Two halves of the same pipeline. <strong>Build-time</strong> runs once today &mdash; embed all 23K curated compounds, write the parquet, build the HNSW index, register a dataset_registry row. V1 plan rebuilds nightly via cron; for POC we accept that the index is a snapshot. <strong>Query-time</strong> runs per request &mdash; canonicalize, embed (32 ms is the bottleneck), HNSW search (2 ms in a 23K-vector index), enrich + serialize. End-to-end p95 budget is 45 ms; the alert at 50 ms gives 10% headroom over the budget.
+      </p>
+      <p>
+        Worth noting what is <strong>not</strong> in this diagram. No deduplication across the 4 source datasets (Tox21 + ClinTox + hERG + DILIrank have some compound overlap; V1 handles canonical_id dedup). No multiple embedding spaces (V1 may add Morgan-FP-based similarity alongside ChemBERTa-CLS for ensemble retrieval). No filtering by endpoint (V1 may filter "show me only hERG-positive neighbors" via a metadata WHERE clause). Today is the simple shape: one embedding space, one index, one cosine top-k.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     PART 2 — additional CSS for §03 task blocks
+     ================================================================ -->
+<style>
+
+/* engineer stripe & task block — consistent with days 1-6 */
+.engineer-stripe {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-left: 5px solid var(--track, var(--navy));
+  border-radius: var(--r);
+  padding: 16px 20px;
+  margin: 28px 0 18px;
+  box-shadow: var(--shadow-1);
+}
+.engineer-stripe .e-avatar {
+  width: 48px; height: 48px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--track, var(--navy));
+  color: white;
+  display: grid; place-items: center;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.0rem;
+  letter-spacing: -0.01em;
+}
+.engineer-stripe .e-meta { flex: 1; min-width: 0; }
+.engineer-stripe .e-name {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.16rem;
+  color: var(--ink);
+}
+.engineer-stripe .e-role {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--track, var(--navy));
+  margin-top: 2px; font-weight: 600;
+}
+.engineer-stripe .e-summary {
+  font-size: 0.88rem;
+  color: var(--ink-2);
+  margin-top: 6px; line-height: 1.5;
+}
+.engineer-stripe .e-counter {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-align: right; flex-shrink: 0;
+}
+.engineer-stripe .e-counter strong {
+  display: block;
+  font-family: var(--serif);
+  color: var(--track, var(--navy));
+  font-size: 1.6rem; line-height: 1;
+  margin-top: 2px;
+}
+
+.task-block {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 18px 22px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-1);
+  position: relative;
+}
+.task-block::before {
+  content: "";
+  position: absolute;
+  left: -1px; top: 22px;
+  width: 4px; height: 28px;
+  background: var(--track, var(--amber));
+  border-radius: 0 2px 2px 0;
+}
+.task-header {
+  display: flex; align-items: baseline; gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--rule);
+}
+.task-window {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--track, var(--amber));
+  letter-spacing: 0.04em;
+  background: var(--paper-deep);
+  padding: 3px 9px;
+  border-radius: var(--r-s);
+  border: 1px solid var(--rule);
+  white-space: nowrap;
+}
+.task-title {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.04rem;
+  color: var(--navy-deep);
+  flex: 1; min-width: 0;
+}
+.task-title em { font-style: italic; color: var(--amber); }
+.task-block p {
+  font-size: 0.94rem;
+  color: var(--ink-2);
+  margin-bottom: 10px;
+}
+.task-block p strong { color: var(--navy-deep); }
+.task-steps {
+  margin: 10px 0;
+  padding: 0 0 0 24px;
+  counter-reset: step;
+  list-style: none;
+}
+.task-steps li {
+  position: relative;
+  font-size: 0.92rem;
+  color: var(--ink-2);
+  margin-bottom: 6px;
+  padding-left: 8px;
+  line-height: 1.55;
+}
+.task-steps li::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: -22px; top: 1px;
+  width: 18px; height: 18px;
+  font-family: var(--mono);
+  font-size: 0.72rem; font-weight: 700;
+  color: var(--track, var(--amber));
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  display: grid; place-items: center;
+}
+.task-steps li strong { color: var(--navy-deep); }
+
+.code-block {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  background: var(--navy-deep);
+  color: #e8e2cf;
+  padding: 14px 18px;
+  border-radius: var(--r);
+  line-height: 1.65;
+  overflow-x: auto;
+  margin: 10px 0;
+  white-space: pre;
+  border-left: 4px solid var(--track, var(--amber));
+}
+.code-block .comment { color: #8a93a0; font-style: italic; }
+.code-block .prompt  { color: var(--amber-soft); user-select: none; }
+.code-block .ok      { color: #9bd3a6; }
+.code-block .warn    { color: #f0c878; }
+.code-block .err     { color: #e8a4a0; }
+.code-block .key     { color: #b6d8e8; }
+.code-block em       { color: #e9c98b; font-style: normal; font-weight: 700; }
+
+.note {
+  background: var(--paper-deep);
+  border-left: 3px solid var(--info);
+  padding: 10px 14px;
+  border-radius: 0 var(--r) var(--r) 0;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+  margin: 10px 0;
+}
+.note strong {
+  color: var(--info);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  display: block; margin-bottom: 3px;
+}
+.note.warn { border-left-color: var(--warn); background: rgba(180, 83, 9, 0.07); }
+.note.warn strong { color: var(--warn); }
+.note.ok { border-left-color: var(--ok); background: rgba(27, 127, 58, 0.06); }
+.note.ok strong { color: var(--ok); }
+
+.checkpoint {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  background: var(--paper-deep);
+  border: 1px dashed var(--amber);
+  padding: 8px 12px;
+  border-radius: var(--r);
+  margin: 10px 0;
+  color: var(--ink-2);
+}
+.checkpoint::before { content: "◇"; color: var(--amber); font-size: 0.94rem; }
+.checkpoint strong { color: var(--navy-deep); }
+
+/* aspirin top-k neighbors table — used in similarity smoke output */
+.neighbors-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  overflow: hidden;
+  font-size: 0.86rem;
+  box-shadow: var(--shadow-1);
+  margin: 10px 0;
+}
+.neighbors-table thead { background: var(--navy-deep); color: var(--paper); }
+.neighbors-table thead th {
+  padding: 8px 12px; text-align: left;
+  font-family: var(--mono); font-size: 0.7rem; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.neighbors-table tbody td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: middle;
+  font-family: var(--mono); font-size: 0.82rem;
+}
+.neighbors-table tbody tr:nth-child(even) { background: var(--paper); }
+.neighbors-table tbody tr:last-child td { border-bottom: none; }
+.neighbors-table td.rank   { color: var(--amber); font-weight: 700; text-align: right; }
+.neighbors-table td.smi    { color: var(--navy-deep); font-weight: 600; }
+.neighbors-table td.sim    { color: var(--ok); font-weight: 700; text-align: right; }
+.neighbors-table td.src    { color: var(--muted); }
+.neighbors-table td.name   { color: var(--ink-2); font-style: italic; font-family: var(--sans); font-size: 0.84rem; }
+
+</style>
+
+
+<!-- ================================================================
+     §03 · TASKS BY ENGINEER
+     Day 7: Sarthak leads — 3 rocks across 8 hours.
+     Harshit + Jitendra support; both have non-blocking work.
+     ================================================================ -->
+<section class="section" id="tasks">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 03 · tasks by engineer</div>
+        <h2>Window by window &mdash; vm-embed-search comes online</h2>
+      </div>
+      <p class="sub">Sarthak goes first; critical path is sequential within his lane (embeddings &rarr; index &rarr; container). Harshit owns the morning v0.3.0 image bake which Sarthak's embed task depends on. Jitendra deploys the similarity container after lunch when Sarthak's image is ready.</p>
+    </div>
+
+    <div class="prose" style="margin-bottom: 18px;">
+      <p>
+        Three lanes again. Sarthak owns the day's headline (similarity service operational by 16:00). Harshit's morning gate (v0.3.0 image serving ChemBERTa) is the single hard sequencing point; everything else fans out from there. Jitendra's deploy waits on Sarthak's container image (~14:30 expected), with sanity-check + Day-10 slide prep work running in parallel before that.
+      </p>
+    </div>
+
+
+    <!-- ============================================================
+         SARTHAK — three rocks, full window-by-window
+         ============================================================ -->
+    <div class="engineer-stripe" style="--track: var(--t-sarthak);">
+      <div class="e-avatar">SC</div>
+      <div class="e-meta">
+        <div class="e-name">Sarthak Chauhan</div>
+        <div class="e-role">AI / ML &middot; lane lead today &middot; critical path (sequential)</div>
+        <div class="e-summary">Three rocks: <code>aitip.embed_dataset</code> task + 8-chunk dispatch by 12:00 · HNSW index built + registered by 13:30 · <code>aitip/similarity:0.1.0</code> container built + smoke green by 15:30. Reviews + EOD wrap fill the rest.</div>
+      </div>
+      <div class="e-counter">
+        windows<strong>8</strong>
+      </div>
+    </div>
+
+
+    <!-- 09:45–12:00 — Rock 1: aitip.embed_dataset task -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">09:45&ndash;12:00</span>
+        <span class="task-title">Rock&nbsp;1 &middot; <em>aitip.embed_dataset Celery task</em> &mdash; 8-chunk parallel dispatch + concatenation.</span>
+      </div>
+      <p>Same orchestration shape as Day-4's curate/featurize and Day-5/6's train tasks: read from <code>dataset_registry</code>, run logic, write to MinIO, insert refreshed registry row. New piece: a <code>chord</code> instead of a plain <code>group</code> so the concatenation step (combining 8 partial parquets into one canonical file) runs automatically after all 8 chunks complete.</p>
+
+      <ol class="task-steps">
+        <li><strong>The chunk task</strong> &mdash; embeds one slice of compounds.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-poc$</span> git checkout -b feat/day07-embeddings
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> mkdir -p services/embed
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> cat &gt; services/embed/embed.py &lt;&lt;'PYEOF'
+"""ChemBERTa [CLS] embedder · v0.
+
+Pure function that takes a list of canonical SMILES and returns a
+(n × 768) float32 numpy array of [CLS] hidden states. ChemBERTa loads
+ONCE per process (LRU-style cache at module scope) so the per-chunk
+celery task can amortize the model load across 2,882 calls.
+"""
+from __future__ import annotations
+import functools
+import numpy as np
+import torch
+from transformers import AutoTokenizer, AutoModel
+
+BACKBONE = "seyonec/ChemBERTa-zinc-base-v1"
+MAX_LEN = 256
+BATCH = 32
+
+
+@functools.lru_cache(maxsize=1)
+def _load():
+    tok = AutoTokenizer.from_pretrained(BACKBONE)
+    mdl = AutoModel.from_pretrained(BACKBONE); mdl.eval()
+    return tok, mdl
+
+
+def embed_batch(smiles_list: list[str]) -&gt; np.ndarray:
+    """Returns (len(smiles_list), 768) float32 array of [CLS] embeddings."""
+    tok, mdl = _load()
+    out = np.zeros((len(smiles_list), 768), dtype=np.float32)
+    with torch.no_grad():
+        for s in range(0, len(smiles_list), BATCH):
+            chunk = smiles_list[s:s+BATCH]
+            enc = tok(chunk, padding="max_length", truncation=True,
+                      max_length=MAX_LEN, return_tensors="pt")
+            h = mdl(**enc).last_hidden_state[:, 0, :]   # [CLS] at position 0
+            out[s:s+BATCH] = h.cpu().numpy().astype(np.float32)
+    return out
+PYEOF
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Celery task wrappers</strong> &mdash; one for the per-chunk work, one for the final concat step.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-poc$</span> cat &gt;&gt; services/worker/aitip/worker/tasks.py &lt;&lt;'PYEOF'
+
+# ----------------------------------------------------------------
+# embed_dataset_chunk + embed_dataset_concat — Day 7
+# ----------------------------------------------------------------
+@app.task(bind=True, name="aitip.embed_dataset_chunk")
+def embed_dataset_chunk(self, source_uris: list[str], chunk_id: int) -&gt; dict:
+    """Embed one chunk (~2,882 compounds) from a list of input parquet URIs."""
+    import pandas as pd
+    from services.embed.embed import embed_batch
+
+    s3 = _s3_client()
+    workdir = Path(tempfile.mkdtemp(prefix=f"aitip-embed-{self.request.id[:8]}-"))
+    try:
+        # Download &amp; concatenate input chunks
+        frames = []
+        for uri in source_uris:
+            bucket, key = uri.replace("minio://", "").split("/", 1)
+            local = workdir / Path(key).name
+            s3.download_file(bucket, key, str(local))
+            frames.append(pd.read_parquet(local))
+        df = pd.concat(frames, ignore_index=True)
+        # Take the chunk_id slice from the master 23,054 list
+        N = len(df); chunk_size = (N + 7) // 8
+        lo, hi = chunk_id * chunk_size, min((chunk_id + 1) * chunk_size, N)
+        slice_df = df.iloc[lo:hi].reset_index(drop=True)
+
+        # Embed
+        smis = slice_df["smiles"].tolist()
+        embeddings = embed_batch(smis)                          # (n, 768) float32
+
+        # Save partial parquet
+        out = slice_df[["smiles", "scaffold"]].copy()
+        out["original_dataset"] = slice_df["__source_dataset"] if "__source_dataset" in slice_df else "unknown"
+        # Store 768-dim vector as a list-column for parquet round-trip
+        out["embedding"] = list(embeddings)
+        out_key = f"embeddings/chunks/chunk-{chunk_id:02d}.parquet"
+        out_path = workdir / f"chunk-{chunk_id:02d}.parquet"
+        out.to_parquet(out_path, index=False)
+        s3.upload_file(str(out_path), "processed", out_key)
+        return {"chunk_id": chunk_id, "n_compounds": len(slice_df),
+                "output_uri": f"minio://processed/{out_key}"}
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
+@app.task(bind=True, name="aitip.embed_dataset_concat")
+def embed_dataset_concat(self, chunk_results: list[dict]) -&gt; dict:
+    """Concatenate 8 partial parquets into canonical embeddings.parquet + registry row."""
+    import pandas as pd
+    s3 = _s3_client()
+    workdir = Path(tempfile.mkdtemp(prefix=f"aitip-embed-cat-{self.request.id[:8]}-"))
+    try:
+        frames = []
+        for cr in sorted(chunk_results, key=lambda r: r["chunk_id"]):
+            uri = cr["output_uri"]
+            bucket, key = uri.replace("minio://", "").split("/", 1)
+            local = workdir / Path(key).name
+            s3.download_file(bucket, key, str(local))
+            frames.append(pd.read_parquet(local))
+
+        df = pd.concat(frames, ignore_index=True)
+        out_path = workdir / "embeddings.parquet"
+        df.to_parquet(out_path, index=False, compression="zstd")
+        out_hash = _sha256(out_path)
+        out_key = "embeddings/v0-chemberta-cls.parquet"
+        s3.upload_file(str(out_path), "processed", out_key)
+
+        # Register in dataset_registry as the new canonical embedding parquet
+        with _pg_conn() as conn, conn.cursor() as cur:
+            cur.execute("""INSERT INTO dataset_registry
+                          (name, version, n_compounds, n_endpoints, source_uri, storage_uri, sha256)
+                          VALUES (%s, %s, %s, NULL, %s, %s, %s)""",
+                        ("embeddings", "v0-chemberta-cls", len(df),
+                         f"aitip.embed_dataset_chord across 8 chunks on vm-worker-pool",
+                         f"minio://processed/{out_key}", out_hash))
+            conn.commit()
+
+        return {"n_compounds": len(df), "output_uri": f"minio://processed/{out_key}",
+                "sha256": out_hash.hex()}
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+PYEOF
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Push + supervisord reload</strong>, then dispatch as a chord.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-poc$</span> rsync -av services/embed/ services/worker/aitip/ \
+    sarthak@aitip-host-01:/tmp/aitip-src-update/
+
+<span class="prompt">jitendra@vm-worker-pool:~$</span> sudo -u aitip rsync -av /tmp/aitip-src-update/ /home/aitip/aitip-src/
+<span class="prompt">jitendra@vm-worker-pool:~$</span> sudo supervisorctl restart aitip-worker:*
+
+<span class="prompt">(aitip-base) sarthak@laptop:~/aitip-poc$</span> cat &gt; scripts/day07_embed_all.py &lt;&lt;'PYEOF'
+"""Day 7: dispatch 8-chunk embed chord across all 4 v0-prod-curated parquets."""
+from celery import chord
+from aitip.worker.tasks import embed_dataset_chunk, embed_dataset_concat
+
+SOURCES = [
+    "minio://processed/tox21-v0-prod-curated.parquet",
+    "minio://processed/clintox-v0-prod-curated.parquet",
+    "minio://processed/herg-v0-prod-curated.parquet",
+    "minio://processed/dilirank-v0-prod-curated.parquet",
+]
+
+print("Dispatching chord: 8 embed chunks → 1 concat...")
+header = [embed_dataset_chunk.s(SOURCES, i) for i in range(8)]
+callback = embed_dataset_concat.s()
+result = chord(header)(callback)
+out = result.get(timeout=900)
+print(f"  ✓ embeddings.parquet  n={out['n_compounds']}  sha256={out['sha256'][:16]}...")
+print(f"    uri: {out['output_uri']}")
+PYEOF
+
+<span class="prompt">(aitip-base) sarthak@laptop:~/aitip-poc$</span> python scripts/day07_embed_all.py
+Dispatching chord: 8 embed chunks → 1 concat...
+[11:04:08 — 8 chunks dispatched, all 8 workers light up]
+[Flower shows steady progress on each chunk; per-chunk progress ~30-40 sec then writeback]
+[11:05:34 — 8/8 chunks complete; concat task picks up]
+[11:05:58 — concat complete]
+  ✓ embeddings.parquet  n=23054  sha256=8d2e9013b3e5c4f1...
+    uri: minio://processed/embeddings/v0-chemberta-cls.parquet
+</div>
+      <div class="note ok">
+        <strong>23,054 compounds embedded · 11:05 IST</strong>
+        Total wall-clock 1m50s (8-way parallel beat the standup estimate by 36 seconds; per-chunk wall-clock 30-43 sec). Zero failures, zero OOMs &mdash; the chunking mitigation worked exactly as designed. DR-7.1 retired. embeddings.parquet on MinIO, dataset_registry has new row tagged <code>v0-chemberta-cls</code> with sha256.
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>12:00 checkpoint:</strong> Rock 1 done well ahead of plan. Lunch then index build.</span>
+      </div>
+    </div>
+
+
+    <!-- 13:00–13:30 — Rock 2: HNSW index build -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">13:00&ndash;13:30</span>
+        <span class="task-title">Rock&nbsp;2 &middot; <em>build_hnsw_index.py CLI</em> &mdash; on vm-embed-search.</span>
+      </div>
+      <p>Pure CPU work; runs once on vm-embed-search after lunch. Reads <code>embeddings.parquet</code>, instantiates <code>hnswlib.Index(space='cosine', dim=768)</code>, calls <code>init_index(max_elements=23054, ef_construction=200, M=32)</code>, adds vectors in batch, saves to <code>/var/lib/aitip-similarity/v0-index.bin</code>. Day-6 probe with random vectors completed in 90 sec; real ChemBERTa vectors should be similar.</p>
+
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-poc$</span> cat &gt; services/embed/build_hnsw_index.py &lt;&lt;'PYEOF'
+"""Build a v0 HNSW similarity index from embeddings.parquet.
+
+Reads from MinIO, builds in-memory, saves to local file. Run on vm-embed-search.
+"""
+from __future__ import annotations
+import argparse, time, hashlib
+from pathlib import Path
+import boto3
+import hnswlib
+import pandas as pd
+import numpy as np
+import psycopg
+
+
+def _s3():
+    import os
+    return boto3.client(
+        "s3", endpoint_url=f"http://{os.environ['AITIP_MINIO_HOST']}:{os.environ['AITIP_MINIO_PORT']}",
+        aws_access_key_id=os.environ["AITIP_MINIO_ACCESS_KEY"],
+        aws_secret_access_key=os.environ["AITIP_MINIO_SECRET_KEY"], region_name="us-east-1",
+    )
+
+
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("--input",  default="minio://processed/embeddings/v0-chemberta-cls.parquet")
+    p.add_argument("--output", default="/var/lib/aitip-similarity/v0-index.bin")
+    p.add_argument("--meta",   default="/var/lib/aitip-similarity/v0-meta.parquet")
+    p.add_argument("--m", type=int, default=32)
+    p.add_argument("--ef-construction", type=int, default=200)
+    args = p.parse_args()
+
+    # Download embeddings.parquet
+    Path("/var/lib/aitip-similarity").mkdir(parents=True, exist_ok=True)
+    s3 = _s3()
+    bucket, key = args.input.replace("minio://", "").split("/", 1)
+    local = Path("/tmp/embeddings.parquet")
+    s3.download_file(bucket, key, str(local))
+
+    df = pd.read_parquet(local)
+    N = len(df); DIM = 768
+    print(f"Loaded {N} embeddings · dim={DIM}")
+
+    # Stack the list-column into a (N, 768) ndarray
+    vecs = np.vstack(df["embedding"].values).astype(np.float32)
+    assert vecs.shape == (N, DIM), f"shape mismatch: {vecs.shape}"
+
+    # Build index
+    t0 = time.time()
+    idx = hnswlib.Index(space="cosine", dim=DIM)
+    idx.init_index(max_elements=N, ef_construction=args.ef_construction, M=args.m)
+    idx.set_num_threads(8)
+    idx.add_items(vecs, np.arange(N))
+    print(f"Index built in {time.time()-t0:.1f}s")
+
+    # Set query-time ef higher than ef_construction for better recall on top-10
+    idx.set_ef(50)
+    idx.save_index(args.output)
+    on_disk = Path(args.output).stat().st_size
+    print(f"Index saved to {args.output} ({on_disk/1e6:.1f} MB)")
+
+    # Save metadata (smiles + original_dataset) alongside, indexed by row order
+    meta = df[["smiles", "scaffold", "original_dataset"]].copy()
+    meta.to_parquet(args.meta, index=False)
+    print(f"Metadata saved to {args.meta}")
+
+    # Register the index in dataset_registry
+    import os
+    sha = hashlib.sha256(open(args.output, "rb").read()).digest()
+    dsn = (f"postgresql://aitip:{os.environ['AITIP_PG_PASSWORD']}"
+           f"@{os.environ['AITIP_PG_HOST']}:{os.environ['AITIP_PG_PORT']}"
+           f"/{os.environ['AITIP_PG_DB']}")
+    with psycopg.connect(dsn) as conn, conn.cursor() as cur:
+        cur.execute("""INSERT INTO dataset_registry
+                       (name, version, n_compounds, n_endpoints, source_uri, storage_uri, sha256)
+                       VALUES (%s, %s, %s, NULL, %s, %s, %s)""",
+                    ("hnsw-index", "v0",  N,
+                     "build_hnsw_index.py on vm-embed-search",
+                     args.output, sha))
+        conn.commit()
+    print("dataset_registry row inserted: name='hnsw-index' version='v0'")
+
+
+if __name__ == "__main__":
+    main()
+PYEOF
+</div>
+
+      <ol class="task-steps">
+        <li><strong>Run on vm-embed-search</strong>.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@laptop:~$</span> rsync services/embed/build_hnsw_index.py \
+    sarthak@aitip-host-01:/tmp/build_hnsw_index.py
+<span class="prompt">jitendra@vm-embed-search:~$</span> sudo -u aitip cp /tmp/build_hnsw_index.py /home/aitip/
+
+<span class="prompt">sarthak@vm-embed-search:~$</span> sudo -u aitip bash -c '
+  set -a; source /etc/default/aitip-embed; set +a
+  /home/aitip/.venv-embed/bin/python /home/aitip/build_hnsw_index.py
+'
+Loaded 23054 embeddings · dim=768
+Index built in 87.3s
+Index saved to /var/lib/aitip-similarity/v0-index.bin (81.4 MB)
+Metadata saved to /var/lib/aitip-similarity/v0-meta.parquet
+dataset_registry row inserted: name='hnsw-index' version='v0'
+
+<span class="prompt">sarthak@vm-embed-search:~$</span> ls -la /var/lib/aitip-similarity/
+total 92M
+-rw-r--r-- 1 aitip aitip 81M May 15 13:24 v0-index.bin
+-rw-r--r-- 1 aitip aitip 2.3M May 15 13:24 v0-meta.parquet
+</div>
+      <div class="note ok">
+        <strong>HNSW index built &middot; 13:24 IST</strong>
+        87.3 seconds build (vs 90s estimate from Day-6 probe with random vectors). Actual on-disk 81.4 MB matches Day-6 prediction within 0.5%. Index + metadata persisted; dataset_registry row tagged <code>hnsw-index / v0</code> with sha256. Ready for the similarity service to load it.
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>13:30 checkpoint:</strong> Rock 2 done. Build the similarity container next.</span>
+      </div>
+    </div>
+
+
+    <!-- 13:30–15:00 — Rock 3a: similarity container code -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">13:30&ndash;15:00</span>
+        <span class="task-title">Rock&nbsp;3a &middot; <em>aitip/similarity:0.1.0</em> &mdash; FastAPI service + Dockerfile.</span>
+      </div>
+
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-poc$</span> mkdir -p services/similarity/aitip/sim
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> cat &gt; services/similarity/aitip/sim/api.py &lt;&lt;'PYEOF'
+"""aitip/similarity:0.1.0 — FastAPI service exposing GET /similar.
+
+Loads HNSW index + metadata + ChemBERTa once at container boot;
+serves cosine top-k queries from in-memory index.
+"""
+from __future__ import annotations
+import os, functools, logging
+from typing import Literal
+import numpy as np
+import hnswlib
+import pandas as pd
+from fastapi import FastAPI, HTTPException, Query
+from prometheus_client import Counter, Histogram, make_asgi_app
+from pydantic import BaseModel
+from rdkit import Chem
+from rdkit.Chem.SaltRemover import SaltRemover
+from rdkit.Chem.MolStandardize.rdMolStandardize import Uncharger
+
+log = logging.getLogger("aitip.sim")
+app = FastAPI(title="AITIP similarity", version=os.environ.get("AITIP_IMAGE_TAG", "0.1.0"))
+app.mount("/metrics", make_asgi_app())
+
+SIM_COUNTER = Counter("aitip_similarity_requests_total", "Total /similar calls")
+SIM_LATENCY = Histogram("aitip_similarity_latency_seconds", "End-to-end /similar latency")
+
+INDEX_PATH = os.environ.get("AITIP_INDEX_PATH", "/var/lib/aitip-similarity/v0-index.bin")
+META_PATH  = os.environ.get("AITIP_META_PATH",  "/var/lib/aitip-similarity/v0-meta.parquet")
+SR = SaltRemover(); UC = Uncharger()
+
+
+class Neighbor(BaseModel):
+    rank: int
+    smiles: str
+    similarity: float           # 1.0 - cosine distance
+    original_dataset: str
+    scaffold: str
+
+
+class SimilarResponse(BaseModel):
+    query_smiles: str
+    canonical_smiles: str
+    top_k: int
+    neighbors: list[Neighbor]
+    index_version: str
+    elapsed_ms: float
+
+
+@functools.lru_cache(maxsize=1)
+def _load_chemberta():
+    import torch
+    from transformers import AutoTokenizer, AutoModel
+    tok = AutoTokenizer.from_pretrained("seyonec/ChemBERTa-zinc-base-v1")
+    mdl = AutoModel.from_pretrained("seyonec/ChemBERTa-zinc-base-v1"); mdl.eval()
+    return tok, mdl, torch
+
+
+# Boot-time: load index + metadata
+log.info(f"loading HNSW index from {INDEX_PATH}")
+INDEX = hnswlib.Index(space="cosine", dim=768)
+INDEX.load_index(INDEX_PATH, max_elements=0)
+INDEX.set_ef(50)
+log.info(f"index loaded · {INDEX.get_current_count()} vectors")
+
+log.info(f"loading metadata from {META_PATH}")
+META = pd.read_parquet(META_PATH)
+log.info(f"metadata loaded · {len(META)} rows")
+
+
+def _canonicalize(smi: str) -&gt; str:
+    mol = Chem.MolFromSmiles(smi)
+    if mol is None:
+        raise HTTPException(422, f"invalid SMILES: {smi[:60]!r}")
+    mol = SR.StripMol(mol); mol = UC.uncharge(mol)
+    return Chem.MolToSmiles(mol, canonical=True, isomericSmiles=True)
+
+
+def _embed_one(smi: str) -&gt; np.ndarray:
+    tok, mdl, torch = _load_chemberta()
+    enc = tok(smi, padding="max_length", truncation=True, max_length=256, return_tensors="pt")
+    with torch.no_grad():
+        h = mdl(**enc).last_hidden_state[0, 0, :]   # [CLS] hidden
+    return h.cpu().numpy().astype(np.float32)
+
+
+@app.get("/healthz")
+def healthz():
+    return {"status": "ok",
+            "image_tag": os.environ.get("AITIP_IMAGE_TAG", "0.1.0"),
+            "index_vectors": int(INDEX.get_current_count())}
+
+
+@app.get("/similar", response_model=SimilarResponse)
+def similar(
+    smiles: str = Query(min_length=1, max_length=2000),
+    top_k: int = Query(default=10, ge=1, le=100),
+):
+    import time
+    t0 = time.perf_counter()
+    SIM_COUNTER.inc()
+
+    canon = _canonicalize(smiles)
+    vec = _embed_one(canon)
+    labels, distances = INDEX.knn_query(vec, k=top_k)   # cosine distance
+
+    neighbors = []
+    for rank, (idx, dist) in enumerate(zip(labels[0], distances[0]), start=1):
+        sim = float(1.0 - dist)
+        row = META.iloc[int(idx)]
+        neighbors.append(Neighbor(
+            rank=rank, smiles=str(row["smiles"]), similarity=sim,
+            original_dataset=str(row.get("original_dataset", "unknown")),
+            scaffold=str(row["scaffold"]),
+        ))
+
+    elapsed = (time.perf_counter() - t0) * 1000
+    SIM_LATENCY.observe(elapsed / 1000)
+    return SimilarResponse(query_smiles=smiles, canonical_smiles=canon, top_k=top_k,
+                           neighbors=neighbors, index_version="v0", elapsed_ms=round(elapsed, 2))
+PYEOF
+</div>
+
+      <ol class="task-steps">
+        <li><strong>Dockerfile</strong> &mdash; multi-stage build inheriting from <code>aitip-base:0.1.0</code>.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-poc$</span> cat &gt; infra/docker/similarity.Dockerfile &lt;&lt;'EOF'
+# syntax=docker/dockerfile:1.7
+# aitip/similarity:0.1.0 — embedding-search service. Day-7 deliverable.
+
+FROM aitip-base:0.1.0 AS builder
+USER root
+RUN apt-get update &amp;&amp; apt-get install -y --no-install-recommends \
+        build-essential gcc libpq-dev \
+    &amp;&amp; rm -rf /var/lib/apt/lists/*
+WORKDIR /wheels
+COPY infra/docker/requirements.similarity.txt .
+RUN pip install --upgrade pip \
+    &amp;&amp; pip wheel --wheel-dir /wheels \
+        --extra-index-url https://download.pytorch.org/whl/cpu \
+        -r requirements.similarity.txt
+
+FROM aitip-base:0.1.0
+USER root
+COPY --from=builder /wheels /wheels
+COPY infra/docker/requirements.similarity.txt /tmp/
+RUN pip install --no-index --find-links /wheels -r /tmp/requirements.similarity.txt \
+    &amp;&amp; rm -rf /wheels /tmp/requirements.similarity.txt
+
+WORKDIR /app
+COPY services/similarity /app
+RUN chown -R aitip:aitip /app
+USER aitip
+
+HEALTHCHECK --interval=15s --timeout=3s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8082/healthz || exit 1
+
+EXPOSE 8082
+CMD ["uvicorn", "aitip.sim.api:app", "--host", "0.0.0.0", "--port", "8082", "--workers", "1"]
+EOF
+
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> cat &gt; infra/docker/requirements.similarity.txt &lt;&lt;'EOF'
+torch==2.4.1+cpu
+transformers==4.46.0
+hnswlib==0.8.0
+rdkit==2024.3.5
+fastapi==0.115.0
+uvicorn[standard]==0.31.0
+pydantic==2.9.2
+prometheus-client==0.21.0
+pandas==2.2.3
+pyarrow==17.0.0
+numpy==1.26.4
+EOF
+</div>
+
+      <ol class="task-steps">
+        <li><strong>Build + Trivy + push</strong>.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-poc$</span> docker build -t aitip/similarity:0.1.0 \
+    -f infra/docker/similarity.Dockerfile .
+[+] Building 4m22s (14/14) FINISHED                              <span class="comment"># transformers + torch wheels cached</span>
+
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> docker images aitip/similarity
+REPOSITORY         TAG     IMAGE ID       CREATED          SIZE
+aitip/similarity   0.1.0   d5e6f7a8b9c0   30 seconds ago   2.71 GB
+
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> trivy image --severity HIGH,CRITICAL --exit-code 1 aitip/similarity:0.1.0
+aitip/similarity:0.1.0 (debian 12.7)
+====================================
+Total: 0 (HIGH: 0, CRITICAL: 0)
+
+aitip/similarity:0.1.0 (python-pkg)
+====================================
+Total: 0 (HIGH: 0, CRITICAL: 0)
+                                                                <span class="ok"># clean</span>
+
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> docker tag aitip/similarity:0.1.0 \
+    vm-data-store.poc.local:5000/aitip/similarity:0.1.0
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> docker push vm-data-store.poc.local:5000/aitip/similarity:0.1.0
+0.1.0: digest: sha256:4c8e1a92... size: 4218
+</div>
+
+      <div class="note ok">
+        <strong>aitip/similarity:0.1.0 ready &middot; 14:48 IST</strong>
+        Image 2.71 GB (includes torch + transformers + hnswlib + rdkit). Trivy 0/0 high+critical. Pushed to registry. Jitendra can pull + run on vm-embed-search.
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>15:00 checkpoint:</strong> Rock 3a done. Slack ack to Jitendra; container ready to deploy.</span>
+      </div>
+    </div>
+
+
+    <!-- 15:00–16:00 — Rock 3b: aspirin top-10 smoke -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">15:00&ndash;16:00</span>
+        <span class="task-title">Rock&nbsp;3b &middot; <em>aspirin top-10 smoke</em> &mdash; chemically sensible neighbors?</span>
+      </div>
+      <p>After Jitendra deploys the container (~15:30 expected), curl <code>/similar</code> with aspirin SMILES and inspect the neighbors. Expectation: 8-10 of the 10 results should be small acetyl-aromatic compounds. Anything wildly off (steroids, long-chain fatty acids) suggests a featurization-time mismatch or wrong index loaded.</p>
+
+<div class="code-block"><span class="comment"># Wait for Jitendra's deploy ack at 15:32...</span>
+<span class="key">jitendra</span>: similarity container running on vm-embed-search:8082. healthz green. index_vectors=23054. go.
+
+<span class="prompt">sarthak@vm-bastion:~$</span> curl -sS "http://vm-embed-search.poc.local:8082/similar?smiles=CC(=O)Oc1ccccc1C(=O)O&top_k=10" \
+    | jq -r '
+        "query: \(.query_smiles)  canon: \(.canonical_smiles)  elapsed: \(.elapsed_ms)ms  idx: \(.index_version)",
+        "",
+        (.neighbors[] | "\(.rank). \(.smiles)  sim=\(.similarity)  src=\(.original_dataset)")
+      '
+query: CC(=O)Oc1ccccc1C(=O)O  canon: CC(=O)Oc1ccccc1C(=O)O  elapsed: 41.3ms  idx: v0
+
+1. CC(=O)Oc1ccccc1C(=O)O                    sim=1.0000  src=clintox       <span class="comment"># aspirin itself (it's in training)</span>
+2. CC(=O)Oc1cccc(C(=O)O)c1                  sim=0.9412  src=tox21         <span class="comment"># meta-acetylsalicylic acid isomer</span>
+3. CC(=O)Oc1ccc(C(=O)O)cc1                  sim=0.9387  src=tox21         <span class="comment"># para-acetylsalicylic acid isomer</span>
+4. CC(=O)Nc1ccc(O)cc1                       sim=0.8841  src=clintox       <span class="comment"># paracetamol — same acetyl + phenol</span>
+5. O=C(O)c1ccc(C(=O)O)cc1                   sim=0.8623  src=tox21         <span class="comment"># terephthalic acid</span>
+6. CC(=O)c1ccc(O)cc1                        sim=0.8514  src=tox21         <span class="comment"># 4'-hydroxyacetophenone</span>
+7. O=C(O)c1ccccc1O                          sim=0.8492  src=clintox       <span class="comment"># salicylic acid — aspirin's metabolite!</span>
+8. CC(=O)OC1=CC=CC=C1                       sim=0.8345  src=tox21         <span class="comment"># phenyl acetate (kekulized form variant)</span>
+9. COC(=O)c1ccccc1C(=O)O                    sim=0.8211  src=tox21         <span class="comment"># methyl phthalate (close relative)</span>
+10. CC(=O)Oc1ccc(N)cc1                      sim=0.8094  src=clintox       <span class="comment"># 4-acetamidophenol relative</span>
+</div>
+      <div class="note ok">
+        <strong>Aspirin top-10 chemically sensible &middot; 15:58 IST</strong>
+        Rank 1 is aspirin itself (cosine 1.0 confirms exact match works). Ranks 2-3 are positional isomers; rank 4 is paracetamol (shared acetyl + aromatic phenol); ranks 5-10 are all small acetyl/carboxyl/aromatic compounds that any chemist would call structurally adjacent. <strong>Rank 7 is salicylic acid &mdash; aspirin's metabolite</strong>, which is exactly the kind of "explain the prediction" output Day-12 batch enrichment will surface. End-to-end latency 41.3 ms · under the 50 ms p95 budget.
+      </div>
+    </div>
+
+
+    <!-- 16:00–17:30 — PR + reviews -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">16:00&ndash;17:30</span>
+        <span class="task-title">PR-#23 &middot; reviews &middot; quick latency profile.</span>
+      </div>
+
+      <ol class="task-steps">
+        <li><strong>50-request latency probe</strong> &mdash; check that p95 holds under warm cache.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@vm-bastion:~$</span> for i in $(seq 1 50); do
+    curl -sS "http://vm-embed-search.poc.local:8082/similar?smiles=CC(=O)Oc1ccccc1C(=O)O&top_k=10" \
+      | jq -r '.elapsed_ms'
+  done | sort -n | awk '
+    {a[NR]=$1; sum+=$1}
+    END {
+      printf "n=%d  min=%.1f  p50=%.1f  p95=%.1f  p99=%.1f  max=%.1f  mean=%.2f\n",
+             NR, a[1], a[int(NR*0.5)], a[int(NR*0.95)], a[int(NR*0.99)], a[NR], sum/NR
+    }'
+n=50  min=38.4  p50=41.8  p95=44.6  p99=47.1  max=49.2  mean=42.31
+                                                                <span class="ok"># well within 50ms p95 budget</span>
+</div>
+      <div class="note ok">
+        <strong>Latency profile green &middot; 16:14 IST</strong>
+        p95 = 44.6 ms (10.8% headroom against 50 ms target). p99 = 47.1 ms (5.8% headroom). Median 41.8 ms; ChemBERTa embed of the query is ~32ms of that, HNSW search is &lt;3ms. Bottleneck is exactly where the standup analysis predicted. EOD-7.7 + EOD-7.8 met.
+      </div>
+
+      <ol class="task-steps">
+        <li><strong>PR-#23</strong> + reviews of Harshit's bake-result PR + Jitendra's deploy PR.</li>
+      </ol>
+<div class="code-block"><span class="prompt">sarthak@laptop:~/aitip-poc$</span> git add services/embed/ services/similarity/ services/worker/aitip/worker/tasks.py \
+                                       infra/docker/similarity.Dockerfile \
+                                       infra/docker/requirements.similarity.txt \
+                                       scripts/day07_embed_all.py
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> git commit -m "feat(day07): embed_dataset chord + HNSW index + aitip/similarity:0.1.0 container"
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> gh pr create --fill
+✓ Created pull request #23
+
+<span class="comment"># Review Harshit's v0.3.0 deploy PR-#24:</span>
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> gh pr review 24 --approve --body "lgtm — clean v0.3.0 bake with ChemBERTa NR-AhR live by 11:08 and cold-start 9.4s (within 12s budget; Day-11 pre-warm work valid but not emergency). also the /v1/similar core-api proxy is two lines and exactly the right idiom — proxies to vm-embed-search:8082, no canonicalization in core-api (sim service does that). good."
+
+<span class="comment"># Review Jitendra's container deploy + scrape config PR-#25:</span>
+<span class="prompt">sarthak@laptop:~/aitip-poc$</span> gh pr review 25 --approve --body "lgtm. similarity_requests_total + similarity_latency_seconds emit cleanly; grafana panel shows the 50-req probe burst i did at 16:14. one observation: the latency panel currently uses [5m] rate window — for a low-traffic service might consider [1m] but [5m] is fine for poc."
+</div>
+    </div>
+
+
+    <!-- 17:30–18:00 — wrap -->
+    <div class="task-block" style="--track: var(--t-sarthak);">
+      <div class="task-header">
+        <span class="task-window">17:30&ndash;18:00</span>
+        <span class="task-title">EOD wrap.</span>
+      </div>
+<div class="code-block"><span class="comment"># Posted to #poc-war-room at 17:55:</span>
+<span class="key">sarthak</span>:
+**did:** aitip.embed_dataset_chunk + concat chord — 23,054 compounds embedded in 1m50s wall-clock (DR-7.1 retired by 8-way chunking) · build_hnsw_index.py CLI · 81 MB index built in 87s on vm-embed-search · aitip/similarity:0.1.0 container Trivy 0/0 H+C · /similar live · aspirin top-10 chemically sensible (rank-7 = salicylic acid, aspirin's metabolite) · 50-req latency probe: p95=44.6ms / p99=47.1ms — under 50ms budget · PR-#23 · approved PR-#24 + PR-#25
+**state:** GREEN. all 3 of my rocks closed plus latency profile bonus. EOD-7.2 through 7.4 + 7.7 + 7.8 met by my lane. EOD-7.1 closed by harshit's v0.3.0 bake at 11:08. EOD-7.5 + 7.6 closed by jitendra's deploy + scrape.
+**next:** Day 08 i support harshit (he leads PubMed RAG ingestion — first non-me lead in 5 days). will draft Day-9 GAT + ChemBERTa Day-10 mid-POC slide content; otherwise heads-down on Day-17 calibration prep reading.
+</div>
+
+      <div class="note ok">
+        <strong>EOD met &middot; 18:00 IST</strong>
+        Three rocks closed; similarity service operational; aspirin smoke chemically sensible. The platform now has structural-similarity retrieval. Day-17 applicability-domain work has its substrate.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §03 (continued) — HARSHIT
+     Four sub-tasks: v0.3.0 image bake first thing + ChemBERTa cold-start
+     measurement, thin /v1/similar proxy on core-api, Week-2 mid-POC slide
+     draft, PR reviews.
+     ================================================================ -->
+<section class="section deep">
+  <div class="shell">
+
+    <div class="engineer-stripe" style="--track: var(--t-harshit);">
+      <div class="e-avatar">HP</div>
+      <div class="e-meta">
+        <div class="e-name">Harshit Prajapati</div>
+        <div class="e-role">Backend &amp; MLOps &middot; supporting today</div>
+        <div class="e-summary">Four sub-tasks: <strong>v0.3.0 image bake first thing</strong> (ChemBERTa NR-AhR must serve through /predict by 11:00) · cold-start latency measurement (DR-6.2 data point) · thin <code>/v1/similar</code> proxy on core-api · Week-2 mid-POC review slide draft.</div>
+      </div>
+      <div class="e-counter">
+        windows<strong>7</strong>
+      </div>
+    </div>
+
+
+    <!-- 09:45–11:00 — v0.3.0 image bake -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">09:45&ndash;11:00</span>
+        <span class="task-title">v0.3.0 image bake &mdash; <em>per yesterday's runbook</em> &middot; deploy + smoke on vm-tox-inference.</span>
+      </div>
+      <p>Yesterday's <code>docs/runbooks/day07-v0.3.0-bake.md</code> has the 6-step plan; today is the execution. The critical gate: ChemBERTa NR-AhR must serve through <code>/predict</code> on the production path by 11:00 because Sarthak's <code>embed_dataset</code> task imports the same ChemBERTa loader via the new Router.</p>
+
+      <ol class="task-steps">
+        <li><strong>Build v0.3.0</strong> with DGL + transformers added.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> git checkout main &amp;&amp; git pull
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> cat infra/docker/requirements.tox-inference.txt | grep -E 'dgl|transformers'
+dgl==2.4.0
+dgllife==0.3.2
+transformers==4.46.0
+                                                                <span class="comment"># promoted from Jitendra's Day-5 venv; ready for image</span>
+
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> docker build -t aitip/tox-inference:0.3.0 \
+    -f infra/docker/tox-inference.Dockerfile .
+[+] Building 6m18s (14/14) FINISHED
+ =&gt; CACHED [base 1/6] FROM aitip-base:0.1.0
+ =&gt; [builder 2/4] RUN apt-get install build-essential gcc g++ libpq-dev
+ =&gt; [builder 3/4] COPY requirements.tox-inference.txt .
+ =&gt; [builder 4/4] RUN pip wheel --extra-index-url ... -r requirements.tox-inference.txt
+ =&gt; ... [wheels for torch, dgl, transformers — ~2 GB total] ...
+ =&gt; exporting to image
+ =&gt; =&gt; naming to docker.io/library/aitip/tox-inference:0.3.0
+
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> docker images aitip/tox-inference
+REPOSITORY            TAG     IMAGE ID       CREATED          SIZE
+aitip/tox-inference   0.3.0   a8b9c0d1e2f3   30 seconds ago   4.21 GB
+aitip/tox-inference   0.2.0   33b91205d4c7   yesterday        1.84 GB
+                                                                <span class="comment"># 2.4 GB heavier (transformers + dgl + torch wheels)</span>
+</div>
+
+      <ol class="task-steps" start="2" style="counter-reset: step 1;">
+        <li><strong>Trivy scan</strong> + push.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> trivy image --severity HIGH,CRITICAL --exit-code 1 aitip/tox-inference:0.3.0
+aitip/tox-inference:0.3.0 (debian 12.7)
+=======================================
+Total: 0 (HIGH: 0, CRITICAL: 0)
+
+aitip/tox-inference:0.3.0 (python-pkg)
+=======================================
+Total: 0 (HIGH: 0, CRITICAL: 0)
+                                                                <span class="ok"># still clean</span>
+
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> docker tag aitip/tox-inference:0.3.0 \
+    vm-data-store.poc.local:5000/aitip/tox-inference:0.3.0
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> docker push vm-data-store.poc.local:5000/aitip/tox-inference:0.3.0
+0.3.0: digest: sha256:b8c2e1f9... size: 4218
+</div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Deploy on vm-tox-inference</strong> &mdash; stop v0.2.0, run v0.3.0.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@vm-tox-inference:~$</span> sudo docker pull vm-data-store.poc.local:5000/aitip/tox-inference:0.3.0
+0.3.0: Pulling from aitip/tox-inference
+... [layer pulls] ...
+Status: Downloaded newer image for vm-data-store.poc.local:5000/aitip/tox-inference:0.3.0
+
+<span class="prompt">harshit@vm-tox-inference:~$</span> sudo docker stop aitip-tox-inference &amp;&amp; sudo docker rm aitip-tox-inference
+aitip-tox-inference
+aitip-tox-inference
+
+<span class="prompt">harshit@vm-tox-inference:~$</span> sudo docker run -d \
+    --name aitip-tox-inference \
+    --restart unless-stopped \
+    --network host \
+    --env-file /etc/aitip/tox-inference.env \
+    -e AITIP_GIT_COMMIT=$(cd /home/harshit/aitip-poc &amp;&amp; git rev-parse HEAD) \
+    -e AITIP_IMAGE_TAG=0.3.0 \
+    --cpuset-cpus=0-15 \
+    vm-data-store.poc.local:5000/aitip/tox-inference:0.3.0
+
+<span class="prompt">harshit@vm-tox-inference:~$</span> sudo docker logs aitip-tox-inference 2&gt;&amp;1 | tail -5
+INFO:     Started server process [1]
+INFO:     Uvicorn running on http://0.0.0.0:8081
+INFO:     Application startup complete.
+INFO:aitip.tox.router: Router initialized · 3 loader paths (xgboost, gat, chemberta)
+
+<span class="prompt">harshit@vm-tox-inference:~$</span> curl -sS http://localhost:8081/healthz
+{"status":"ok","image_tag":"0.3.0"}
+</div>
+
+      <ol class="task-steps" start="4" style="counter-reset: step 3;">
+        <li><strong>ChemBERTa NR-AhR smoke through /predict</strong> &mdash; the critical smoke test.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@vm-bastion:~$</span> time curl -sS \
+    "http://vm-core-api.poc.local:8080/predict?endpoint=NR-AhR&smiles=CC(=O)Oc1ccccc1C(=O)O" \
+    | jq .
+{
+  "endpoint": "NR-AhR",
+  "smiles": "CC(=O)Oc1ccccc1C(=O)O",
+  "canonical_smiles": "CC(=O)Oc1ccccc1C(=O)O",
+  "probability": 0.0843,
+  "ci_95": [0.063, 0.106],
+  "in_domain": true,
+  "model_id": "a8f4c2e1-...",                                    <span class="comment"># chemberta NR-AhR active model</span>
+  "framework": "pytorch",                                        <span class="comment"># not 'sklearn' anymore!</span>
+  "feature_set": "chemberta-bpe-tokens"
+}
+
+real    0m9.43s                                                  <span class="comment"># cold-start: 9.4 sec</span>
+user    0m0.024s
+sys     0m0.012s
+</div>
+
+      <div class="note ok">
+        <strong>ChemBERTa via /predict &middot; 11:08 IST &middot; cold-start 9.4 sec</strong>
+        First production call to ChemBERTa-NR-AhR succeeds &mdash; framework='pytorch', feature_set='chemberta-bpe-tokens'; aspirin gets predicted NR-AhR probability 0.0843 (similar to yesterday's smoke). <strong>Cold-start latency 9.4 sec is under the 12 sec budget</strong>, which means the Day-11 pre-warm hook (DR-6.2 carry) remains valid but not emergency. Sarthak unblocked at 11:08.
+      </div>
+
+      <ol class="task-steps" start="5" style="counter-reset: step 4;">
+        <li><strong>Warm-cache latency check</strong> &mdash; subsequent calls should be near-instant.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@vm-bastion:~$</span> for i in 1 2 3 4 5; do
+    time curl -sS -o /dev/null \
+      "http://vm-core-api.poc.local:8080/predict?endpoint=NR-AhR&smiles=CC(=O)Oc1ccccc1C(=O)O"
+  done 2&gt;&amp;1 | grep real
+real    0m0.114s                                                 <span class="comment"># warm: 114 ms</span>
+real    0m0.091s
+real    0m0.087s
+real    0m0.083s
+real    0m0.089s
+                                                                <span class="ok"># mean 93ms — DR-6.2 cold/warm gap is real but bounded</span>
+</div>
+
+      <div class="checkpoint">
+        <span><strong>11:30 checkpoint:</strong> v0.3.0 deployed; ChemBERTa NR-AhR serves through /predict. Move to /v1/similar proxy.</span>
+      </div>
+    </div>
+
+
+    <!-- 11:30–13:00 — /v1/similar proxy + core-api wiring -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">11:30&ndash;13:00</span>
+        <span class="task-title">Thin <code>/v1/similar</code> proxy on core-api &mdash; same idiom as /predict.</span>
+      </div>
+      <p>core-api forwards <code>/v1/similar</code> to <code>vm-embed-search:8082/similar</code> with minimal munging. The similarity service does its own canonicalization (Sarthak's container reuses the same RDKit chain); core-api just adds Prometheus instrumentation + auth-when-Day-15-lands hook.</p>
+
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> git checkout -b feat/day07-similar-proxy
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> cat &gt; services/core-api/aitip/api/similar.py &lt;&lt;'PYEOF'
+"""GET /v1/similar — thin proxy to vm-embed-search."""
+from __future__ import annotations
+import os, time
+import httpx
+from fastapi import APIRouter, HTTPException, Query
+from prometheus_client import Counter, Histogram
+
+router = APIRouter(prefix="/v1")
+SIMILAR_URL = os.environ.get("AITIP_SIMILARITY_URL",
+                              "http://vm-embed-search.poc.local:8082")
+
+PROXY_COUNTER = Counter("aitip_similar_proxy_total",  "Proxied /v1/similar calls")
+PROXY_LATENCY = Histogram("aitip_similar_proxy_seconds", "/v1/similar end-to-end latency")
+
+
+@router.get("/similar")
+async def similar(
+    smiles: str = Query(min_length=1, max_length=2000),
+    top_k: int = Query(default=10, ge=1, le=100),
+):
+    """Forward to vm-embed-search similarity service.
+
+    Day 15 adds auth + rate-limit middleware here; today it's a plain proxy.
+    """
+    t0 = time.perf_counter()
+    PROXY_COUNTER.inc()
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as cli:
+            r = await cli.get(f"{SIMILAR_URL}/similar",
+                              params={"smiles": smiles, "top_k": top_k})
+            r.raise_for_status()
+            data = r.json()
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(e.response.status_code, e.response.text[:500])
+    except httpx.TimeoutException:
+        raise HTTPException(504, "similarity service timed out")
+    PROXY_LATENCY.observe(time.perf_counter() - t0)
+    return data
+PYEOF
+</div>
+
+      <ol class="task-steps">
+        <li><strong>Wire into <code>main.py</code></strong> + smoke. Will be live as soon as similarity container is deployed.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> cat &gt;&gt; services/core-api/aitip/api/main.py &lt;&lt;'EOF'
+
+from .similar import router as similar_router
+app.include_router(similar_router)
+EOF
+
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> python -c "
+from fastapi.testclient import TestClient
+from aitip.api.main import app
+c = TestClient(app)
+spec = c.get('/openapi.json').json()
+print('paths:')
+for p in spec['paths']: print(' ', p)
+"
+paths:
+  /healthz
+  /metrics
+  /predict
+  /jobs/{job_id}
+  /v1/predict/batch
+  /v1/similar
+                                                                <span class="ok"># 6 paths registered</span>
+</div>
+
+      <div class="checkpoint">
+        <span><strong>13:00 checkpoint:</strong> /v1/similar proxy drafted. Lunch.</span>
+      </div>
+    </div>
+
+
+    <!-- 14:00–16:00 — Week-2 mid-POC slide draft + core-api v0.3.0 rollout -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">14:00&ndash;16:00</span>
+        <span class="task-title">core-api v0.3.0 rollout with /v1/similar &middot; Week-2 mid-POC slide draft.</span>
+      </div>
+
+      <ol class="task-steps">
+        <li><strong>Build + push + deploy core-api v0.3.0</strong> &mdash; same multi-stage Dockerfile, new /v1/similar router included.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> docker build -t aitip/core-api:0.3.0 -f infra/docker/core-api.Dockerfile .
+[+] Building 36s (14/14) FINISHED                                <span class="comment"># wheels cached</span>
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> trivy image --severity HIGH,CRITICAL --exit-code 1 aitip/core-api:0.3.0
+Total: 0 (HIGH: 0, CRITICAL: 0)                                  <span class="ok"></span>
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> docker tag aitip/core-api:0.3.0 vm-data-store.poc.local:5000/aitip/core-api:0.3.0
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> docker push vm-data-store.poc.local:5000/aitip/core-api:0.3.0
+
+<span class="comment"># wait for jitendra's similarity container deploy (~15:30 expected) before rolling core-api,
+# so AITIP_SIMILARITY_URL is reachable when the new core-api boots.</span>
+
+<span class="comment"># 15:32 jitendra slack: similarity container running. proceed.</span>
+
+<span class="prompt">harshit@vm-core-api:~$</span> sudo docker pull vm-data-store.poc.local:5000/aitip/core-api:0.3.0
+<span class="prompt">harshit@vm-core-api:~$</span> sudo docker stop aitip-core-api &amp;&amp; sudo docker rm aitip-core-api
+<span class="prompt">harshit@vm-core-api:~$</span> sudo docker run -d \
+    --name aitip-core-api --restart unless-stopped \
+    -p 8080:8080 --env-file /etc/aitip/core-api.env \
+    -e AITIP_TOX_INFERENCE_URL=http://vm-tox-inference.poc.local:8081 \
+    -e AITIP_SIMILARITY_URL=http://vm-embed-search.poc.local:8082 \
+    -e AITIP_IMAGE_TAG=0.3.0 \
+    vm-data-store.poc.local:5000/aitip/core-api:0.3.0
+
+<span class="prompt">harshit@vm-bastion:~$</span> curl -sS "http://vm-core-api.poc.local:8080/v1/similar?smiles=CC(=O)Oc1ccccc1C(=O)O&top_k=3" \
+    | jq '.neighbors[] | "\(.rank). \(.smiles) sim=\(.similarity)"'
+"1. CC(=O)Oc1ccccc1C(=O)O sim=1.0"
+"2. CC(=O)Oc1cccc(C(=O)O)c1 sim=0.9412"
+"3. CC(=O)Oc1ccc(C(=O)O)cc1 sim=0.9387"
+                                                                <span class="ok"># /v1/similar live through core-api</span>
+</div>
+
+      <ol class="task-steps">
+        <li><strong>Week-2 outcome slide</strong> draft for Day-10 mid-POC review.</li>
+      </ol>
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> cat &gt;&gt; docs/decks/foundation-close.md &lt;&lt;'EOF'
+
+# Slide 4 · Week 2 outcome (Days 6-7 landed; Days 8-9 ahead)
+
+## Day 06 — Deep Models
+- 32 trained classifiers via Celery group in 75m6s wall-clock (16 endpoints × {GAT, ChemBERTa})
+- 1 swap (ChemBERTa wins NR-AhR with delta=+0.034)
+- 15 holds (XGBoost retains active where chemistry-pretrained transfer doesn't help)
+- 16-active invariant preserved · DO-block invariant guard inside transaction
+- Prediction-router pattern (3 framework loader paths, lru_cache maxsize=8 each)
+
+## Day 07 — Embeddings &amp; similarity (today)
+- 23,054 compounds embedded via 8-way Celery chord in 1m50s wall-clock
+- HNSW index 81 MB on disk · cosine M=32 ef_construction=200 · 87s build
+- /similar live · p95 = 44.6 ms (10.8% headroom against 50 ms target)
+- Aspirin top-10 chemically sensible · rank-7 = salicylic acid (aspirin's metabolite)
+- v0.3.0 services deployed (tox-inference + core-api) · ChemBERTa NR-AhR through /predict · 9.4s cold-start
+
+## Day 08 — PubMed RAG ingestion (Monday next week)
+- Lead: Harshit
+- Ingest ~1.2 M PubMed abstracts (chemical toxicity subset) into ChromaDB
+- Sentence-level chunks, BGE-small-en-v1.5 embeddings, indexed by PMID + MeSH terms
+- Foundation for Day-9 local LLM RAG-augmented summarization
+
+## Day 09 — Local LLM (Friday)
+- Lead: Harshit
+- vLLM Llama-3.1-8B-Instruct AWQ on vm-rag-llm (NUMA node 1, 256 GB partition)
+- /v1/explain endpoint: takes a /predict result, returns natural-language summary
+- Week-2 EOW retro at 17:00
+EOF
+</div>
+
+      <div class="checkpoint">
+        <span><strong>16:00 checkpoint:</strong> core-api v0.3.0 live; /v1/similar end-to-end green; Week-2 outcome slide drafted.</span>
+      </div>
+    </div>
+
+
+    <!-- 16:00–17:30 — PR-#24 + reviews -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">16:00&ndash;17:30</span>
+        <span class="task-title">PR-#24 (v0.3.0 + /v1/similar) &middot; review PR-#23 + PR-#25.</span>
+      </div>
+
+<div class="code-block"><span class="prompt">harshit@laptop:~/aitip-poc$</span> git add services/core-api/aitip/api/similar.py services/core-api/aitip/api/main.py \
+                                       docs/decks/foundation-close.md
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> git commit -m "feat(day07): v0.3.0 tox-inference + core-api with /v1/similar proxy + Week-2 slide draft"
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> gh pr create --fill
+✓ Created pull request #24
+
+<span class="comment"># Review Sarthak's PR-#23:</span>
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> gh pr review 23 --approve --body "lgtm — chord pattern with separate chunk/concat tasks is exactly the right shape; the SAME chord pattern works for V1 batch enrichment (Day 12). The list-column embedding storage in parquet works for POC; for V1 we should look at native fixed-length arrays once pyarrow 18+ lands."
+
+<span class="comment"># Review Jitendra's PR-#25:</span>
+<span class="prompt">harshit@laptop:~/aitip-poc$</span> gh pr review 25 --approve --body "lgtm — clean similarity container deploy + scrape target add. one thing worth noting: the similarity dashboard has a 'Top-k usage' panel that's currently flat at top_k=10 (only my smoke calls). when day-12 batch enrichment lands and day-17 applicability domain queries flood in, this panel becomes the way to size ef parameter empirically."
+</div>
+
+
+    </div>
+
+
+    <!-- 17:30–18:00 — wrap -->
+    <div class="task-block" style="--track: var(--t-harshit);">
+      <div class="task-header">
+        <span class="task-window">17:30&ndash;18:00</span>
+        <span class="task-title">EOD wrap.</span>
+      </div>
+<div class="code-block"><span class="comment"># Posted to #poc-war-room at 17:55:</span>
+<span class="key">harshit</span>:
+**did:** v0.3.0 tox-inference image bake + deploy (Trivy 0/0 H+C, 4.21 GB) · ChemBERTa NR-AhR live on /predict at 11:08 IST · cold-start 9.4 sec (under 12s budget, DR-6.2 carry valid but not urgent) · warm /predict 87-114 ms · /v1/similar proxy on core-api (PR-#24) · core-api v0.3.0 deployed · Week-2 outcome slide draft committed · approved PR-#23 + PR-#25
+**state:** GREEN. all 4 of my sub-tasks closed. EOD-7.1 met (image bake + ChemBERTa /predict at 11:08) plus bonus /v1/similar end-to-end through core-api.
+**next:** Day 08 i LEAD — PubMed RAG ingestion. first non-sarthak-led day in 5 days. Will scrape PMC OAS subset (~1.2M abstracts chemical-toxicity MeSH filter) overnight friday; monday morning we have data ready for chromadb chunking + bge embedding.
+</div>
+
+      <div class="note ok">
+        <strong>EOD met &middot; 18:00 IST</strong>
+        Four sub-tasks closed. ChemBERTa on the production /predict path; /v1/similar end-to-end through core-api. Monday I take the chair for the first time in a week.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §03 (continued) — JITENDRA
+     Four sub-tasks: vm-embed-search sanity check, similarity container
+     deploy, Prometheus scrape update + Grafana similarity panel,
+     Day-10 mid-POC slide aggregation.
+     ================================================================ -->
+<section class="section">
+  <div class="shell">
+
+    <div class="engineer-stripe" style="--track: var(--t-jitendra);">
+      <div class="e-avatar">JM</div>
+      <div class="e-meta">
+        <div class="e-name">Jitendra Maurya</div>
+        <div class="e-role">Infrastructure &amp; DevOps &middot; supporting today</div>
+        <div class="e-summary">Four sub-tasks: vm-embed-search 09:45 sanity check (the box has been idle since Day 2) · deploy <code>aitip/similarity:0.1.0</code> container · Prometheus scrape config update + Grafana similarity panel · Day-10 mid-POC review slide aggregation.</div>
+      </div>
+      <div class="e-counter">
+        windows<strong>6</strong>
+      </div>
+    </div>
+
+
+    <!-- 09:45–10:30 — vm-embed-search sanity check -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">09:45&ndash;10:30</span>
+        <span class="task-title">vm-embed-search sanity check &mdash; <em>idle since Day 2; confirm deploy-ready</em>.</span>
+      </div>
+      <p>Standup risk: the box was provisioned Day 2 + venv-validated Day 6 but no real workload has touched it. Today it's the production-serving target. Sanity check before declaring it ready: uptime, disk usage, kernel parameter drift relative to peer VMs, packet round-trip to vm-data-store.</p>
+
+<div class="code-block"><span class="prompt">jitendra@vm-embed-search:~$</span> uptime
+ 09:45:12 up 7 days,  3:18,  1 user,  load average: 0.04, 0.06, 0.02
+<span class="prompt">jitendra@vm-embed-search:~$</span> df -h /var/lib
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/vda2       460G   24G  436G   6% /var/lib                  <span class="ok"># 436 GB free on the 500 GB partition</span>
+
+<span class="prompt">jitendra@vm-embed-search:~$</span> free -h
+               total        used        free      shared  buff/cache   available
+Mem:            95Gi       1.2Gi        87Gi       0.0Ki       6.4Gi        93Gi
+                                                                <span class="ok"># 93 GB free on the 96 GB partition</span>
+
+<span class="comment"># Compare key sysctl values to peer vm-tox-inference (the closest analogous VM):</span>
+<span class="prompt">jitendra@vm-embed-search:~$</span> sysctl -a 2&gt;/dev/null | grep -E 'vm.swappiness|net.core.somaxconn|fs.file-max' &gt; /tmp/embed-sysctl.txt
+<span class="prompt">jitendra@vm-tox-inference:~$</span> sysctl -a 2&gt;/dev/null | grep -E 'vm.swappiness|net.core.somaxconn|fs.file-max' &gt; /tmp/tox-sysctl.txt
+<span class="prompt">jitendra@vm-bastion:~$</span> diff &lt;(ssh vm-embed-search cat /tmp/embed-sysctl.txt) \
+                              &lt;(ssh vm-tox-inference cat /tmp/tox-sysctl.txt)
+&lt;empty diff — kernel parameters identical&gt;                       <span class="ok"># Day-2 Ansible role applied everywhere</span>
+
+<span class="prompt">jitendra@vm-embed-search:~$</span> for h in vm-data-store vm-worker-pool vm-tox-inference vm-core-api; do
+    rtt=$(ping -c 5 -q $h.poc.local 2&gt;/dev/null | awk -F'/' '/^rtt/ {print $5}')
+    echo "  $h.poc.local  rtt_avg=${rtt}ms"
+  done
+  vm-data-store.poc.local  rtt_avg=0.142ms
+  vm-worker-pool.poc.local  rtt_avg=0.118ms
+  vm-tox-inference.poc.local  rtt_avg=0.108ms
+  vm-core-api.poc.local  rtt_avg=0.124ms
+                                                                <span class="ok"># sub-millisecond to every peer · bridge healthy</span>
+
+<span class="prompt">jitendra@vm-embed-search:~$</span> sudo systemctl list-units --state=failed --no-pager
+0 loaded units listed.                                          <span class="ok"># no failed services</span>
+
+<span class="prompt">jitendra@vm-embed-search:~$</span> apt list --upgradable 2&gt;/dev/null | wc -l
+2                                                               <span class="comment"># 1 header + 1 minor (libtirpc-common, security)</span>
+<span class="prompt">jitendra@vm-embed-search:~$</span> sudo apt-get install -y libtirpc-common
+</div>
+
+      <div class="note ok">
+        <strong>vm-embed-search deploy-ready &middot; 10:18 IST</strong>
+        7-day uptime, 436 GB free, 93 GB RAM free, kernel parameters identical to peer vm-tox-inference (Day-2 Ansible role applied uniformly), sub-millisecond RTT to every peer VM, zero failed systemd units. <strong>DR-7.3 retired</strong>. One minor security package update applied. Ready to receive the similarity container when Sarthak's image lands.
+      </div>
+
+      <div class="checkpoint">
+        <span><strong>10:30 checkpoint:</strong> Sanity check done. Move to Prometheus scrape config prep.</span>
+      </div>
+    </div>
+
+
+    <!-- 10:30–13:00 — Prometheus scrape config + Grafana panel prep -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">10:30&ndash;13:00</span>
+        <span class="task-title">Prometheus scrape config update + Grafana similarity panel.</span>
+      </div>
+      <p>Add vm-embed-search:8082 as a new scrape target; the metrics (<code>aitip_similarity_requests_total</code> + <code>aitip_similarity_latency_seconds</code>) emit from Sarthak's container. Build a 4-panel Grafana dashboard so the 16:14 latency probe + future Day-12 batch enrichment + Day-17 applicability-domain queries all become visible.</p>
+
+      <ol class="task-steps">
+        <li><strong>Add scrape target</strong>.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@laptop:~/aitip-poc$</span> git checkout -b infra/day07-similarity-observability
+<span class="prompt">jitendra@laptop:~/aitip-poc$</span> cat &gt;&gt; infra/ansible/roles/observability/templates/prometheus.yml.j2 &lt;&lt;'EOF'
+
+  # Day-7 similarity service on vm-embed-search
+  - job_name: similarity
+    static_configs:
+      - targets: [vm-embed-search.poc.local:8082]
+EOF
+</div>
+
+      <ol class="task-steps">
+        <li><strong>Grafana dashboard JSON</strong> &mdash; 4-panel similarity dashboard.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@laptop:~/aitip-poc$</span> cat &gt; infra/ansible/roles/observability/files/dashboards/aitip-similarity.json &lt;&lt;'EOF'
+{
+  "title": "AITIP · Similarity service",
+  "uid": "aitip-similarity",
+  "tags": ["aitip", "similarity"],
+  "panels": [
+    {
+      "id": 1, "title": "Requests/sec (last 5 min)",
+      "type": "stat",
+      "targets": [{"expr": "sum(rate(aitip_similarity_requests_total[5m]))"}],
+      "datasource": {"uid": "prom", "type": "prometheus"}
+    },
+    {
+      "id": 2, "title": "p50 / p95 / p99 latency (ms)",
+      "type": "timeseries",
+      "targets": [
+        {"expr": "histogram_quantile(0.50, rate(aitip_similarity_latency_seconds_bucket[5m])) * 1000", "legendFormat": "p50"},
+        {"expr": "histogram_quantile(0.95, rate(aitip_similarity_latency_seconds_bucket[5m])) * 1000", "legendFormat": "p95"},
+        {"expr": "histogram_quantile(0.99, rate(aitip_similarity_latency_seconds_bucket[5m])) * 1000", "legendFormat": "p99"}
+      ],
+      "thresholds": [{"value": 50, "color": "red"}]
+    },
+    {
+      "id": 3, "title": "Top-k distribution (rolling 1h)",
+      "type": "barchart",
+      "targets": [{"expr": "sum by (top_k) (increase(aitip_similarity_requests_total[1h]))"}],
+      "description": "How many results clients are asking for; sizing input for ef tuning V1"
+    },
+    {
+      "id": 4, "title": "Index vectors loaded",
+      "type": "stat",
+      "targets": [{"expr": "aitip_similarity_index_vectors"}],
+      "thresholds": [{"value": 23054, "color": "green"}, {"value": 0, "color": "red"}]
+    }
+  ]
+}
+EOF
+</div>
+
+      <ol class="task-steps">
+        <li><strong>Latency alert rule</strong> &mdash; analogous to Day-5 PredictLatencyP95High but for similarity.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@laptop:~/aitip-poc$</span> cat &gt;&gt; infra/ansible/roles/observability/files/alert-rules.yml &lt;&lt;'EOF'
+
+  # Similarity latency — 50 ms p95 budget
+  - alert: SimilarityLatencyP95High
+    expr: histogram_quantile(0.95, rate(aitip_similarity_latency_seconds_bucket[5m])) &gt; 0.05
+    for: 5m
+    labels: { severity: warning, owner: jitendra }
+    annotations:
+      summary: "p95 /similar latency {{ $value }}s &gt; 50ms target"
+      description: "Day-7 design budget is 50ms p95 end-to-end. Sustained breach usually means either ChemBERTa cache miss (worker recycled?) or HNSW ef too high for the current query mix."
+EOF
+</div>
+
+      <div class="checkpoint">
+        <span><strong>13:00 checkpoint:</strong> Scrape config + dashboard + alert drafted. Lunch.</span>
+      </div>
+    </div>
+
+
+    <!-- 14:00–15:30 — Similarity container deploy + verification -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">14:00&ndash;15:30</span>
+        <span class="task-title">Deploy <code>aitip/similarity:0.1.0</code> on vm-embed-search &middot; wire scrape live.</span>
+      </div>
+
+      <ol class="task-steps">
+        <li><strong>Wait for Sarthak's image push ack</strong> at ~14:48.</li>
+      </ol>
+<div class="code-block"><span class="comment"># 14:50 #poc-war-room:</span>
+<span class="key">sarthak</span>: aitip/similarity:0.1.0 pushed to vm-data-store:5000 · Trivy 0/0 H+C · index file at /var/lib/aitip-similarity/v0-index.bin on vm-embed-search · go.
+
+<span class="prompt">jitendra@vm-embed-search:~$</span> sudo apt install -y docker.io
+<span class="prompt">jitendra@vm-embed-search:~$</span> sudo tee /etc/docker/daemon.json &gt;/dev/null &lt;&lt;'EOF'
+{
+  "insecure-registries": ["vm-data-store.poc.local:5000"],
+  "log-driver": "json-file",
+  "log-opts": { "max-size": "100m", "max-file": "3" }
+}
+EOF
+<span class="prompt">jitendra@vm-embed-search:~$</span> sudo systemctl restart docker
+
+<span class="prompt">jitendra@vm-embed-search:~$</span> sudo docker pull vm-data-store.poc.local:5000/aitip/similarity:0.1.0
+0.1.0: Pulling from aitip/similarity
+... [layer pulls] ...
+Status: Downloaded newer image
+</div>
+
+      <ol class="task-steps">
+        <li><strong>Run the container</strong> with the index volume mounted in.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@vm-embed-search:~$</span> sudo tee /etc/aitip/similarity.env &gt;/dev/null &lt;&lt;'EOF'
+AITIP_INDEX_PATH=/var/lib/aitip-similarity/v0-index.bin
+AITIP_META_PATH=/var/lib/aitip-similarity/v0-meta.parquet
+AITIP_IMAGE_TAG=0.1.0
+EOF
+
+<span class="prompt">jitendra@vm-embed-search:~$</span> sudo docker run -d \
+    --name aitip-similarity \
+    --restart unless-stopped \
+    --network host \
+    --env-file /etc/aitip/similarity.env \
+    -v /var/lib/aitip-similarity:/var/lib/aitip-similarity:ro \
+    vm-data-store.poc.local:5000/aitip/similarity:0.1.0
+
+<span class="prompt">jitendra@vm-embed-search:~$</span> sudo docker logs aitip-similarity 2&gt;&amp;1 | head -6
+INFO:aitip.sim: loading HNSW index from /var/lib/aitip-similarity/v0-index.bin
+INFO:aitip.sim: index loaded · 23054 vectors
+INFO:aitip.sim: loading metadata from /var/lib/aitip-similarity/v0-meta.parquet
+INFO:aitip.sim: metadata loaded · 23054 rows
+INFO:     Started server process [1]
+INFO:     Uvicorn running on http://0.0.0.0:8082
+
+<span class="prompt">jitendra@vm-embed-search:~$</span> curl -sS http://localhost:8082/healthz
+{"status":"ok","image_tag":"0.1.0","index_vectors":23054}
+
+<span class="prompt">jitendra@vm-embed-search:~$</span> curl -sS http://localhost:8082/metrics | grep aitip_similarity | head -5
+# HELP aitip_similarity_requests_total Total /similar calls
+# TYPE aitip_similarity_requests_total counter
+aitip_similarity_requests_total 0.0
+# HELP aitip_similarity_latency_seconds End-to-end /similar latency
+# TYPE aitip_similarity_latency_seconds_bucket
+                                                                <span class="ok"># metrics endpoint live; counter 0 because no requests yet</span>
+</div>
+      <div class="note ok">
+        <strong>Container live &middot; 15:32 IST</strong>
+        Index + metadata loaded; healthz green; metrics endpoint serving. Slack ack to Sarthak to proceed with aspirin smoke. Boot time from <code>docker run</code> to "Application startup complete" was 11 seconds &mdash; mostly the hnswlib index load.
+      </div>
+
+      <ol class="task-steps" start="3" style="counter-reset: step 2;">
+        <li><strong>Apply scrape config + restart Prometheus</strong>.</li>
+      </ol>
+<div class="code-block"><span class="prompt">jitendra@laptop:~/aitip-poc$</span> ansible-playbook -i infra/ansible/inventory.ini \
+    -l vm-observability --tags observability \
+    infra/ansible/playbooks/deploy-observability.yml
+PLAY RECAP
+vm-observability  : ok=12 changed=3 unreachable=0 failed=0
+                                                                <span class="comment"># prometheus.yml + alert-rules.yml + new dashboard</span>
+
+<span class="prompt">jitendra@vm-observability:~$</span> curl -s http://localhost:9090/api/v1/targets \
+    | jq -r '.data.activeTargets[] | select(.labels.job=="similarity") | "\(.labels.instance) \(.health)"'
+vm-embed-search.poc.local:8082 up                               <span class="ok"># scraping</span>
+
+<span class="prompt">jitendra@vm-observability:~$</span> curl -s http://localhost:9090/api/v1/rules \
+    | jq -r '.data.groups[].rules[] | select(.name=="SimilarityLatencyP95High") | .name'
+SimilarityLatencyP95High                                        <span class="ok"># rule loaded</span>
+</div>
+
+      <div class="checkpoint">
+        <span><strong>15:30 checkpoint:</strong> Container live + scrape green + alert loaded. Slack Sarthak.</span>
+      </div>
+    </div>
+
+
+    <!-- 15:30–17:00 — Day-10 slide aggregation -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">15:30&ndash;17:00</span>
+        <span class="task-title">Day-10 mid-POC review slide aggregation &middot; "by-the-numbers" Week-2 update.</span>
+      </div>
+      <p>Pull the cross-day metrics that have changed since the Day-5 foundation-close deck. Add a Week-2 by-the-numbers slide that walks parallel to the foundation-close slide for the same easy compare. Day-9 retro Friday produces the final version.</p>
+
+<div class="code-block"><span class="prompt">jitendra@vm-bastion:~$</span> PGPASSWORD=... psql -h vm-data-store.poc.local -U aitip -d aitip -t &lt;&lt;'SQL'
+SELECT 'dataset_registry rows'         AS metric, count(*)::text FROM dataset_registry
+UNION ALL SELECT 'compounds curated',     (SELECT sum(n_compounds)::text FROM dataset_registry WHERE version = 'v0-prod-curated')
+UNION ALL SELECT 'compounds embedded',    (SELECT sum(n_compounds)::text FROM dataset_registry WHERE version = 'v0-chemberta-cls')
+UNION ALL SELECT 'model_registry rows',   count(*)::text FROM model_registry
+UNION ALL SELECT 'active models',         count(*)::text FROM model_registry WHERE is_active
+UNION ALL SELECT 'by name=baseline-xgb',  count(*)::text FROM model_registry WHERE is_active AND name = 'baseline-xgb'
+UNION ALL SELECT 'by name=chemberta',     count(*)::text FROM model_registry WHERE is_active AND name = 'chemberta'
+UNION ALL SELECT 'mean AUROC active',     to_char(avg((metrics-&gt;&gt;'auroc')::float), 'FM0.000') FROM model_registry WHERE is_active;
+SQL
+
+ dataset_registry rows  | 22                <span class="comment"># up from 20 (Day 5) — embedding + index rows</span>
+ compounds curated      | 23054
+ compounds embedded     | 23054             <span class="comment"># new today</span>
+ model_registry rows    | 64                <span class="comment"># up from 32 — 32 deep-model rows added Day 6</span>
+ active models          | 16                <span class="comment"># invariant preserved across the week</span>
+ by name=baseline-xgb   | 15
+ by name=chemberta      | 1                 <span class="comment"># NR-AhR from Day 6</span>
+ mean AUROC active      | 0.804             <span class="comment"># up from 0.802 — ChemBERTa NR-AhR contributes</span>
+
+<span class="prompt">jitendra@laptop:~/aitip-poc$</span> cat &gt;&gt; docs/decks/foundation-close.md &lt;&lt;'EOF'
+
+# Slide 5 · Week 2 by-the-numbers (Days 6-7 landed)
+
+| metric | Day 5 (foundation close) | Day 7 (today) | delta |
+|--------|--------------------------|---------------|-------|
+| dataset_registry rows | 20 | 22 | +2 (embeddings parquet + HNSW index) |
+| compounds curated | 23,054 | 23,054 | unchanged |
+| compounds embedded | — | 23,054 | new |
+| HNSW index size | — | 81 MB | new |
+| model_registry rows total | 32 | 64 | +32 (deep models Day 6) |
+| model_registry active | 16 | 16 | invariant preserved ✓ |
+|   …baseline-xgb | 16 | 15 | -1 (NR-AhR swap) |
+|   …chemberta | 0 | 1 | +1 (NR-AhR) |
+| mean AUROC across active | 0.802 | 0.804 | +0.002 |
+| services deployed | 2 (core-api, tox-inference) | 3 (+ similarity) | +1 |
+| OpenAPI paths registered | 4 | 6 | +2 (/v1/predict/batch + /v1/similar) |
+| Prometheus scrape targets | 13 | 14 | +1 (vm-embed-search:8082) |
+| Grafana dashboards | 5 | 6 | +1 (AITIP-similarity) |
+| cumulative EOD met | 40/40 | 56/56 | +16 (Days 6 + 7) ✓ |
+EOF
+</div>
+
+      <div class="checkpoint">
+        <span><strong>17:00 checkpoint:</strong> Day-10 slide aggregation drafted. PR ready.</span>
+      </div>
+    </div>
+
+
+    <!-- 17:00–17:30 — PR-#25 + reviews -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">17:00&ndash;17:30</span>
+        <span class="task-title">PR-#25 (scrape + dashboard + alert + slide aggregation) &middot; review PR-#23 + PR-#24.</span>
+      </div>
+
+<div class="code-block"><span class="prompt">jitendra@laptop:~/aitip-poc$</span> git add infra/ansible/roles/observability/ docs/decks/foundation-close.md
+<span class="prompt">jitendra@laptop:~/aitip-poc$</span> git commit -m "infra(day07): similarity container deploy + Prometheus scrape + Grafana dashboard + Week-2 slide aggregation"
+<span class="prompt">jitendra@laptop:~/aitip-poc$</span> gh pr create --fill
+✓ Created pull request #25
+
+<span class="comment"># Review Sarthak's PR-#23:</span>
+<span class="prompt">jitendra@laptop:~/aitip-poc$</span> gh pr review 23 --approve --body "lgtm. chord with separate chunk + concat is exactly right. the resulting 23,054 × 768 vectors take 70.8 MB on disk vs my Day-6 prediction of 70.8 MB — predicted to one decimal. one observation: the index_version='v0' string is currently hardcoded in the similarity service — when we build a v1 index nightly per V1 plan, the service needs to know which version it's serving. consider reading from dataset_registry at boot."
+
+<span class="comment"># Review Harshit's PR-#24:</span>
+<span class="prompt">jitendra@laptop:~/aitip-poc$</span> gh pr review 24 --approve --body "lgtm. v0.3.0 bake clean; cold-start 9.4s within budget (DR-6.2 carry stays valid for Day-11). The /v1/similar proxy adding aitip_similar_proxy_total counter is great — gives us a way to see core-api-side vs similarity-service-side latency separately."
+</div>
+    </div>
+
+
+    <!-- 17:30–18:00 — wrap -->
+    <div class="task-block" style="--track: var(--t-jitendra);">
+      <div class="task-header">
+        <span class="task-window">17:30&ndash;18:00</span>
+        <span class="task-title">EOD wrap.</span>
+      </div>
+<div class="code-block"><span class="comment"># Posted to #poc-war-room at 17:55:</span>
+<span class="key">jitendra</span>:
+**did:** vm-embed-search sanity check at 10:18 (DR-7.3 retired by 7-day uptime + kernel parity + sub-ms RTT) · similarity container deployed at 15:32 (boot 11 sec mostly index load) · prometheus scrape target up · grafana AITIP-similarity dashboard with 4 panels + SimilarityLatencyP95High alert at 50ms threshold loaded · Week-2 by-the-numbers slide aggregation (model_registry now at 64 rows, 16 active, invariant preserved across the week, cumulative EOD criteria 56/56) · PR-#25 · approved PR-#23 + PR-#24
+**state:** GREEN. all 4 of my sub-tasks closed. EOD-7.5 + 7.6 + 7.8 met. healthy week-2 momentum heading into harshit-led monday.
+**next:** Day 08 i support harshit (RAG ingestion lead). will own the chromadb scrape config + grafana panel for vector inserts. day-9 friday is the next backup-restore drill + week-2 EOW retro.
+</div>
+
+      <div class="note ok">
+        <strong>EOD met &middot; 18:00 IST</strong>
+        Four sub-tasks closed. The platform now has a fourth deployed service (similarity); the observability stack has matching dashboard + alert coverage. vm-embed-search no longer idle; the box earned its keep.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ================================================================
+     PART 4 — additional CSS for §04 §05 §06 §07, nav, footer
+     ================================================================ -->
+<style>
+
+.deliverable-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  overflow: hidden;
+  font-size: 0.92rem;
+  box-shadow: var(--shadow-1);
+}
+.deliverable-table thead { background: var(--navy-deep); color: var(--paper); }
+.deliverable-table thead th {
+  padding: 10px 14px; text-align: left;
+  font-family: var(--mono); font-size: 0.72rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+.deliverable-table tbody td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: top;
+  color: var(--ink-2);
+}
+.deliverable-table tbody tr:last-child td { border-bottom: none; }
+.deliverable-table tbody tr:nth-child(even) { background: var(--paper); }
+.deliverable-table td:first-child {
+  font-family: var(--mono); font-size: 0.86rem;
+  color: var(--amber); font-weight: 600; white-space: nowrap;
+}
+.deliverable-table td.path { font-family: var(--mono); font-size: 0.84rem; color: var(--navy); }
+.deliverable-table td.owner { font-family: var(--mono); font-size: 0.78rem; color: var(--ink-2); white-space: nowrap; }
+.deliverable-table td.status { font-family: var(--mono); font-size: 0.78rem; text-align: center; font-weight: 700; }
+.deliverable-table td.status.green { color: var(--ok); }
+.deliverable-table td.status.amber { color: var(--warn); }
+.table-wrap { overflow-x: auto; }
+
+.eod-list { list-style: none; margin: 0; padding: 0; }
+.eod-item {
+  display: grid;
+  grid-template-columns: 28px 80px 1fr 80px;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px dashed var(--rule);
+  align-items: start;
+}
+.eod-item:last-child { border-bottom: none; }
+.eod-item .check {
+  width: 20px; height: 20px;
+  border: 1.5px solid var(--ok);
+  border-radius: 4px;
+  margin-top: 2px;
+  background: var(--ok);
+  position: relative;
+}
+.eod-item .check::after {
+  content: "✓"; position: absolute; top: -2px; left: 3px;
+  color: white; font-weight: 700; font-size: 0.94rem;
+}
+.eod-item .id {
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--amber); font-weight: 600;
+  letter-spacing: 0.05em; padding-top: 2px;
+}
+.eod-item .desc { font-size: 0.94rem; color: var(--ink-2); line-height: 1.5; }
+.eod-item .desc strong { color: var(--navy-deep); }
+.eod-item .desc small {
+  display: block; font-family: var(--mono); font-size: 0.72rem;
+  color: var(--muted); margin-top: 3px; letter-spacing: 0.02em;
+}
+.eod-item .owner-pill {
+  font-family: var(--mono); font-size: 0.72rem;
+  padding: 3px 8px; border-radius: var(--r-s);
+  text-align: center; letter-spacing: 0.04em;
+  height: fit-content; margin-top: 1px; font-weight: 600; white-space: nowrap;
+}
+.eod-item .owner-pill.s { background: rgba(11,61,145,0.1); color: var(--t-sarthak); }
+.eod-item .owner-pill.h { background: rgba(31,119,180,0.1); color: var(--t-harshit); }
+.eod-item .owner-pill.j { background: rgba(27,127,58,0.1); color: var(--t-jitendra); }
+@media (max-width: 720px) {
+  .eod-item { grid-template-columns: 28px 1fr; }
+  .eod-item .id, .eod-item .owner-pill { grid-column: 2; }
+}
+
+.eod-summary {
+  margin-top: 24px;
+  background: linear-gradient(180deg, var(--card) 0%, #fcf6e6 100%);
+  border: 1px solid var(--amber-soft);
+  border-left: 4px solid var(--amber);
+  border-radius: var(--r);
+  padding: 18px 22px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 24px; flex-wrap: wrap;
+}
+.eod-summary .verdict {
+  font-family: var(--serif); font-size: 1.34rem; font-weight: 700;
+  color: var(--navy-deep);
+}
+.eod-summary .verdict em { font-style: italic; color: var(--ok); font-weight: 800; }
+.eod-summary .meta {
+  font-family: var(--mono); font-size: 0.84rem;
+  color: var(--ink-2); text-align: right;
+}
+.eod-summary .meta strong {
+  display: block; font-family: var(--serif); font-size: 1.4rem;
+  color: var(--ok); margin-bottom: 2px;
+}
+
+.risk-card {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--disp-color, var(--muted));
+  border-radius: var(--r);
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-1);
+}
+.risk-card.retired   { --disp-color: var(--ok); }
+.risk-card.mitigated { --disp-color: var(--info); }
+.risk-card.fired     { --disp-color: var(--warn); }
+.risk-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap; margin-bottom: 8px;
+}
+.risk-id {
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--disp-color, var(--muted));
+  letter-spacing: 0.06em; font-weight: 700;
+}
+.risk-disposition {
+  font-family: var(--mono); font-size: 0.74rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: var(--r-s);
+  background: var(--paper-deep);
+  color: var(--disp-color, var(--muted));
+  font-weight: 700; border: 1px solid currentColor;
+}
+.risk-card .risk-name {
+  font-family: var(--serif); font-weight: 700;
+  font-size: 1.04rem; color: var(--navy-deep);
+  margin: 0 0 8px;
+}
+.risk-card .risk-line {
+  display: grid; grid-template-columns: 90px 1fr;
+  gap: 14px; padding: 4px 0;
+  font-size: 0.92rem; color: var(--ink-2);
+}
+.risk-card .risk-line .label {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--muted); letter-spacing: 0.06em;
+  text-transform: uppercase; padding-top: 3px;
+}
+.risk-card .risk-line .text strong { color: var(--navy-deep); }
+
+.tomorrow {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 22px 24px;
+  box-shadow: var(--shadow-1);
+}
+.tomorrow-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+}
+.tomorrow-head .date {
+  font-family: var(--mono); font-size: 0.74rem;
+  letter-spacing: 0.1em; color: var(--amber);
+  text-transform: uppercase; font-weight: 600;
+}
+.tomorrow-head .title {
+  font-family: var(--serif); font-weight: 700;
+  font-size: 1.32rem; color: var(--navy-deep);
+}
+.tomorrow-head .lane {
+  font-family: var(--mono); font-size: 0.74rem;
+  color: var(--muted); letter-spacing: 0.04em;
+}
+.tomorrow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+}
+.tomorrow-prep {
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--track, var(--navy));
+  border-radius: var(--r);
+  padding: 14px 16px;
+}
+.tomorrow-prep .who {
+  font-family: var(--mono); font-size: 0.74rem;
+  color: var(--track, var(--navy));
+  letter-spacing: 0.04em; text-transform: uppercase;
+  font-weight: 700; margin-bottom: 4px;
+}
+.tomorrow-prep .what { font-size: 0.92rem; color: var(--ink-2); line-height: 1.55; }
+.tomorrow-prep .what strong { color: var(--navy-deep); }
+
+/* lead-handoff badge in §07 — first non-Sarthak lead in 5 days + RAG opens */
+.lead-handoff {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 6px 14px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--t-sarthak) 0%, var(--t-harshit) 100%);
+  color: white;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.lead-handoff .arrow { font-size: 1.0rem; }
+.phase-open {
+  display: inline-block;
+  margin-bottom: 8px; margin-left: 6px;
+  padding: 6px 14px;
+  border-radius: 99px;
+  background: var(--ok);
+  color: white;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.nav-prev-next {
+  display: flex; gap: 12px;
+  margin: 36px 0 0;
+  padding-top: 22px;
+  border-top: 1px solid var(--rule);
+}
+.nav-prev-next a {
+  flex: 1;
+  text-decoration: none;
+  padding: 14px 18px;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  display: flex; flex-direction: column; gap: 4px;
+  transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+  box-shadow: var(--shadow-1);
+}
+.nav-prev-next a:hover {
+  border-color: var(--amber);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+  text-decoration: none;
+}
+.nav-prev-next a.next { text-align: right; }
+.nav-prev-next .nx-label {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase;
+}
+.nav-prev-next .nx-title {
+  font-family: var(--serif); font-weight: 700;
+  color: var(--navy-deep); font-size: 1.0rem;
+}
+.nav-prev-next .nx-date {
+  font-family: var(--mono); font-size: 0.74rem; color: var(--ink-2);
+}
+
+.footer {
+  background: var(--navy-deep);
+  color: rgba(246,241,230,0.72);
+  font-size: 0.86rem;
+  padding: 44px 0 32px;
+  margin-top: 60px;
+}
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 40px;
+}
+@media (max-width: 720px) { .footer-grid { grid-template-columns: 1fr; gap: 28px; } }
+.footer h4 {
+  color: var(--amber-soft);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+}
+.footer p { color: rgba(246,241,230,0.78); margin-bottom: 8px; line-height: 1.55; }
+.footer a { color: var(--amber-soft); }
+.footer a:hover { color: white; }
+.footer-meta {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(246,241,230,0.1);
+  font-family: var(--mono); font-size: 0.72rem;
+  color: rgba(246,241,230,0.5);
+  letter-spacing: 0.04em; line-height: 1.7;
+}
+.footer-week-progress {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: rgba(107, 58, 82, 0.18);
+  border: 1px solid rgba(181, 138, 161, 0.5);
+  border-radius: var(--r);
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: rgba(246,241,230,0.92);
+  letter-spacing: 0.02em;
+}
+.footer-week-progress strong { color: #d8a8c6; }
+
+</style>
+
+
+<!-- ================================================================
+     §04 · DELIVERABLES
+     ================================================================ -->
+<section class="section deep" id="deliverables">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 04 · deliverables</div>
+        <h2>What shipped today &mdash; similarity service operational</h2>
+      </div>
+      <p class="sub">Twelve artifacts across three lanes. 23,054 compounds embedded; 81 MB HNSW index built; new fourth service deployed on vm-embed-search; aspirin top-10 chemically sensible; p95 = 44.6 ms under 50 ms budget. ChemBERTa now serves through /predict + /v1/similar on the production path.</p>
+    </div>
+
+    <div class="table-wrap">
+      <table class="deliverable-table">
+        <thead>
+          <tr>
+            <th style="width: 60px;">id</th>
+            <th>artifact</th>
+            <th>path / location</th>
+            <th>owner</th>
+            <th>verification</th>
+            <th style="width: 60px; text-align: center;">status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>D7-01</td>
+            <td><strong><code>embed_dataset_chunk</code> + <code>embed_dataset_concat</code> Celery tasks</strong> &mdash; one chunk task takes a slice (2,882 compounds) and writes a partial parquet to MinIO; one concat task downloads 8 partials, concatenates with zstd, writes canonical embeddings.parquet + INSERTs dataset_registry row. Dispatched as a Celery <code>chord</code> so concat fires automatically after all 8 chunks complete.</td>
+            <td class="path">services/embed/embed.py<br>services/worker/aitip/<br>worker/tasks.py</td>
+            <td class="owner">Sarthak</td>
+            <td>11:04 dispatch &rarr; 11:05:58 concat complete &middot; <strong>1m50s wall-clock</strong></td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D7-02</td>
+            <td><strong>23,054 compounds embedded</strong> &mdash; ChemBERTa [CLS] hidden state for every canonical SMILES across the 4 source datasets. Stored as a 768-dim float32 vector per row in <code>embeddings.parquet</code> with smiles + scaffold + original_dataset metadata. dataset_registry row tagged <code>name='embeddings', version='v0-chemberta-cls'</code> with sha256 stamp.</td>
+            <td class="path">minio://processed/<br>embeddings/<br>v0-chemberta-cls.parquet</td>
+            <td class="owner">Sarthak</td>
+            <td>n=23054 · sha256=8d2e9013... · 70.8 MB on disk</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D7-03</td>
+            <td><strong>HNSW similarity index</strong> &mdash; hnswlib cosine index over 23,054 768-dim vectors. <code>M=32, ef_construction=200, set_ef(50)</code> for query-time recall. Built via <code>services/embed/build_hnsw_index.py</code> CLI on vm-embed-search in 87.3 sec. Persisted to <code>/var/lib/aitip-similarity/v0-index.bin</code> alongside metadata parquet. dataset_registry row tagged <code>name='hnsw-index', version='v0'</code> with sha256 stamp.</td>
+            <td class="path">vm-embed-search:<br>/var/lib/aitip-similarity/<br>v0-index.bin (81 MB)<br>+ v0-meta.parquet</td>
+            <td class="owner">Sarthak</td>
+            <td>Index built in 87.3s · 81.4 MB on-disk · matches Day-6 prediction within 0.5%</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D7-04</td>
+            <td><strong><code>aitip/similarity:0.1.0</code> container</strong> &mdash; FastAPI service exposing <code>GET /healthz</code> + <code>GET /similar?smiles=&top_k=</code>. Loads HNSW index + metadata parquet + ChemBERTa once at boot; in-memory cosine knn_query; returns top-k {smiles, similarity, original_dataset, scaffold} list. Multi-stage Dockerfile inheriting from aitip-base:0.1.0; Trivy 0/0 high+critical. 2.71 GB image; pushed to local registry.</td>
+            <td class="path">services/similarity/<br>aitip/sim/api.py<br>infra/docker/<br>similarity.Dockerfile</td>
+            <td class="owner">Sarthak</td>
+            <td>Build 4m22s · Trivy clean · pushed to vm-data-store:5000 at 14:48</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D7-05</td>
+            <td><strong>Aspirin top-10 chemically sensible</strong> &mdash; first end-to-end <code>/similar</code> smoke. Rank 1 is aspirin itself (cosine 1.0); ranks 2-3 are positional isomers of acetylsalicylic acid; rank 4 is paracetamol; <strong>rank 7 is salicylic acid (aspirin's metabolite)</strong>. End-to-end latency 41.3 ms · under the 50 ms p95 budget. Plus 50-request latency probe: p50=41.8ms · p95=44.6ms · p99=47.1ms (10.8% headroom against 50 ms target).</td>
+            <td class="path">curl smoke<br>captured to PR-#23</td>
+            <td class="owner">Sarthak</td>
+            <td>15:58 smoke + 16:14 latency probe · all green</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D7-06</td>
+            <td><strong><code>aitip/tox-inference:0.3.0</code> image bake + deploy</strong> &mdash; v0.2.0 + DGL 2.4.0 + dgllife 0.3.2 + transformers 4.46.0 wheels added. Trivy 0/0 high+critical. 4.21 GB image (vs 1.84 GB at v0.2.0). Deployed on vm-tox-inference with NUMA pin (cpuset 0-15) preserved. <strong>ChemBERTa NR-AhR live through /predict at 11:08 IST · cold-start 9.4 sec under 12 sec budget</strong>. Warm /predict 87-114 ms.</td>
+            <td class="path">vm-data-store:5000/<br>aitip/tox-inference:0.3.0<br>+ vm-tox-inference:8081</td>
+            <td class="owner">Harshit</td>
+            <td>Build 6m18s · curl /predict?endpoint=NR-AhR returns framework='pytorch' · 9.4s cold</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D7-07</td>
+            <td><strong><code>GET /v1/similar</code> proxy on core-api</strong> &mdash; thin httpx forward to vm-embed-search:8082/similar with Prometheus instrumentation (<code>aitip_similar_proxy_total</code> + <code>aitip_similar_proxy_seconds</code>). 15-sec timeout; 504 on similarity-service timeout. Same proxy idiom as <code>/predict</code> &rarr; tox-inference. Day-15 adds auth + rate-limit middleware here.</td>
+            <td class="path">services/core-api/<br>aitip/api/similar.py</td>
+            <td class="owner">Harshit</td>
+            <td>OpenAPI now shows 6 paths · end-to-end smoke green at 15:38</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D7-08</td>
+            <td><strong><code>aitip/core-api:0.3.0</code> deployed</strong> &mdash; same multi-stage build, includes the new /v1/similar router. Trivy 0/0 high+critical. Deployed on vm-core-api after Jitendra's similarity container ack at 15:32. AITIP_SIMILARITY_URL env var points at vm-embed-search:8082.</td>
+            <td class="path">vm-data-store:5000/<br>aitip/core-api:0.3.0<br>+ vm-core-api:8080</td>
+            <td class="owner">Harshit</td>
+            <td>Build 36s (wheels cached) · deployed 15:38 · /v1/similar returns 3 results for aspirin smoke</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D7-09</td>
+            <td><strong>vm-embed-search sanity check &middot; DR-7.3 retired</strong> &mdash; 7-day uptime, 436 GB free on 500 GB SSD, 93 GB RAM free, kernel parameters identical to peer vm-tox-inference (Day-2 Ansible role applied uniformly), sub-millisecond RTT to every peer VM, zero failed systemd units. One minor security package update (libtirpc-common) applied. <strong>Box is no longer idle</strong>.</td>
+            <td class="path">vm-embed-search<br>(sanity scripts in PR-#25)</td>
+            <td class="owner">Jitendra</td>
+            <td>10:18 IST · uptime + df + free + sysctl diff + ping RTT all green</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D7-10</td>
+            <td><strong>Similarity container deployed</strong> &mdash; <code>docker run</code> with <code>--network host</code> + index volume mount read-only. Boot time 11 sec (mostly hnswlib index load). <code>/healthz</code> reports <code>index_vectors: 23054</code>; <code>/metrics</code> emits aitip_similarity_* counters.</td>
+            <td class="path">vm-embed-search:8082<br>(docker run config)</td>
+            <td class="owner">Jitendra</td>
+            <td>15:32 IST · curl /healthz green · index loaded</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D7-11</td>
+            <td><strong>Prometheus scrape + Grafana <code>AITIP-similarity</code> dashboard + <code>SimilarityLatencyP95High</code> alert</strong> &mdash; new scrape target vm-embed-search:8082 added to prometheus.yml; 4-panel dashboard (requests/sec stat, p50/p95/p99 latency timeseries with 50 ms threshold marker, top-k usage barchart, index_vectors stat); alert rule firing at p95 &gt; 50 ms sustained 5 min.</td>
+            <td class="path">infra/ansible/roles/<br>observability/{files,templates}/</td>
+            <td class="owner">Jitendra</td>
+            <td>15:42 IST · scrape target up · alert rule loaded · dashboard provisioned</td>
+            <td class="status green">GREEN</td>
+          </tr>
+          <tr>
+            <td>D7-12</td>
+            <td><strong>Day-10 mid-POC review Week-2 by-the-numbers slide</strong> &mdash; aggregated cross-day metrics: dataset_registry 22 rows (up from 20), model_registry 64 rows (up from 32), is_active = 16 invariant preserved, mean AUROC across active 0.804 (up from 0.802), services deployed 3 (up from 2), OpenAPI paths 6 (up from 4), Prometheus scrape targets 14 (up from 13), Grafana dashboards 6 (up from 5), <strong>cumulative EOD met 56/56 across the POC so far</strong>.</td>
+            <td class="path">docs/decks/<br>foundation-close.md<br>(slides 4 + 5)</td>
+            <td class="owner">Jitendra</td>
+            <td>PR-#25 includes slide 4 + 5 draft; reviewed by Harshit</td>
+            <td class="status green">GREEN</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="prose" style="margin-top: 22px;">
+      <p>
+        Twelve deliverables, all green. Three PRs (#23 embeddings + index + similarity container, #24 v0.3.0 tox-inference + core-api with /v1/similar proxy, #25 similarity container deploy + scrape + dashboard + Week-2 slide) opened today and approved. Day-7 net change to repo: ~2,400 lines across services/embed, services/similarity, services/core-api, services/worker, infra/docker, infra/ansible, and docs/decks.
+      </p>
+      <p>
+        <strong>What the platform now does.</strong> Yesterday it could serve XGBoost predictions through one loader path and a draft router for ChemBERTa. Today it serves ChemBERTa NR-AhR through the production /predict path and also answers structural-similarity queries via /v1/similar with chemically-sensible neighbors in under 50 ms. <strong>The platform has graduated from "model serving" to "model serving with chemical context"</strong>: every prediction is becoming more than just a number, because /similar will soon be invoked alongside it (Day-17 applicability domain) and the user will see the structural neighbors that informed it.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §05 · EOD CHECKLIST
+     ================================================================ -->
+<section class="section" id="eod">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 05 · eod exit criteria</div>
+        <h2>Eight criteria locked at standup &mdash; eight green by 17:30 IST</h2>
+      </div>
+      <p class="sub">Fifth consecutive early close. Headline: <em>similarity service operational, p95 = 44.6 ms under 50 ms budget, aspirin smoke chemically sensible</em>. Cumulative POC-wide EOD criteria: 64/64.</p>
+    </div>
+
+    <ul class="eod-list">
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-7.1</span>
+        <span class="desc">
+          <strong>v0.3.0 image bake + deploy + ChemBERTa NR-AhR live through /predict.</strong> aitip/tox-inference:0.3.0 built with DGL + transformers wheels (Trivy 0/0 H+C, 4.21 GB image). Deployed on vm-tox-inference with NUMA pin preserved. First curl /predict?endpoint=NR-AhR&smiles=aspirin returned framework='pytorch' + feature_set='chemberta-bpe-tokens' at 11:08 IST. Cold-start 9.4 sec (within 12 sec budget). Sarthak's embed_dataset task unblocked at 11:08.
+          <small>verified: framework field shifts from 'sklearn' to 'pytorch' on /predict for NR-AhR; warm calls 87-114 ms</small>
+        </span>
+        <span class="owner-pill h">Harshit</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-7.2</span>
+        <span class="desc">
+          <strong><code>aitip.embed_dataset_chunk</code> + <code>embed_dataset_concat</code> Celery tasks implemented.</strong> Dispatched as a Celery <code>chord</code> with 8 chunks (2,882 compounds each) + 1 concat callback. Each chunk loads ChemBERTa once (lru_cache(1)), embeds in BATCH=32 with [CLS] hidden extraction, writes partial parquet. Concat sorts by chunk_id, downloads + zstd-concatenates, INSERTs dataset_registry row.
+          <small>verified: PR-#23; chord dispatched at 11:04, callback complete at 11:05:58</small>
+        </span>
+        <span class="owner-pill s">Sarthak</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-7.3</span>
+        <span class="desc">
+          <strong>23,054 compounds embedded into 768-dim ChemBERTa [CLS] vectors.</strong> Total wall-clock 1m50s (8-way parallel beat 11m26s serial estimate by 84%). Zero failures, zero OOMs &mdash; the 8-chunk mitigation worked exactly as designed; <strong>DR-7.1 retired</strong>. embeddings.parquet (70.8 MB, sha256-stamped) on MinIO; dataset_registry row v0-chemberta-cls inserted.
+          <small>verified: SELECT n_compounds FROM dataset_registry WHERE version='v0-chemberta-cls' returns 23054</small>
+        </span>
+        <span class="owner-pill s">Sarthak</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-7.4</span>
+        <span class="desc">
+          <strong>HNSW index built and persisted.</strong> hnswlib cosine, M=32, ef_construction=200, set_ef(50) for query-time recall. Built in 87.3s on vm-embed-search via <code>services/embed/build_hnsw_index.py</code> CLI. Actual on-disk 81.4 MB matches Day-6 prediction within 0.5%. Index + metadata parquet persisted at /var/lib/aitip-similarity/; dataset_registry row v0/hnsw-index inserted.
+          <small>verified: ls -la shows 81 MB binary + 2.3 MB metadata; psql shows registry row with sha256</small>
+        </span>
+        <span class="owner-pill s">Sarthak</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-7.5</span>
+        <span class="desc">
+          <strong><code>aitip/similarity:0.1.0</code> container built + Trivy clean + pushed.</strong> Multi-stage build inheriting from aitip-base:0.1.0; build time 4m22s (with cached wheels); image 2.71 GB. Trivy scans 0/0 high+critical on both Debian and Python-pkg layers. Pushed to vm-data-store:5000 registry with sha256 digest at 14:48 IST.
+          <small>verified: docker images shows tag 0.1.0; Trivy output captured to PR-#23; registry catalog returns digest</small>
+        </span>
+        <span class="owner-pill s">Sarthak</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-7.6</span>
+        <span class="desc">
+          <strong>Container deployed on vm-embed-search; /healthz + /similar live.</strong> Docker run with --network host + index volume mount (read-only). Boot time 11 sec (mostly hnswlib index load from disk). /healthz returns <code>{status: ok, image_tag: 0.1.0, index_vectors: 23054}</code>; /metrics emits aitip_similarity_* counters. /v1/similar reachable through core-api at 15:38 IST after Harshit's core-api v0.3.0 rollout.
+          <small>verified: docker logs show "Application startup complete" + index loaded; healthz returns 200 with index count</small>
+        </span>
+        <span class="owner-pill j">Jitendra</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-7.7</span>
+        <span class="desc">
+          <strong>Aspirin top-10 smoke returns chemically sensible neighbors.</strong> Rank 1 = aspirin itself (cosine 1.0); ranks 2-3 = positional isomers (meta and para acetylsalicylic acid); rank 4 = paracetamol; rank 7 = <strong>salicylic acid, aspirin's metabolite</strong>; ranks 5-10 are all small acetyl/carboxyl/aromatic compounds. End-to-end latency 41.3 ms · within budget.
+          <small>verified: 15:58 IST curl with smiles=CC(=O)Oc1ccccc1C(=O)O · top-10 captured in §03 Rock 3b</small>
+        </span>
+        <span class="owner-pill s">Sarthak</span>
+      </li>
+
+      <li class="eod-item">
+        <span class="check"></span>
+        <span class="id">EOD-7.8</span>
+        <span class="desc">
+          <strong>Prometheus scraping vm-embed-search; Grafana similarity panel + alert.</strong> New scrape target up; 4-panel AITIP-similarity dashboard provisioned via Grafana sidecar (requests/sec, p50/p95/p99 latency with 50 ms threshold line, top-k usage, index_vectors stat); SimilarityLatencyP95High alert rule loaded. 16:14 latency probe (50 req): <strong>p95=44.6ms · p99=47.1ms · mean=42.31ms</strong> &mdash; well under 50 ms p95 budget.
+          <small>verified: prometheus /api/v1/targets shows similarity job up; /api/v1/rules shows alert; grafana datasource returns dashboard</small>
+        </span>
+        <span class="owner-pill j">Jitendra</span>
+      </li>
+
+    </ul>
+
+    <div class="eod-summary">
+      <div class="verdict">Day 7 closes <em>green</em> &mdash; eight of eight, finished by 17:30.</div>
+      <div class="meta"><strong>8 / 8</strong>EOD criteria met &middot; 17:30 IST &middot; cumulative 64 / 64</div>
+    </div>
+
+    <div class="prose" style="margin-top: 22px;">
+      <p>
+        <strong>Fifth consecutive early close.</strong> Days 3-7 all finished at or before 17:30 IST. Cumulative POC-wide EOD criteria across 7 working days: 64/64. The pattern continues to hold: verify before workload (Jitendra's 10:18 sanity check before the 15:00 deploy), prove invariants after (Sarthak's chord delivers exactly 23,054 vectors, not 23,053 and not 23,055), and gate every milestone on a concrete observable (aspirin top-10 chemically sensible, p95 = 44.6 ms under 50 ms budget, framework field on /predict shifts from 'sklearn' to 'pytorch').
+      </p>
+      <p>
+        <strong>What today taught us about the field.</strong> ChemBERTa's [CLS] vectors encode enough structural information to make the kind of neighborhood judgments a chemist makes intuitively. Rank 7 being salicylic acid &mdash; aspirin's metabolite &mdash; is a particularly satisfying result, because it suggests the embedding space captures metabolic / structural relationships beyond strict graph isomorphism. Day-12 batch enrichment will surface findings of this shape ("your candidate compound is similar to X, which had hERG = positive in training") and Day-17 applicability domain will use the same vectors to flag predictions whose neighbors are too distant to trust.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §06 · DAY-7 RISK DISPOSITION
+     ================================================================ -->
+<section class="section deep" id="risks">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 06 · day-7 risk disposition</div>
+        <h2>Three risks named &mdash; two retired, one mitigated</h2>
+      </div>
+      <p class="sub">Three engineers, three risks. Two retired in-day by execution discipline; one mitigated structurally with explicit Day-11 carry. Zero fires.</p>
+    </div>
+
+    <article class="risk-card retired">
+      <div class="risk-head">
+        <span class="risk-id">DR-7.1</span>
+        <span class="risk-disposition">retired</span>
+      </div>
+      <h3 class="risk-name">ChemBERTa OOM on the 23K-compound batch loop.</h3>
+      <div class="risk-line">
+        <span class="label">Predicted</span>
+        <span class="text">Per-call ChemBERTa CPU forward is ~30 ms and ~150 MB working set; naively looping 23K compounds in one worker process risks resident memory climbing as tokenizer + intermediates accumulate. Risk: OOM kill mid-batch, partial parquet, restart from scratch. Mitigation: chunk into 8 sub-tasks via Celery group (each 2,882 compounds, fresh tokenizer per chunk); concat step combines partials.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">What happened</span>
+        <span class="text">Mitigation worked exactly as designed. 8 chunk tasks dispatched 11:04:08; each ran 30-43 sec wall-clock; all 8 complete by 11:05:34; concat callback complete at 11:05:58. <strong>Total wall-clock 1m50s</strong> &mdash; 8-way parallel beat the standup serial estimate (11m26s) by 84%. Zero OOMs; zero retries; peak per-worker resident memory was 1.3 GB (well under any reasonable ceiling). The "mitigation cost" was negative &mdash; structuring as a chord made the work both safer and faster.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">Disposition</span>
+        <span class="text"><strong>Retired</strong> &mdash; chord pattern committed for embed_dataset; same pattern carries forward to Day-12 batch enrichment (which will fan out predictions + similarity over user-submitted batches). Pattern documented in PR-#23 commit message as "8-way Celery chord for embarrassingly-parallel batch work over the curated corpus."</span>
+      </div>
+    </article>
+
+    <article class="risk-card mitigated">
+      <div class="risk-head">
+        <span class="risk-id">DR-7.2</span>
+        <span class="risk-disposition">mitigated</span>
+      </div>
+      <h3 class="risk-name">ChemBERTa cold-start on v0.3.0 may exceed user-tolerable latency.</h3>
+      <div class="risk-line">
+        <span class="label">Predicted</span>
+        <span class="text">v0.2.0 ships only joblib XGBoost (10-50 MB, cold-load &lt;200 ms); v0.3.0 adds transformers + DGL paths where ChemBERTa cold-load involves downloading from MinIO (~330 MB checkpoint + tokenizer dir) and instantiating a 12-layer transformer. Worst-case cold-start ~12 sec; warm cache hit milliseconds. Mitigation: Day-11 startup pre-warm hook (DR-6.2 carry) loads all 16 active models at container boot, eliminating user-visible cold-start.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">What happened</span>
+        <span class="text">First /predict to NR-AhR after the v0.3.0 deploy took <strong>9.4 sec wall-clock</strong> &mdash; under the 12 sec budget but clearly user-visible. Subsequent warm calls 87-114 ms (mean 93 ms). Cold/warm ratio ~100x. Day-11 pre-warm hook remains valid but not emergency; the production /predict path works today for users who tolerate a one-time cold-load.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">Disposition</span>
+        <span class="text"><strong>Mitigated</strong> &mdash; under-budget cold-start preserves the production path's usability for v0; Day-11 work hardens it. The pattern "first-request-of-the-day pays the cold-start tax" is acceptable for an internal POC; V1 productionization needs the pre-warm hook regardless.</span>
+      </div>
+    </article>
+
+    <article class="risk-card retired">
+      <div class="risk-head">
+        <span class="risk-id">DR-7.3</span>
+        <span class="risk-disposition">retired</span>
+      </div>
+      <h3 class="risk-name">vm-embed-search has been idle since Day 2.</h3>
+      <div class="risk-line">
+        <span class="label">Predicted</span>
+        <span class="text">Provisioned Day 2, venv-validated Day 6, but no real workload had touched it. Realistic risks: stale apt packages, disk-format issues if the partition was never written to, kernel parameter drift if sysctl tuning got applied to peer VMs but not this one. Mitigation: 09:45 fast-track sanity check before declaring deployment-ready.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">What happened</span>
+        <span class="text">7-day uptime, 436 GB free on the SSD partition, 93 GB free RAM, kernel parameters byte-identical to peer vm-tox-inference (Day-2 Ansible role applied uniformly across all VMs), sub-millisecond RTT to every peer VM in the bridge, zero failed systemd units. One minor security package update (libtirpc-common) applied as preventive maintenance. Box is healthy.</span>
+      </div>
+      <div class="risk-line">
+        <span class="label">Disposition</span>
+        <span class="text"><strong>Retired</strong> &mdash; vm-embed-search ran the similarity workload all afternoon without incident. Pattern noted: the Day-2 Ansible role gives us drift-free fleet uniformity for free; any future "this VM has been idle" risk follows the same 5-minute sanity-check ritual.</span>
+      </div>
+    </article>
+
+    <div class="prose" style="margin-top: 22px;">
+      <p>
+        <strong>Cumulative risk ledger across the POC so far.</strong> 7 days, 23 risks named in standups, 18 retired in-day, 4 mitigated with explicit carry (DR-1.5 cooling SLA &rarr; quarterly thermal soak; DR-3.1 MinIO single-host quorum &rarr; V1 multi-host; DR-6.2 ChemBERTa cold-start &rarr; Day-11 pre-warm; DR-7.2 same risk carries forward to Day 11), 1 carry-forward to Day-17 calibration (rare-class behavior under ensembling). <strong>Zero risks have fired into incidents</strong>. The discipline holds.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     §07 · TOMORROW — Day 8 preview
+     First non-Sarthak lead in 5 days; RAG phase opens within Deep Models.
+     ================================================================ -->
+<section class="section" id="tomorrow">
+  <div class="shell">
+    <div class="section-head">
+      <div>
+        <div class="section-tag">§ 07 · tomorrow</div>
+        <h2>What Day 8 opens with</h2>
+      </div>
+      <p class="sub"><strong>Harshit takes the chair for the first time in five days</strong> &mdash; PubMed RAG ingestion opens the RAG sub-phase within Deep Models. Sarthak supports; Jitendra owns ChromaDB observability.</p>
+    </div>
+
+    <div class="tomorrow">
+      <div class="tomorrow-head">
+        <div>
+          <span class="lead-handoff">
+            <span>Sarthak</span><span class="arrow">&rarr;</span><span>Harshit</span>
+          </span>
+          <span class="phase-open">RAG sub-phase opens</span>
+          <div class="date">Day 08 &middot; Monday 18 May 2026 &middot; deep models phase &middot; day 3 of 5 (week 2)</div>
+          <div class="title">PubMed RAG ingestion &mdash; ~1.2 M abstracts into ChromaDB</div>
+        </div>
+        <div class="lane">Lane lead: <strong style="color: var(--t-harshit);">Harshit</strong></div>
+      </div>
+
+      <p style="font-family: var(--serif); font-style: italic; color: var(--ink-2); border-left: 3px solid var(--amber); padding-left: 14px; margin: 12px 0 18px;">
+        ChemBERTa gives us structural similarity; PubMed gives us textual evidence. Day 8 ingests ~1.2 M chemical-toxicity-MeSH-filtered abstracts from the PubMed Central Open Access subset, chunks at the sentence level, embeds with <code>BAAI/bge-small-en-v1.5</code> (384-dim, faster than ChemBERTa on the CPU and trained for English retrieval), and indexes into the existing ChromaDB instance on vm-data-store. By 17:00 the platform can answer "find me the 10 most relevant published sentences about hERG inhibition for this compound class" &mdash; the substrate for Day-9 local LLM RAG-augmented summarization.
+      </p>
+
+      <div class="tomorrow-grid">
+        <div class="tomorrow-prep" style="--track: var(--t-harshit);">
+          <div class="who">Harshit &middot; lead</div>
+          <div class="what">
+            <strong>Day 8 lead &mdash; first non-Sarthak chair in 5 days.</strong> Three rocks. (1) Friday overnight scrape (already running): pull PubMed Central OAS subset filtered by MeSH descriptors <code>D000375</code> (toxicity tests) + <code>D013812</code> (therapeutic uses) + <code>D004364</code> (drug-related side effects); estimated ~1.2 M abstracts in <code>raw/pubmed/</code> bucket by Monday morning. (2) Monday morning <code>aitip.ingest_pubmed_chunk</code> Celery task &mdash; sentence-tokenize abstracts (spaCy), embed each sentence with BGE, INSERT into ChromaDB collection <code>pubmed_v0</code> with PMID + MeSH terms + publication-year as metadata. Dispatched as a chord across 16 chunks (75K abstracts each). (3) <code>/v1/evidence</code> endpoint on core-api &mdash; takes a query string, returns top-k sentence chunks with PMID + source.
+          </div>
+        </div>
+
+        <div class="tomorrow-prep" style="--track: var(--t-sarthak);">
+          <div class="who">Sarthak &middot; supporting</div>
+          <div class="what">
+            <strong>Two sub-tasks.</strong> (1) Draft Day-9 GAT + ChemBERTa per-endpoint comparison content for Day-10 mid-POC review slides &mdash; turn yesterday's model card v0.1 table into a presentation chart showing each endpoint's winning architecture + AUROC. (2) Review Harshit's PR (PubMed scrape config + ingestion task) and Jitendra's PR (ChromaDB observability) when they land. Otherwise heads-down on Day-17 calibration prep reading (Platt scaling vs isotonic across ensemble outputs).
+          </div>
+        </div>
+
+        <div class="tomorrow-prep" style="--track: var(--t-jitendra);">
+          <div class="who">Jitendra &middot; supporting</div>
+          <div class="what">
+            <strong>ChromaDB observability + Day-9 backup-drill prep.</strong> (1) ChromaDB doesn't expose Prometheus metrics natively in v0; write a sidecar exporter that polls collection-size + insert-rate via the client API and emits as Prometheus metrics. New panel on the existing data-stores dashboard. (2) Day-9 Friday is the next backup-restore drill (per the 7-day cadence committed in Day 3). Same drill as Day 3, this time including the new model_registry + embeddings.parquet + HNSW index rows. Pre-flight Wednesday evening. (3) Reviews Harshit's PR-#26.
+          </div>
+        </div>
+      </div>
+
+      <div class="prose" style="margin-top: 22px;">
+        <p>
+          <strong>Day 8 critical-path dependency:</strong> Harshit's lane, but the Friday-overnight scrape pre-empts most of the risk &mdash; if PMC OAS is reachable Sunday night, Monday morning starts with data in hand. Bridge plan if the scrape fails: fall back to PubMed eUtils API for a smaller sample (~150K abstracts via E-utilities batching), accepting smaller corpus for v0. Bridge plan if ChromaDB ingestion is slower than expected (BGE CPU embedding ~12 ms per sentence, 1.2 M sentences = 4 hours single-threaded; 16-way chord brings it to ~15 min): same DR-7.1 chord pattern applies; the rock 2 task is structured as a chord from the start.
+        </p>
+        <p>
+          <strong>Standup Monday:</strong> 09:30 IST, 15 minutes. Harshit chairs &mdash; <strong>first time in 5 days</strong>. Specific question to track: how many of the ~1.2 M scraped abstracts survive the toxicity-relevance filter (we're guessing 70-80% based on MeSH coverage estimates; if it's &lt;50% the filter is too strict and needs broadening on Tuesday). Sarthak + Jitendra prepare their support work without needing prompting; chair rotation is the only behavioral change.
+        </p>
+        <p>
+          <strong>Overnight tasks:</strong> Harshit confirms PMC OAS scrape is making progress (Sunday 18:00 check; if &lt;800K abstracts by then, fail-over to eUtils plan Monday morning); Sarthak drafts the Day-10 model-comparison chart; Jitendra writes a minimal ChromaDB exporter skeleton (Prometheus pull, 30-sec poll interval).
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     PREV / NEXT NAVIGATION
+     ================================================================ -->
+<section class="section tight">
+  <div class="shell">
+    <nav class="nav-prev-next" aria-label="day navigation">
+      <a class="prev" href="day06.html">
+        <span class="nx-label">&larr; previous</span>
+        <span class="nx-title">Day 06 &middot; Deep Models &mdash; GAT + ChemBERTa</span>
+        <span class="nx-date">Thu 14 May 2026 &middot; deep models opens</span>
+      </a>
+      <a class="next" href="day08.html">
+        <span class="nx-label">next &rarr;</span>
+        <span class="nx-title">Day 08 &middot; PubMed RAG ingestion</span>
+        <span class="nx-date">Mon 18 May 2026 &middot; RAG opens &middot; Harshit lead</span>
+      </a>
+    </nav>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     FOOTER
+     ================================================================ -->
+<footer class="footer">
+  <div class="shell">
+    <div class="footer-grid">
+      <div>
+        <h4>Day 07 &middot; Molecular Embeddings &amp; Similarity</h4>
+        <p>
+          The day vm-embed-search came online. 23,054 compounds embedded via 8-way Celery chord in 1m50s wall-clock; HNSW index 81 MB on disk built in 87s; <code>aitip/similarity:0.1.0</code> container deployed with /healthz + /similar; <code>/v1/similar</code> live through core-api via thin httpx proxy. Aspirin top-10 chemically sensible (rank 7 = salicylic acid, aspirin's metabolite). 50-request latency probe: p95 = 44.6 ms · p99 = 47.1 ms · under 50 ms budget with 10.8% headroom. ChemBERTa NR-AhR now serves through production /predict with 9.4 sec cold-start.
+        </p>
+        <p style="margin-top: 12px;">
+          <strong>Phase:</strong> Deep Models &middot; Day 2 of 5 &middot; vm-embed-search online<br>
+          <strong>Lead:</strong> Sarthak (model-day rotation, day 4) &middot; supporting Harshit + Jitendra<br>
+          <strong>Compounds embedded:</strong> 23,054 &middot; <strong>Index size:</strong> 81 MB &middot; <strong>p95:</strong> 44.6 ms &middot; <strong>EOD verdict:</strong> 8/8 by 17:30
+        </p>
+
+        <div class="footer-week-progress">
+          <strong>Week 2 momentum.</strong> Day 7 of 20 &middot; 2 of 5 days into Deep Models phase. <strong>Cumulative EOD criteria across the POC: 64/64</strong> (Week 1 foundation 40/40 + Week 2 days 6-7 16/16 + healthy operational invariants). Monday opens RAG sub-phase with <strong>first non-Sarthak lead in 5 days</strong> (Harshit chairs Days 8 + 9). Day-10 mid-POC review with stakeholders Wednesday.
+        </div>
+      </div>
+      <div>
+        <h4>Sections on this page</h4>
+        <p>
+          <a href="#standup">§ 01 standup</a><br>
+          <a href="#theme">§ 02 day theme &middot; pipeline</a><br>
+          <a href="#tasks">§ 03 tasks</a><br>
+          <a href="#deliverables">§ 04 deliverables</a><br>
+          <a href="#eod">§ 05 EOD checklist</a><br>
+          <a href="#risks">§ 06 risk disposition</a><br>
+          <a href="#tomorrow">§ 07 day 8 preview</a>
+        </p>
+      </div>
+      <div>
+        <h4>Navigate</h4>
+        <p>
+          <a href="index.html">Sprint Index</a><br>
+          <a href="day06.html">&larr; Day 06 &middot; Deep Models</a><br>
+          <a href="day08.html">&rarr; Day 08 &middot; PubMed RAG</a><br>
+          <a href="day09.html">Day 09 &middot; Local LLM (vLLM)</a><br>
+          <a href="day10.html">Day 10 &middot; Mid-POC review</a>
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-meta">
+      Day 07 of 20 &middot; Friday 15 May 2026 &middot; 09:30 IST kickoff &mdash; 17:30 IST EOD (early close, fifth consecutive)<br>
+      Phase: Deep Models &middot; Lead: Sarthak Chauhan (day 4) &middot; EOD verdict: GREEN (8 / 8) &middot; cumulative 64 / 64 across the POC<br>
+      Next: Day 08 &middot; Monday 18 May 2026 &middot; PubMed RAG ingestion (Harshit lead &mdash; first non-Sarthak chair in 5 days, RAG sub-phase opens)
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
